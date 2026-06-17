@@ -14,7 +14,7 @@ export function ExtractionJobCreatePage() {
   const [ontologyVersionId, setOntologyVersionId] = useState("");
   const [promptId, setPromptId] = useState("");
   const [promptVersionId, setPromptVersionId] = useState("");
-  const [modelName, setModelName] = useState("mock-extractor-v1");
+  const [modelName, setModelName] = useState("mock-deterministic");
   const { data: sources, isLoading: isSourcesLoading, isError: isSourcesError, refetch: refetchSources } = useSources(projectId);
   const { data: versions, isLoading: isVersionsLoading, isError: isVersionsError, refetch: refetchVersions } = useOntologyVersions(projectId);
   const { data: prompts, isLoading: isPromptsLoading, isError: isPromptsError, refetch: refetchPrompts } = usePromptTemplates(projectId);
@@ -93,8 +93,9 @@ export function ExtractionJobCreatePage() {
         source_id: sourceId,
         ontology_version_id: ontologyVersionId,
         prompt_version_id: promptVersionId,
-        provider: "MockProvider",
+        provider: "mock",
         model_name: modelName.trim(),
+        fixture_id: "default",
       },
       {
         onSuccess: (job) => navigate(`/extraction-jobs/${job.id}`),
@@ -150,15 +151,15 @@ export function ExtractionJobCreatePage() {
             <HanaSelect value={promptVersionId} onChange={(event) => setPromptVersionId(event.target.value)}>
               {promptVersions.map((version) => (
                 <option key={version.id} value={version.id}>
-                  v{version.version} {version.status}
+                  v{version.version} {version.is_active ? "ACTIVE" : "INACTIVE"}
                 </option>
               ))}
             </HanaSelect>
           </Field>
           <Field>
             <span>Provider</span>
-            <HanaSelect value="MockProvider" disabled>
-              <option value="MockProvider">MockProvider</option>
+            <HanaSelect value="mock" disabled>
+              <option value="mock">MockProvider</option>
             </HanaSelect>
           </Field>
           <Field>
@@ -182,10 +183,12 @@ export function ExtractionJobCreatePage() {
           <dt>Prompt</dt>
           <dd>{selectedPrompt?.name ?? "-"}</dd>
           <dt>Prompt version</dt>
-          <dd>{selectedPromptVersion ? `v${selectedPromptVersion.version}` : "-"}</dd>
+          <dd>{selectedPromptVersion ? `v${selectedPromptVersion.version} ${selectedPromptVersion.is_active ? "ACTIVE" : "INACTIVE"}` : "-"}</dd>
+          <dt>Prompt template</dt>
+          <dd>{selectedPromptVersion?.template ?? "-"}</dd>
           <dt>Provider rule</dt>
           <dd>
-            <MutedText>Wave 6 thin slice는 외부 LLM credential 없이 deterministic MockProvider만 사용합니다.</MutedText>
+            <MutedText>API payload는 provider=mock이고, 화면 label만 MockProvider를 사용합니다.</MutedText>
           </dd>
         </KeyValueGrid>
       </HanaCard>

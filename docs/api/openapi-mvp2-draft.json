@@ -3146,6 +3146,7 @@
           "property_values": {},
           "publish_status": "NOT_PUBLISHED",
           "raw_payload": {
+            "client_candidate_id": "entity-company-1",
             "fixture_id": "default"
           },
           "review_status": "PENDING",
@@ -3314,6 +3315,7 @@
         ],
         "title": "CandidateEvidence",
         "example": {
+          "chunk_id": 1,
           "column_name": "company_name",
           "created_at": "2026-06-17T00:00:00Z",
           "end_offset": 42,
@@ -3321,9 +3323,14 @@
           "file_name": "companies.csv",
           "id": "evidence-demo",
           "metadata": {
+            "locator": "row:1:company_name",
             "segment_type": "ROW"
           },
+          "page_number": 1,
+          "paragraph_id": 1,
           "row_index": 1,
+          "section_title": "Companies",
+          "sheet_name": "Sheet1",
           "source_id": "source-demo-csv",
           "source_segment_id": "segment-demo-row",
           "source_type": "CSV",
@@ -3478,6 +3485,7 @@
           "prompt_version_id": "prompt-version-demo",
           "publish_status": "NOT_PUBLISHED",
           "raw_payload": {
+            "client_candidate_id": "relation-company-department-1",
             "fixture_id": "default"
           },
           "relation_id": "relation-has-department",
@@ -3587,6 +3595,7 @@
           },
           "provider": {
             "type": "string",
+            "const": "mock",
             "title": "Provider"
           },
           "model_name": {
@@ -3738,6 +3747,7 @@
           },
           "provider": {
             "type": "string",
+            "const": "mock",
             "title": "Provider",
             "default": "mock"
           },
@@ -3765,7 +3775,15 @@
           "ontology_version_id",
           "prompt_version_id"
         ],
-        "title": "ExtractionJobCreateRequest"
+        "title": "ExtractionJobCreateRequest",
+        "example": {
+          "fixture_id": "default",
+          "model_name": "mock-deterministic",
+          "ontology_version_id": "ontology-version-demo",
+          "prompt_version_id": "prompt-version-demo",
+          "provider": "mock",
+          "source_id": "source-demo-csv"
+        }
       },
       "ExtractionJobDetail": {
         "properties": {
@@ -3791,6 +3809,7 @@
           },
           "provider": {
             "type": "string",
+            "const": "mock",
             "title": "Provider"
           },
           "model_name": {
@@ -3923,6 +3942,49 @@
           "fixture_id": "default",
           "id": "job-demo",
           "model_name": "mock-deterministic",
+          "model_runs": [
+            {
+              "cost_estimate": 0.0,
+              "ended_at": "2026-06-17T00:00:01Z",
+              "extraction_job_id": "job-demo",
+              "id": "model-run-demo",
+              "input_token_count": 0,
+              "masking_version": "v1",
+              "model_name": "mock-deterministic",
+              "ontology_version_id": "ontology-version-demo",
+              "output_token_count": 0,
+              "prompt_version_id": "prompt-version-demo",
+              "provider": "mock",
+              "raw_request": {
+                "class_names": [
+                  "Company",
+                  "Department"
+                ],
+                "fixture_id": "default",
+                "model_name": "mock-deterministic",
+                "ontology_version_id": "ontology-version-demo",
+                "provider": "mock",
+                "relation_names": [
+                  "HAS_DEPARTMENT"
+                ],
+                "segment_count": 7,
+                "source_id": "source-demo-csv"
+              },
+              "raw_response": {
+                "entity_count": 2,
+                "fixture_id": "default",
+                "relation_count": 1,
+                "warnings": []
+              },
+              "redaction_summary": {
+                "policy": "no_source_text_or_secrets",
+                "redacted_keys": [],
+                "truncated_fields": []
+              },
+              "started_at": "2026-06-17T00:00:00Z",
+              "status": "SUCCESS"
+            }
+          ],
           "ontology_version_id": "ontology-version-demo",
           "progress": 100,
           "project_id": "project-demo",
@@ -4003,6 +4065,7 @@
           },
           "provider": {
             "type": "string",
+            "const": "mock",
             "title": "Provider"
           },
           "model_name": {
@@ -5398,6 +5461,17 @@
           "id": "prompt-version-demo",
           "is_active": true,
           "output_schema": {
+            "properties": {
+              "candidate_entities": {
+                "type": "array"
+              },
+              "candidate_relations": {
+                "type": "array"
+              },
+              "evidence": {
+                "type": "array"
+              }
+            },
             "type": "object"
           },
           "prompt_template_id": "prompt-template-demo",
@@ -5610,7 +5684,7 @@
         ],
         "title": "SourceParseResponse",
         "example": {
-          "segment_count": 5,
+          "segment_count": 7,
           "segment_types": [
             "SHEET",
             "ROW",
@@ -5797,6 +5871,19 @@
               "sample_values": [
                 "Acme Corp",
                 "Beta LLC"
+              ]
+            },
+            {
+              "candidate_key_score": 0.0,
+              "distinct_count_sampled": 18,
+              "inferred_type": "INTEGER",
+              "name": "employee_count",
+              "null_ratio": 0.05,
+              "nullable": true,
+              "sample_values": [
+                42,
+                7,
+                13
               ]
             }
           ],

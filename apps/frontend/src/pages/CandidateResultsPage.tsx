@@ -123,7 +123,7 @@ export function CandidateResultsPage() {
                           </CandidateName>
                         </td>
                         <td>
-                          <Mono>{candidate.class_id}</Mono>
+                          <Mono>{formatNullable(candidate.class_id)}</Mono>
                         </td>
                         <td>{formatPercent(candidate.confidence)}</td>
                         <td>
@@ -166,12 +166,12 @@ export function CandidateResultsPage() {
                     {relationsQuery.data.map((candidate) => (
                       <tr key={candidate.id}>
                         <td>
-                          <Mono>{candidate.relation_id}</Mono>
+                          <Mono>{formatNullable(candidate.relation_id)}</Mono>
                         </td>
                         <td>
                           <CandidateName>
-                            <strong>{candidate.source_candidate_entity_id}</strong>
-                            <span>{candidate.target_candidate_entity_id}</span>
+                            <strong>{formatNullable(candidate.source_candidate_entity_id)}</strong>
+                            <span>{formatNullable(candidate.target_candidate_entity_id)}</span>
                           </CandidateName>
                         </td>
                         <td>{formatPercent(candidate.confidence)}</td>
@@ -201,7 +201,7 @@ export function CandidateResultsPage() {
   );
 }
 
-function formatProperties(values: Record<string, string | number | boolean | null>) {
+function formatProperties(values: Record<string, unknown>) {
   const entries = Object.entries(values);
 
   if (entries.length === 0) {
@@ -209,6 +209,10 @@ function formatProperties(values: Record<string, string | number | boolean | nul
   }
 
   return entries.map(([key, value]) => `${key}: ${value ?? "-"}`).join(" · ");
+}
+
+function formatNullable(value: string | null) {
+  return value ?? "-";
 }
 
 function renderEvidenceLinks(evidenceIds: string[]) {

@@ -121,7 +121,7 @@ export function ExtractionJobMonitorPage() {
                         {run.input_token_count} / {run.output_token_count}
                       </td>
                       <td>{run.masking_version}</td>
-                      <td>{formatDateTime(run.started_at)}</td>
+                      <td>{run.started_at ? formatDateTime(run.started_at) : "-"}</td>
                     </tr>
                   ))}
                 </tbody>

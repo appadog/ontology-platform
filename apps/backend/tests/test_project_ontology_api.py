@@ -198,6 +198,22 @@ def test_openapi_exposes_source_contract() -> None:
     assert "CandidateRelation" in schema["components"]["schemas"]
     assert "CandidateEvidence" in schema["components"]["schemas"]
     assert "CandidateValidationCode" in schema["components"]["schemas"]
+    request_schema = schema["components"]["schemas"]["ExtractionJobCreateRequest"]
+    assert "mock" in str(request_schema["properties"]["provider"])
+    assert request_schema["example"]["provider"] == "mock"
+    assert "MockProvider" not in str(request_schema)
+    for schema_name in [
+        "SourceProfile",
+        "SourceParseResponse",
+        "PromptTemplate",
+        "PromptVersion",
+        "ExtractionJobCreateRequest",
+        "ExtractionJobDetail",
+        "CandidateEntity",
+        "CandidateRelation",
+        "CandidateEvidence",
+    ]:
+        assert schema["components"]["schemas"][schema_name]["example"]
 
 
 def test_mvp2_source_profile_and_parse_flow() -> None:
@@ -402,6 +418,39 @@ def test_mvp2_prompt_extraction_candidate_thin_flow() -> None:
     assert failed_run["status"] == "FAILED"
     assert failed_run["error_code"] == "MOCK_FIXTURE_NOT_FOUND"
     assert failed_run["model_runs"][0]["status"] == "FAILED"
+
+    invalid_evidence_response = client.post(
+        f"/api/v1/projects/{project_id}/extraction-jobs",
+        json={
+            "source_id": source_id,
+            "ontology_version_id": version_id,
+            "prompt_version_id": prompt_version_id,
+            "fixture_id": "invalid_evidence_reference",
+        },
+    )
+    assert invalid_evidence_response.status_code == 201
+    invalid_run_response = client.post(
+        f"/api/v1/extraction-jobs/{invalid_evidence_response.json()['id']}/run"
+    )
+    assert invalid_run_response.status_code == 200
+    invalid_run = invalid_run_response.json()
+    assert invalid_run["status"] == "PARTIAL_FAILED"
+    assert invalid_run["provider"] == "mock"
+    assert (
+        invalid_run["model_runs"][0]["raw_response"]["fixture_id"] == "invalid_evidence_reference"
+    )
+
+    invalid_entities_response = client.get(
+        f"/api/v1/extraction-jobs/{invalid_run['id']}/candidates/entities"
+        "?validation_status=FAILED"
+    )
+    assert invalid_entities_response.status_code == 200
+    invalid_entities = invalid_entities_response.json()
+    assert len(invalid_entities) == 1
+    assert invalid_entities[0]["validation_codes"] == ["INVALID_EVIDENCE_REFERENCE"]
+    assert invalid_entities[0]["evidence_ids"] == ["invalid-evidence-reference"]
+    invalid_evidence_detail = client.get("/api/v1/candidate-evidence/invalid-evidence-reference")
+    assert invalid_evidence_detail.status_code == 404
 
 
 def test_openapi_ontology_graph_compat_fields_are_optional_deprecated() -> None:

@@ -37,6 +37,17 @@ PM, Backend, Frontend가 같은 이름과 enum을 쓰기 위한 공통 용어집
 - Enum 값은 대문자 snake case를 사용한다. 예: `NOT_AVAILABLE`, `MANY_TO_ONE`.
 - Frontend 내부 view model은 자유롭게 둘 수 있지만, `shared/api` 경계 밖으로 API enum 문자열을 임의 변경하지 않는다.
 
+## MVP 2 Provider Literal
+
+MVP 2 thin slice의 API provider value는 lowercase string literal `mock`이다. `MockProvider`는 UI display label과 문서상 provider 이름으로만 사용하며, API request/response의 `provider` field 값으로 보내지 않는다.
+
+```text
+API value: mock
+UI display label: MockProvider
+```
+
+Backend는 `MockProvider` alias를 MVP 2 Wave 7 contract sync 범위에서 추가하지 않는다. Frontend는 화면 표시 label과 API payload value를 분리한다.
+
 ## Shared Status Values
 
 ### Role

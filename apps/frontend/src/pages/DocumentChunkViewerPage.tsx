@@ -48,6 +48,22 @@ export function DocumentChunkViewerPage() {
           {parseSource.isPending ? "Parsing" : "Parse source"}
         </HanaButton>
       </PageHeader>
+      {parseSource.data && (
+        <HanaCard title="Parse summary" description="POST /api/v1/sources/{source_id}/parse returns SourceParseResponse. Segment rows come from GET /segments.">
+          <KeyValueGrid>
+            <dt>Source</dt>
+            <dd>
+              <Mono>{parseSource.data.source_id}</Mono>
+            </dd>
+            <dt>Segment count</dt>
+            <dd>{parseSource.data.segment_count}</dd>
+            <dt>Segment types</dt>
+            <dd>{parseSource.data.segment_types.join(", ") || "-"}</dd>
+            <dt>Warnings</dt>
+            <dd>{parseSource.data.warnings?.join(", ") || "-"}</dd>
+          </KeyValueGrid>
+        </HanaCard>
+      )}
       {segments.length === 0 ? (
         <PageState kind="empty" title="Segment가 없습니다" description="parse source를 실행하면 chunk/page/row segment가 표시됩니다." />
       ) : (
@@ -60,6 +76,7 @@ export function DocumentChunkViewerPage() {
                     <FileSearch aria-hidden="true" />
                     <strong>{segment.segment_type}</strong>
                   </span>
+                  <MutedText>Sequence {segment.sequence}</MutedText>
                   <Mono>{segment.id}</Mono>
                   <MutedText>{segment.text ?? "Structured locator only"}</MutedText>
                 </button>
@@ -78,6 +95,8 @@ export function DocumentChunkViewerPage() {
                   <dd>
                     <HanaBadge tone="neutral">{selectedSegment.segment_type}</HanaBadge>
                   </dd>
+                  <dt>Sequence</dt>
+                  <dd>{selectedSegment.sequence}</dd>
                   <dt>Row / Column</dt>
                   <dd>
                     {selectedSegment.row_index ?? "-"} / {selectedSegment.column_name ?? "-"}

@@ -84,3 +84,42 @@ This backlog is now eligible for Wave 6 implementation kickoff. The contract is 
 - Candidate 조회는 extraction-job 하위 endpoint만으로 충분한지, project/source/ontology_version filter가 필요한지 FE와 함께 확인해야 한다.
 - Candidate confidence scale과 threshold는 first thin slice QA 이후 조정할 수 있다.
 - PDF parsing library와 chunking default size/overlap은 thin slice 구현 결과를 보고 확정한다.
+
+## Wave 6 QA Findings
+
+Wave 6 thin slice 결과는 `PARTIAL`이다. Backend/API core는 동작하지만 FE actual API mode closeout 전 아래 항목을 Wave 7에서 정리한다.
+
+- `SourceProfile.id`, `SourceProfileColumn.nullable`, `SourceProfileColumn.distinct_count_sampled`를 FE type/fixture/UI에 반영한다.
+- `SourceSegment.sequence`와 `SourceParseResponse`를 FE type/client에 반영한다.
+- `PromptTemplate`/`PromptVersion` DTO를 OpenAPI 기준으로 재동기화한다.
+- MVP 2 provider API literal은 `mock`이다. `MockProvider`는 UI display label로만 사용한다.
+- `CandidateEntity`, `CandidateRelation`, `CandidateEvidence`의 nullable fields, `created_at`, `extraction_job_id`, numeric paragraph/chunk id를 FE type/fixture에 반영한다.
+- `INVALID_EVIDENCE_REFERENCE`를 재현할 deterministic fixture 또는 test hook 추가 여부를 PM/Backend가 Wave 7에서 확정한다.
+- Retry no-duplicate natural key 범위를 PM이 Wave 7에서 확정한다.
+
+## Wave 7 Contract Sync Decisions
+
+Wave 7은 기능 확장이 아니라 FE/OpenAPI contract sync closeout wave다. Candidate detail drawer, evidence highlight, 고급 PDF parsing, 외부 LLM provider, review/publish/RAG 범위는 열지 않는다.
+
+- Provider literal/display split:
+  - API value: `mock`
+  - UI display label: `MockProvider`
+  - Backend는 `MockProvider` alias를 추가하지 않는다.
+  - Frontend는 job creation payload에 `provider: "mock"`을 전송한다.
+- Source parse response:
+  - `POST /api/v1/sources/{source_id}/parse` 응답은 `SourceParseResponse`다.
+  - `SourceSegment[]` 단독 반환이 아니다.
+  - parsed segment list는 `GET /api/v1/sources/{source_id}/segments`에서 조회한다.
+- Retry no-duplicate scope:
+  - 중복 방지 범위는 같은 job 내부가 아니라 retry chain 전체다.
+  - retry root는 `retry_of_job_id`가 null인 최초 job이다.
+  - natural key는 retry root, provider, fixture, source, ontology version, prompt version, candidate kind, provider stable client candidate/evidence id를 기준으로 한다.
+  - MockProvider가 client id를 제공하지 않으면 fixture id, candidate kind, provider output index, segment locator로 deterministic key를 만든다.
+- `INVALID_EVIDENCE_REFERENCE` runtime evidence:
+  - deterministic fixture 또는 backend test hook이 필요하다.
+  - preferred fixture id: `invalid_evidence_reference`.
+  - 이 hook은 QA smoke 전용이며 product UI workflow가 아니다.
+- Candidate list response shape:
+  - Wave 7에서는 현재 OpenAPI의 plain array response를 유지한다: `CandidateEntity[]`, `CandidateRelation[]`.
+  - `limit`, `offset`, `source_id`, `ontology_version_id`, `validation_status`, `has_evidence`는 query filter로 유지한다.
+  - `total_count`, cursor, list wrapper DTO는 이번 wave에서 추가하지 않는다.

@@ -33,6 +33,8 @@ export function SourceProfilingPage() {
     );
   }
 
+  const warnings = profile.warnings ?? [];
+
   return (
     <>
       <PageHeader title="Source Profiling" description="CSV/Excel source의 column type, null ratio, distinct count, sample values를 확인합니다.">
@@ -56,10 +58,10 @@ export function SourceProfilingPage() {
           Last profile result
         </MetricCard>
       </PanelGrid>
-      {profile.warnings.length > 0 && (
+      {warnings.length > 0 && (
         <HanaCard title="Warnings">
           <InlineList>
-            {profile.warnings.map((warning) => (
+            {warnings.map((warning) => (
               <HanaBadge key={warning} tone="warning">
                 {warning}
               </HanaBadge>
@@ -77,8 +79,9 @@ export function SourceProfilingPage() {
                 <tr>
                   <th>Name</th>
                   <th>Inferred type</th>
+                  <th>Nullable</th>
                   <th>Null ratio</th>
-                  <th>Distinct</th>
+                  <th>Distinct sampled</th>
                   <th>Key score</th>
                   <th>Samples</th>
                 </tr>
@@ -92,8 +95,9 @@ export function SourceProfilingPage() {
                     <td>
                       <HanaBadge tone="neutral">{column.inferred_type}</HanaBadge>
                     </td>
+                    <td>{column.nullable ? "Yes" : "No"}</td>
                     <td>{formatPercent(column.null_ratio)}</td>
-                    <td>{column.distinct_count}</td>
+                    <td>{column.distinct_count_sampled}</td>
                     <td>{formatPercent(column.candidate_key_score)}</td>
                     <td>
                       <MutedText>{column.sample_values.map((value) => String(value ?? "-")).join(", ")}</MutedText>

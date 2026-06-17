@@ -57,7 +57,14 @@ class PromptVersion(BaseModel):
                 "prompt_template_id": "prompt-template-demo",
                 "version": 1,
                 "template": "Extract candidate entities from source segments.",
-                "output_schema": {"type": "object"},
+                "output_schema": {
+                    "type": "object",
+                    "properties": {
+                        "candidate_entities": {"type": "array"},
+                        "candidate_relations": {"type": "array"},
+                        "evidence": {"type": "array"},
+                    },
+                },
                 "is_active": True,
                 "created_at": "2026-06-17T00:00:00Z",
                 "created_by": "dev-user",

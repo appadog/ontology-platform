@@ -47,9 +47,13 @@ export function EvidenceViewerPage() {
           </dd>
           <dt>Segment</dt>
           <dd>
-            <DataLink to={`/projects/${defaultProjectId}/sources/${evidence.source_id}/chunks`}>
-              <Mono>{evidence.source_segment_id}</Mono>
-            </DataLink>
+            {evidence.source_segment_id ? (
+              <DataLink to={`/projects/${defaultProjectId}/sources/${evidence.source_id}/chunks`}>
+                <Mono>{evidence.source_segment_id}</Mono>
+              </DataLink>
+            ) : (
+              "-"
+            )}
           </dd>
           <dt>Sheet / Row</dt>
           <dd>{formatSheetRow(evidence.sheet_name, evidence.row_index, evidence.column_name)}</dd>
@@ -57,10 +61,12 @@ export function EvidenceViewerPage() {
           <dd>{formatPageSection(evidence.page_number, evidence.section_title, evidence.paragraph_id, evidence.chunk_id)}</dd>
           <dt>Offsets</dt>
           <dd>{formatOffsets(evidence.start_offset, evidence.end_offset)}</dd>
+          <dt>Created</dt>
+          <dd>{evidence.created_at}</dd>
         </KeyValueGrid>
       </HanaCard>
       <HanaCard title="Evidence text" description="후속 화면은 이 text range를 candidate detail과 연결합니다.">
-        <EvidenceText>{evidence.evidence_text}</EvidenceText>
+        <EvidenceText>{evidence.evidence_text ?? "No evidence text available."}</EvidenceText>
       </HanaCard>
       <HanaCard title="Metadata" description="Fixture와 actual API 모두 nullable locator field를 그대로 렌더링합니다.">
         {evidence.metadata ? <MetadataBlock>{JSON.stringify(evidence.metadata, null, 2)}</MetadataBlock> : <MutedText>No metadata</MutedText>}
@@ -74,7 +80,7 @@ function formatSheetRow(sheetName?: string | null, rowIndex?: number | null, col
   return parts.length > 0 ? parts.join(" · ") : "-";
 }
 
-function formatPageSection(pageNumber?: number | null, sectionTitle?: string | null, paragraphId?: string | null, chunkId?: string | null) {
+function formatPageSection(pageNumber?: number | null, sectionTitle?: string | null, paragraphId?: number | null, chunkId?: number | null) {
   const parts = [
     pageNumber !== undefined && pageNumber !== null ? `page=${pageNumber}` : null,
     sectionTitle ? `section=${sectionTitle}` : null,

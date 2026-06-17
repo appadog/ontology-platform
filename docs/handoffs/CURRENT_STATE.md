@@ -4,8 +4,8 @@
 
 ## Latest Wave
 
-- Current wave: `wave-006`
-- Overall status: `MVP 1 APP ACCEPTANCE CLOSED / MVP 2 IMPLEMENTATION KICKOFF READY`
+- Current wave: `wave-007`
+- Overall status: `MVP 2 WAVE 6 THIN SLICE PARTIAL / FE CONTRACT SYNC REQUIRED`
 - 기준일: 2026-06-17
 
 ## Latest Decisions
@@ -14,6 +14,12 @@
 - Docker CLI absence is approved as an environment exception for MVP 1 closeout. Compose smoke remains a follow-up infra gate, not an MVP 1 app acceptance blocker.
 - Headless Chrome render evidence plus actual API write smoke is accepted as `INT-005` browser/manual UAT evidence. Full click automation remains a follow-up when tooling is available.
 - MVP 2 implementation may begin in Wave 6, starting with contract hardening plus the first thin Backend/Frontend slices for profiling, segments, prompts, extraction jobs, and deterministic mock extraction.
+- Wave 6 PM contract hardening and Backend thin slice are accepted as PASS.
+- Wave 6 Frontend mock/navigation slice is accepted as PASS for mock exploration, but actual API mode remains PARTIAL until FE types/client/fixtures match `docs/api/openapi-mvp2-draft.json`.
+- Provider API literal for MVP 2 thin slice is `mock`; `MockProvider` may be used as UI display label only.
+- `POST /api/v1/sources/{source_id}/parse` canonical response is `SourceParseResponse`, not `SourceSegment[]`.
+- `GET /api/v1/extraction-jobs/{job_id}` remains the MVP 2 detail boundary for `model_runs[]`.
+- Wave 7 must close FE/OpenAPI contract mismatch before broadening MVP 2 implementation.
 - `/api/v1/dashboard` is not part of MVP 1 actual API contract. Frontend actual API mode must compute dashboard data from P0 APIs or keep dashboard mock-only/P1 boundary.
 - `docs/api/openapi-mvp1.json` is the MVP 1 canonical OpenAPI export artifact.
 - Source delete uses internal `is_deleted` soft delete; `SourceStatus` enum is not extended for delete/archive in MVP 1.
@@ -42,14 +48,16 @@
 | MVP 1 App Acceptance | Closed. Backend regression, OpenAPI freshness, actual FE-to-BE smoke, ontology authoring smoke, source preview smoke, and UAT evidence accepted. | INT-001, INT-003, INT-005 |
 | Infra | Docker CLI 부재로 Compose 실제 `up` 검증 미수행. 총괄 환경 예외 승인, 후속 gate로 유지. | BE-002 |
 | Browser Automation | Headless render evidence accepted. Full click automation is useful but no longer blocks MVP 1 closeout. | INT-005 |
-| MVP 2 Contract | `SourceSegment`, `SourceProfileColumn`, `ExtractionJob.status`, evidence policy, raw payload masking, candidate filters require Wave 6 hardening. | PM2-001~PM2-005, BE2-001~BE2-007, INT2-001 |
+| MVP 2 Backend Thin Slice | Backend profile/parse/prompt/job/mock extraction/candidate/evidence smoke PASS. | BE2-001~BE2-007, BE2-009 |
+| MVP 2 FE Contract Sync | FE `SourceProfile`, `SourceSegment`, `SourceParseResponse`, `PromptVersion`, provider literal, candidate/evidence DTOs do not fully match OpenAPI. | FE2-001~FE2-006, INT2-001~INT2-003 |
+| MVP 2 Evidence Fixture | `INVALID_EVIDENCE_REFERENCE` policy is documented but lacks deterministic runtime fixture/test hook. | PM2-003, PM2-005, BE2-007, INT2-002 |
 
 ## Next Gate
 
-1. PM: Lock MVP 2 user flow, evidence policy, enum/status policy, and mock provider acceptance.
-2. Backend: Implement the first MVP 2 thin slice: SourceSegment/profile/parse contract plus prompt/job/model-run/mock-provider/candidate scaffold as ordered.
-3. Frontend: Add MVP 2 navigation and mock/API boundary for profiling, chunks, extraction jobs, candidate results, and evidence.
-4. QA: Prepare MVP 2 contract tests and deterministic fixtures; verify MVP 1 remains green.
+1. PM: Confirm provider literal/display split, parse response shape, retry dedupe scope, and invalid evidence fixture policy.
+2. Frontend: Re-sync MVP 2 types/client/fixtures/screens against `docs/api/openapi-mvp2-draft.json`; send provider `mock`.
+3. Backend: Keep backend API stable, add/clarify examples and invalid evidence fixture/test hook if PM approves.
+4. QA: Re-run INT2-001/002/003 actual FE-to-BE smoke after FE sync; keep INT2-004 regression.
 
 ## Latest Role Reports
 
@@ -71,6 +79,10 @@
 | Backend | wave-005 | `PASS / NO BACKEND CHANGE REQUIRED` | Regression PASS, OpenAPI freshness PASS, `/api/v1/dashboard` remains excluded |
 | Frontend | wave-005 | `PASS / ACTUAL API BOUNDARY CLOSED` | Dashboard mismatch fixed, ontology authoring API smoke PASS |
 | QA | wave-005 | `PASS WITH ENVIRONMENT EXCEPTION` | INT-003 PASS, INT-001 app acceptance PASS, INT-005 evidence accepted; Docker follow-up |
+| PM | wave-006 | `PASS / MVP2 CONTRACT HARDENED` | Enum/status/evidence/mock/masking decisions recorded |
+| Backend | wave-006 | `PASS / MVP2 THIN API READY` | Source profiling, parse, prompt, extraction, mock provider, candidate/evidence scaffold PASS |
+| Frontend | wave-006 | `PASS / MOCK NAVIGATION READY` | MVP2 routes and mock/API boundary added; actual API smoke not closed |
+| QA | wave-006 | `PARTIAL / FE CONTRACT SYNC REQUIRED` | Backend MVP2 smoke PASS; INT2-001 FAIL, INT2-002/003 PARTIAL, INT2-004 PASS |
 
 ## Report Index
 
@@ -81,4 +93,5 @@
 | wave-003 | `wave-003/PM_REPORT.md` | `wave-003/BACKEND_REPORT.md` | `wave-003/FRONTEND_REPORT.md` | `wave-003/QA_REPORT.md` | `wave-003/NEXT_ORDERS.md` |
 | wave-004 | `wave-004/PM_REPORT.md` | `wave-004/BACKEND_REPORT.md` | `wave-004/FRONTEND_REPORT.md` | `wave-004/QA_REPORT.md` | `wave-004/NEXT_ORDERS.md` |
 | wave-005 | `wave-005/PM_REPORT.md` | `wave-005/BACKEND_REPORT.md` | `wave-005/FRONTEND_REPORT.md` | `wave-005/QA_REPORT.md` | `wave-005/NEXT_ORDERS.md` |
-| wave-006 | `wave-006/PM_REPORT.md` | `wave-006/BACKEND_REPORT.md` | `wave-006/FRONTEND_REPORT.md` | `wave-006/QA_REPORT.md` | pending |
+| wave-006 | `wave-006/PM_REPORT.md` | `wave-006/BACKEND_REPORT.md` | `wave-006/FRONTEND_REPORT.md` | `wave-006/QA_REPORT.md` | `wave-006/NEXT_ORDERS.md` |
+| wave-007 | `wave-007/PM_REPORT.md` | `wave-007/BACKEND_REPORT.md` | `wave-007/FRONTEND_REPORT.md` | `wave-007/QA_REPORT.md` | pending |

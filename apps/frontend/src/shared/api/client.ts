@@ -42,6 +42,7 @@ import {
   PromptTemplate,
   PromptVersion,
   SourceData,
+  SourceParseResponse,
   SourcePreview,
   SourceProfile,
   SourceSegment,
@@ -277,7 +278,7 @@ function filterCandidatesByJob<T extends CandidateEntity | CandidateRelation>(
   }
 
   return candidates.filter((candidate) => {
-    if (candidate.model_run_id && !mockModelRuns.some((run) => run.id === candidate.model_run_id && run.extraction_job_id === jobId)) {
+    if (candidate.extraction_job_id !== jobId) {
       return false;
     }
     if (filters.source_id && candidate.source_id !== filters.source_id) {
@@ -300,6 +301,18 @@ function buildMockJobDetail(job: ExtractionJob): ExtractionJobDetail {
   return {
     ...job,
     model_runs: mockModelRuns.filter((run) => run.extraction_job_id === job.id),
+  };
+}
+
+function buildMockParseResponse(sourceId: string): SourceParseResponse {
+  const segments = mockSegmentStore[sourceId] ?? [];
+  const segmentTypes = [...new Set(segments.map((segment) => segment.segment_type))];
+
+  return {
+    source_id: sourceId,
+    segment_count: segments.length,
+    segment_types: segmentTypes,
+    warnings: segments.length === 0 ? ["No deterministic segments are available for this source fixture."] : [],
   };
 }
 
@@ -688,12 +701,12 @@ export const apiClient = {
     return request<SourceProfile>(`/api/v1/sources/${sourceId}/profile`);
   },
 
-  async parseSource(sourceId: string): Promise<SourceSegment[]> {
+  async parseSource(sourceId: string): Promise<SourceParseResponse> {
     if (USE_MOCK_API) {
-      return delay(mockSegmentStore[sourceId] ?? []);
+      return delay(buildMockParseResponse(sourceId));
     }
 
-    return jsonRequest<SourceSegment[]>(`/api/v1/sources/${sourceId}/parse`, {
+    return jsonRequest<SourceParseResponse>(`/api/v1/sources/${sourceId}/parse`, {
       method: "POST",
       body: JSON.stringify({}),
     });
@@ -732,8 +745,9 @@ export const apiClient = {
         source_id: payload.source_id,
         ontology_version_id: payload.ontology_version_id,
         prompt_version_id: payload.prompt_version_id,
-        provider: payload.provider,
-        model_name: payload.model_name,
+        provider: payload.provider ?? "mock",
+        model_name: payload.model_name ?? "mock-deterministic",
+        fixture_id: payload.fixture_id ?? "default",
         status: "PENDING",
         progress: 0,
         created_at: now,
@@ -882,6 +896,6 @@ export const apiClient = {
     }
 
     const job = await request<ExtractionJobDetail>(`/api/v1/extraction-jobs/${jobId}`);
-    return job.model_runs;
+    return job.model_runs ?? [];
   },
 };

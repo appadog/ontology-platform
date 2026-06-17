@@ -123,7 +123,16 @@ class SourceProfile(BaseModel):
                         "distinct_count_sampled": 2,
                         "sample_values": ["Acme Corp", "Beta LLC"],
                         "candidate_key_score": 1.0,
-                    }
+                    },
+                    {
+                        "name": "employee_count",
+                        "inferred_type": "INTEGER",
+                        "nullable": True,
+                        "null_ratio": 0.05,
+                        "distinct_count_sampled": 18,
+                        "sample_values": [42, 7, 13],
+                        "candidate_key_score": 0.0,
+                    },
                 ],
                 "row_count": 20,
                 "sample_size": 20,
@@ -164,7 +173,7 @@ class SourceParseResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "source_id": "source-demo-csv",
-                "segment_count": 5,
+                "segment_count": 7,
                 "segment_types": ["SHEET", "ROW", "CELL"],
                 "warnings": [],
             }

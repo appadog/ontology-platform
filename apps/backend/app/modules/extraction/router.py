@@ -334,7 +334,11 @@ def _persist_candidates(
         evidence_ids: list[str] = []
         source_segment_id = None
 
-        if payload.get("force_missing_evidence") or not text_segments:
+        if payload.get("force_invalid_evidence_reference"):
+            validation_status = ValidationStatus.FAILED
+            validation_codes.append(CandidateValidationCode.INVALID_EVIDENCE_REFERENCE.value)
+            evidence_ids.append("invalid-evidence-reference")
+        elif payload.get("force_missing_evidence") or not text_segments:
             validation_status = ValidationStatus.WARNING
             validation_codes.append(CandidateValidationCode.MISSING_EVIDENCE.value)
         else:
@@ -361,7 +365,11 @@ def _persist_candidates(
             property_values={},
             confidence=payload.get("confidence", 0.0),
             evidence_ids=evidence_ids,
-            raw_payload={"fixture_id": job.fixture_id, "provider_index": index},
+            raw_payload={
+                "fixture_id": job.fixture_id,
+                "provider_index": index,
+                "client_candidate_id": payload.get("client_candidate_id"),
+            },
             validation_status=validation_status,
             validation_codes=validation_codes,
             review_status=CandidateReviewStatus.PENDING,
@@ -418,7 +426,11 @@ def _persist_candidates(
             target_candidate_entity_id=target_entity.id if target_entity else None,
             confidence=payload.get("confidence", 0.0),
             evidence_ids=evidence_ids,
-            raw_payload={"fixture_id": job.fixture_id, "provider_index": index},
+            raw_payload={
+                "fixture_id": job.fixture_id,
+                "provider_index": index,
+                "client_candidate_id": payload.get("client_candidate_id"),
+            },
             validation_status=validation_status,
             validation_codes=validation_codes,
             review_status=CandidateReviewStatus.PENDING,

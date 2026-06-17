@@ -4,6 +4,8 @@ Status: `READY FOR WAVE 6 IMPLEMENTATION KICKOFF / CONTRACT STILL DRAFT`
 
 This document is still a contract draft, but Wave 5 closed MVP 1 app acceptance with an accepted Docker environment exception. Wave 6 may implement thin slices from this contract while reporting any enum, DTO, status lifecycle, evidence, or privacy issue before expanding scope.
 
+Wave 7 is a contract sync closeout wave. It keeps backend runtime shape stable and aligns Frontend actual API mode to `docs/api/openapi-mvp2-draft.json`; it does not open candidate detail drawer, evidence highlight, advanced PDF parsing, external LLM provider, review/publish, or RAG scope.
+
 ## MVP 2 API Entry Gate
 
 - MVP 1 `docs/api/openapi-mvp1.json` is fresh and remains the canonical MVP 1 artifact.
@@ -24,6 +26,17 @@ This document is still a contract draft, but Wave 5 closed MVP 1 app acceptance 
 | P0 | ModelRun | provider/model/prompt/version execution metadata |
 | P0 | Mock LLM Provider | deterministic local extraction |
 | P0 | CandidateEntity / CandidateRelation / CandidateEvidence | candidate graph persistence |
+
+## Provider Literal / Display Split
+
+MVP 2 thin slice provider API literal is `mock`.
+
+```text
+API request/response value: mock
+UI display label: MockProvider
+```
+
+`MockProvider` is not accepted as a provider API value in Wave 7. Frontend must send `provider: "mock"` in `ExtractionJobCreateRequest`; it may display `MockProvider` in labels, chips, and selects.
 
 ## MVP 2 Enum Binding
 
@@ -50,6 +63,8 @@ MVP 2에서는 review/publish workflow를 구현하지 않는다. Candidate `rev
 | GET | `/api/v1/sources/{source_id}/profile` | profile result 조회 |
 | POST | `/api/v1/sources/{source_id}/parse` | document parsing/chunking 실행 |
 | GET | `/api/v1/sources/{source_id}/segments` | source segment/chunk 목록 조회 |
+
+`POST /api/v1/sources/{source_id}/parse` returns `SourceParseResponse`. It does not return `SourceSegment[]`. Use `GET /api/v1/sources/{source_id}/segments` to fetch the parsed segment list.
 
 ### Prompt
 
@@ -80,6 +95,8 @@ MVP 2에서는 review/publish workflow를 구현하지 않는다. Candidate `rev
 
 Candidate list endpoints must support `limit`, `offset`, `source_id`, `ontology_version_id`, `validation_status`, and `has_evidence` query filters before the contract is considered ready for FE actual API mode.
 
+Wave 7 keeps candidate list response shape as plain arrays: `CandidateEntity[]` and `CandidateRelation[]`. Do not introduce `CandidateEntityListResponse` or `CandidateRelationListResponse` wrappers in this sync wave. `limit`/`offset` are request parameters only; `total_count` and cursor metadata are deferred until a later pagination hardening wave.
+
 ## Key DTO Draft
 
 ### SourceSegment
@@ -88,6 +105,7 @@ Candidate list endpoints must support `limit`, `offset`, `source_id`, `ontology_
 id
 source_id
 segment_type
+sequence
 row_index
 column_name
 page_number
@@ -104,6 +122,7 @@ created_at
 ### SourceProfile
 
 ```text
+id
 source_id
 columns[]
 row_count
@@ -117,13 +136,66 @@ created_at
 ```text
 name
 inferred_type
+nullable
 null_ratio
-distinct_count
+distinct_count_sampled
 sample_values[]
 candidate_key_score
 ```
 
 `inferred_type` uses `ProfileInferredType`.
+
+### SourceParseResponse
+
+```text
+source_id
+segment_count
+segment_types[]
+warnings[]
+```
+
+`segment_types[]` uses `SourceSegmentType`. This response is a parse summary. It intentionally omits `segments[]` so large parsed source payloads are fetched through `GET /api/v1/sources/{source_id}/segments`.
+
+### PromptTemplate
+
+```text
+id
+project_id
+name
+description
+created_at
+updated_at
+```
+
+`active_version_id` is not part of the MVP 2 API DTO. Frontend may compute active display state from `PromptVersion.is_active`.
+
+### PromptVersion
+
+```text
+id
+prompt_template_id
+version
+template
+output_schema
+is_active
+created_at
+created_by
+```
+
+`status`, `prompt_id`, and `prompt_text` are not MVP 2 API fields. Frontend uses `prompt_template_id`, `template`, and `is_active`.
+
+### ExtractionJobCreateRequest
+
+```text
+source_id
+ontology_version_id
+prompt_version_id
+provider
+model_name
+fixture_id
+```
+
+`provider` defaults to `mock` and only accepts `mock` in the MVP 2 thin slice. `fixture_id` is optional and defaults to `default`.
 
 ### ExtractionJob
 
@@ -135,6 +207,7 @@ ontology_version_id
 prompt_version_id
 provider
 model_name
+fixture_id
 status
 progress
 created_at
@@ -153,6 +226,16 @@ PENDING -> QUEUED -> RUNNING -> PARTIAL_FAILED
 PENDING -> QUEUED -> RUNNING -> FAILED
 FAILED/PARTIAL_FAILED -> RETRYING -> QUEUED -> RUNNING
 ```
+
+Retry behavior:
+
+- `POST /api/v1/extraction-jobs/{job_id}/retry` creates a new `ExtractionJob` with `retry_of_job_id` pointing to the source job.
+- The no-duplicate natural key scope is the full retry chain, not only a single job.
+- The retry root is the oldest ancestor whose `retry_of_job_id` is null.
+- Candidate natural key: `retry_root_job_id`, `provider`, `fixture_id`, `source_id`, `ontology_version_id`, `prompt_version_id`, candidate kind (`entity` or `relation`), and provider stable `client_candidate_id`.
+- If the provider output lacks `client_candidate_id`, MockProvider thin slice derives it from fixture id, candidate kind, and provider output index.
+- Evidence natural key: `retry_root_job_id`, `provider`, `fixture_id`, `source_id`, `source_segment_id`, provider stable `client_evidence_id` or deterministic segment locator.
+- A retry must not create duplicate candidate/evidence records for the same retry-chain natural key. It should reuse or upsert the existing natural key record, or otherwise make duplicates invisible to list responses.
 
 ### ModelRun
 
@@ -307,6 +390,7 @@ Backend maps `client_candidate_id` and `client_evidence_id` to persistent IDs. M
 - A candidate without evidence may be persisted only to preserve provider output for debugging/QA. It must have `validation_status=WARNING`, `validation_codes=["MISSING_EVIDENCE"]`, `evidence_ids=[]`, and `publish_status=NOT_PUBLISHED`.
 - A candidate with a broken source/evidence reference must have `validation_status=FAILED` and `validation_codes=["INVALID_EVIDENCE_REFERENCE"]`.
 - `validation_status=PASSED` requires valid evidence references and schema-conformant candidate fields.
+- Wave 7 requires a deterministic fixture or backend test hook that can produce `INVALID_EVIDENCE_REFERENCE` without opening review/publish/RAG scope. Preferred fixture id: `invalid_evidence_reference`.
 
 ## MockProvider Determinism
 
@@ -314,8 +398,9 @@ Backend maps `client_candidate_id` and `client_evidence_id` to persistent IDs. M
 - The same source, ontology version, prompt version, fixture id, and fixture content must produce the same candidate content and evidence locators.
 - `extraction_job_id` and `model_run_id` may differ per run, but fixture-derived candidate natural keys must be stable.
 - Missing fixture produces `ExtractionJob.status=FAILED` with `error_code=MOCK_FIXTURE_NOT_FOUND`.
+- Invalid evidence fixture produces at least one persisted candidate with `validation_status=FAILED`, `validation_codes=["INVALID_EVIDENCE_REFERENCE"]`, and a broken or unresolved evidence/source segment reference. This fixture exists for contract/QA smoke only and must not be exposed as a product workflow.
 - Partially invalid fixture output produces `ExtractionJob.status=PARTIAL_FAILED` with valid candidates persisted and invalid candidates marked with validation status/code.
-- Retry must not duplicate candidates for the same job/source/ontology/prompt/fixture natural key.
+- Retry must not duplicate candidates for the same retry-chain natural key.
 
 ## Raw Payload Masking
 

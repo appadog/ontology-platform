@@ -252,18 +252,20 @@ export interface SourcePreview {
 export interface SourceProfileColumn {
   name: string;
   inferred_type: ProfileInferredType;
+  nullable: boolean;
   null_ratio: number;
-  distinct_count: number;
-  sample_values: Array<string | number | boolean | null>;
+  distinct_count_sampled: number;
+  sample_values: unknown[];
   candidate_key_score: number;
 }
 
 export interface SourceProfile {
+  id: string;
   source_id: string;
   columns: SourceProfileColumn[];
   row_count: number;
   sample_size: number;
-  warnings: string[];
+  warnings?: string[];
   created_at: string;
 }
 
@@ -271,6 +273,7 @@ export interface SourceSegment {
   id: string;
   source_id: string;
   segment_type: SourceSegmentType;
+  sequence: number;
   row_index?: number | null;
   column_name?: string | null;
   page_number?: number | null;
@@ -278,8 +281,15 @@ export interface SourceSegment {
   paragraph_index?: number | null;
   chunk_index?: number | null;
   text?: string | null;
-  metadata?: Record<string, string | number | boolean | null>;
+  metadata?: Record<string, unknown>;
   created_at: string;
+}
+
+export interface SourceParseResponse {
+  source_id: string;
+  segment_count: number;
+  segment_types: SourceSegmentType[];
+  warnings?: string[];
 }
 
 export interface PromptTemplate {
@@ -287,17 +297,19 @@ export interface PromptTemplate {
   project_id: string;
   name: string;
   description: string | null;
-  active_version_id: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface PromptVersion {
   id: string;
-  prompt_id: string;
+  prompt_template_id: string;
   version: number;
-  status: "DRAFT" | "ACTIVE" | "ARCHIVED";
-  prompt_text: string;
+  template: string;
+  output_schema: Record<string, unknown>;
+  is_active: boolean;
   created_at: string;
+  created_by: string;
 }
 
 export interface ExtractionJob {
@@ -306,9 +318,9 @@ export interface ExtractionJob {
   source_id: string;
   ontology_version_id: string;
   prompt_version_id: string;
-  provider: "MockProvider" | string;
+  provider: string;
   model_name: string;
-  fixture_id?: string | null;
+  fixture_id: string | null;
   status: ExtractionJobStatus;
   progress: number;
   created_at: string;
@@ -325,8 +337,9 @@ export interface ExtractionJobCreateRequest {
   source_id: string;
   ontology_version_id: string;
   prompt_version_id: string;
-  provider: "MockProvider";
-  model_name: string;
+  provider?: "mock";
+  model_name?: string;
+  fixture_id?: string | null;
 }
 
 export interface ModelRun {
@@ -344,26 +357,27 @@ export interface ModelRun {
   masking_version: string;
   redaction_summary: Record<string, unknown>;
   status: ModelRunStatus;
-  started_at: string;
+  started_at: string | null;
   ended_at: string | null;
 }
 
 export interface ExtractionJobDetail extends ExtractionJob {
-  model_runs: ModelRun[];
+  model_runs?: ModelRun[];
 }
 
 export interface CandidateEntity {
   id: string;
+  extraction_job_id: string;
   project_id: string;
   source_id: string;
   source_segment_id: string | null;
   ontology_version_id: string;
   model_run_id: string;
   prompt_version_id: string;
-  class_id: string;
+  class_id: string | null;
   entity_name: string;
-  normalized_name: string;
-  property_values: Record<string, string | number | boolean | null>;
+  normalized_name: string | null;
+  property_values: Record<string, unknown>;
   confidence: number;
   evidence_ids: string[];
   raw_payload: Record<string, unknown>;
@@ -376,15 +390,16 @@ export interface CandidateEntity {
 
 export interface CandidateRelation {
   id: string;
+  extraction_job_id: string;
   project_id: string;
   source_id: string;
   source_segment_id: string | null;
   ontology_version_id: string;
   model_run_id: string;
   prompt_version_id: string;
-  source_candidate_entity_id: string;
-  relation_id: string;
-  target_candidate_entity_id: string;
+  source_candidate_entity_id: string | null;
+  relation_id: string | null;
+  target_candidate_entity_id: string | null;
   confidence: number;
   evidence_ids: string[];
   raw_payload: Record<string, unknown>;
@@ -398,7 +413,7 @@ export interface CandidateRelation {
 export interface CandidateEvidence {
   id: string;
   source_id: string;
-  source_segment_id: string;
+  source_segment_id: string | null;
   source_type: SourceType;
   file_name: string;
   sheet_name?: string | null;
@@ -406,12 +421,13 @@ export interface CandidateEvidence {
   column_name?: string | null;
   page_number?: number | null;
   section_title?: string | null;
-  paragraph_id?: string | null;
-  chunk_id?: string | null;
-  evidence_text: string;
+  paragraph_id?: number | null;
+  chunk_id?: number | null;
+  evidence_text?: string | null;
   start_offset?: number | null;
   end_offset?: number | null;
-  metadata?: Record<string, string | number | boolean | null>;
+  metadata?: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface CandidateListFilters {
