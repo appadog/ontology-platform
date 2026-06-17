@@ -131,32 +131,32 @@ PM-001/002/003
 
 MVP 1 closeout은 아래 항목이 PASS이거나 PM이 명시적으로 예외 승인한 경우에만 완료로 판정한다. Backend 단독 API smoke, frontend mock route smoke, 문서 검토만으로는 full closeout이 아니다.
 
-- [ ] `docs/api/openapi-mvp1.json`이 최신 backend OpenAPI export와 일치한다.
-- [ ] Backend P0 API smoke가 통과한다: `/health`, `/api/v1/me`, Project, Ontology version/class/property/relation/graph, Source upload/list/detail/preview.
-- [ ] Frontend actual API mode에서 `/api/v1/dashboard`를 호출하지 않는다. Dashboard summary는 P0 API 조합으로 계산하거나 mock-only/P1 boundary로 둔다.
-- [ ] `VITE_USE_MOCK_API=false` actual FE-to-BE Source list/detail/upload/preview smoke가 통과한다.
-- [ ] Ontology draft/class/property/relation 작성 흐름이 actual API mode에서 최소 1회 검증된다.
-- [ ] `SourceStatus`와 `SourcePreviewStatus`가 API, FE type, fixture, UI badge에서 분리되어 표시된다.
-- [ ] `OntologyGraph.nodes[]`, `edges[]`, `properties[]`가 FE/QA canonical graph contract로 사용된다. `classes[]`, `relations[]`는 optional/deprecated compatibility field로만 취급한다.
-- [ ] Browser click smoke가 통과한다. 자동 browser 도구가 없으면 동일 단계 manual UAT checklist, 실행 환경, 미수행 사유가 기록되고 PM 예외 승인 여부가 남는다.
-- [ ] INT-002 enum sync와 INT-003 OpenAPI contract review가 PASS 또는 문서화된 예외 상태다.
-- [ ] Docker Compose/local infra smoke가 통과하거나, Docker CLI 부재 같은 환경 blocker가 별도 예외로 승인된다.
-- [ ] MVP 2 구현 착수 금지/허용 조건이 `docs/pm/MVP2_PREP_BRIEF.md`, `docs/backlog/MVP2_DRAFT_BACKLOG.md`, `docs/api/API_CONTRACT_PRIORITY_MVP2_DRAFT.md`에 분리되어 있다.
+- [x] `docs/api/openapi-mvp1.json`이 최신 backend OpenAPI export와 일치한다.
+- [x] Backend P0 API smoke가 통과한다: `/health`, `/api/v1/me`, Project, Ontology version/class/property/relation/graph, Source upload/list/detail/preview.
+- [x] Frontend actual API mode에서 `/api/v1/dashboard`를 호출하지 않는다. Dashboard summary는 P0 API 조합으로 계산하거나 mock-only/P1 boundary로 둔다.
+- [x] `VITE_USE_MOCK_API=false` actual FE-to-BE Source list/detail/upload/preview smoke가 통과한다.
+- [x] Ontology draft/class/property/relation 작성 흐름이 actual API mode에서 최소 1회 검증된다.
+- [x] `SourceStatus`와 `SourcePreviewStatus`가 API, FE type, fixture, UI badge에서 분리되어 표시된다.
+- [x] `OntologyGraph.nodes[]`, `edges[]`, `properties[]`가 FE/QA canonical graph contract로 사용된다. `classes[]`, `relations[]`는 optional/deprecated compatibility field로만 취급한다.
+- [x] Browser click smoke가 통과한다. 자동 browser 도구가 없으면 동일 단계 manual UAT checklist, 실행 환경, 미수행 사유가 기록되고 PM 예외 승인 여부가 남는다. Wave 5에서 actual API write smoke와 Headless Chrome render evidence를 총괄이 수용했다.
+- [x] INT-002 enum sync와 INT-003 OpenAPI contract review가 PASS 또는 문서화된 예외 상태다.
+- [x] Docker Compose/local infra smoke가 통과하거나, Docker CLI 부재 같은 환경 blocker가 별도 예외로 승인된다. Wave 5에서 Docker CLI 부재를 환경 예외로 승인했다.
+- [x] MVP 2 구현 착수 금지/허용 조건이 `docs/pm/MVP2_PREP_BRIEF.md`, `docs/backlog/MVP2_DRAFT_BACKLOG.md`, `docs/api/API_CONTRACT_PRIORITY_MVP2_DRAFT.md`에 분리되어 있다.
 
 ## MVP 1 Remaining Blockers
 
 | Blocker | 현재 판정 | Closeout에 필요한 조치 | 담당/연결 |
 |---|---|---|---|
-| Frontend dashboard actual API boundary | Open | `/api/v1/dashboard` 실제 호출 제거. P0 API 조합 계산 또는 mock-only/P1 boundary 적용. Backend endpoint 추가 없음. | FE-013, INT-003 |
-| Frontend graph compatibility nullable precision | Open | `OntologyGraph.classes`/`relations`가 compatibility field로 남는 경우 OpenAPI nullable optional shape와 FE type이 일치해야 한다. 신규 UI 기준은 canonical `nodes`/`edges`/`properties`. | FE-009, INT-003 |
-| Ontology authoring actual API smoke | Open | draft/class/property/relation 생성/수정 wrapper와 최소 UI action을 `VITE_USE_MOCK_API=false`에서 검증한다. | FE-014, INT-001 |
-| Browser/manual UAT evidence | Open | Browser click smoke를 수행하거나, 수동 UAT checklist와 미수행 사유를 `INT-001` evidence에 남긴다. | INT-005, QA |
-| Docker Compose/local infra smoke | Environment blocker | Docker CLI가 있는 환경에서 compose smoke를 수행하거나 PM 예외로 분리한다. | BE-002, QA |
-| INT-001 full pass | Partial | Backend full API, FE actual API, ontology authoring, source upload/preview, browser/manual UAT 증거가 모두 모여야 PASS. | INT-001 |
+| Frontend dashboard actual API boundary | Resolved | Wave 5 FE/QA에서 `/api/v1/dashboard` 실제 호출 제거와 P0 API 조합 dashboard render를 확인했다. Backend endpoint 추가 없음. | FE-013, INT-003 |
+| Frontend graph compatibility nullable precision | Resolved | Wave 5 FE/QA에서 `OntologyGraph.classes`/`relations` nullable optional compatibility type을 확인했다. 신규 UI 기준은 canonical `nodes`/`edges`/`properties`. | FE-009, INT-003 |
+| Ontology authoring actual API smoke | Resolved | Wave 5 FE/QA에서 draft/class/property/relation 생성 actual API smoke를 확인했다. | FE-014, INT-001 |
+| Browser/manual UAT evidence | Accepted | Wave 5 QA Headless Chrome render evidence와 actual API write smoke를 총괄이 `INT-005` evidence로 수용했다. Full click automation은 후속 tooling gate로 남긴다. | INT-005, QA |
+| Docker Compose/local infra smoke | Accepted environment exception | Docker CLI 부재를 MVP 1 closeout 환경 예외로 승인했다. Docker CLI가 있는 환경에서 compose smoke를 후속 수행한다. | BE-002, QA |
+| INT-001 full pass | Closed with environment exception | Backend full API, FE actual API, ontology authoring, source upload/preview, browser/manual evidence가 모였고 Docker만 환경 예외로 분리했다. | INT-001 |
 
 ## MVP 2 Entry Conditions
 
-MVP 2는 설계 초안 검토까지 가능하지만, 구현 지시는 MVP 1 closeout 전에는 내리지 않는다. 구현 착수 조건은 아래와 같다.
+MVP 2 구현 착수 조건은 Wave 5에서 충족되었다. Docker Compose 검증은 환경 예외로 분리되었으며, MVP 2는 Wave 6부터 얇은 구현 단위로 진행할 수 있다. 구현 착수 조건은 아래와 같다.
 
 - MVP 1 `INT-001`, `INT-002`, `INT-003`이 PASS이거나 PM 승인 예외 상태다.
 - `/api/v1/dashboard` 제외 결정이 FE actual API boundary에 반영되어 실제 API mode 404가 남지 않는다.
@@ -164,7 +164,7 @@ MVP 2는 설계 초안 검토까지 가능하지만, 구현 지시는 MVP 1 clos
 - `docs/api/openapi-mvp1.json`이 최신 canonical artifact이며 FE type/fixture와 sync 기준이 유지된다.
 - 남은 MVP 1 blocker가 MVP 2의 `SourceSegment`, `ExtractionJob`, `ModelRun`, `CandidateEvidence` domain model을 흔들지 않는다고 PM/Architecture가 판정한다.
 - Docker/infra 미검증이 남는 경우 MVP 2 착수 blocker인지 환경 예외인지 총괄 결정이 기록된다.
-- `docs/pm/MVP2_PREP_BRIEF.md`, `docs/backlog/MVP2_DRAFT_BACKLOG.md`, `docs/api/API_CONTRACT_PRIORITY_MVP2_DRAFT.md`는 `DRAFT / DESIGN REVIEW ONLY` 상태를 유지한다.
+- `docs/pm/MVP2_PREP_BRIEF.md`, `docs/backlog/MVP2_DRAFT_BACKLOG.md`, `docs/api/API_CONTRACT_PRIORITY_MVP2_DRAFT.md`는 `READY FOR WAVE 6 IMPLEMENTATION KICKOFF / CONTRACT STILL DRAFT` 상태다.
 
 ## Backend/Frontend Blockers
 

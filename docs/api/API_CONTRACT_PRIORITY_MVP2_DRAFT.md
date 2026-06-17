@@ -1,8 +1,8 @@
 # API Contract Priority MVP 2 Draft
 
-Status: `DRAFT / DESIGN REVIEW ONLY / DO NOT IMPLEMENT UNTIL MVP 1 ACCEPTANCE CLOSEOUT`
+Status: `READY FOR WAVE 6 IMPLEMENTATION KICKOFF / CONTRACT STILL DRAFT`
 
-This document is a contract draft for review only. It must not trigger backend endpoint implementation, database migration, frontend route work, worker setup, or provider integration until MVP 1 acceptance closeout is PASS or explicitly excepted by PM/Commander.
+This document is still a contract draft, but Wave 5 closed MVP 1 app acceptance with an accepted Docker environment exception. Wave 6 may implement thin slices from this contract while reporting any enum, DTO, status lifecycle, evidence, or privacy issue before expanding scope.
 
 ## MVP 2 API Entry Gate
 

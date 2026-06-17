@@ -4,20 +4,21 @@
 
 ## Latest Wave
 
-- Current wave: `wave-005`
-- Overall status: `MVP 1 ACCEPTANCE CLOSEOUT REQUIRED / MVP 2 PREP DRAFT READY`
+- Current wave: `wave-006`
+- Overall status: `MVP 1 APP ACCEPTANCE CLOSED / MVP 2 IMPLEMENTATION KICKOFF READY`
 - 기준일: 2026-06-17
 
 ## Latest Decisions
 
-- MVP 2 implementation must not begin until MVP 1 acceptance closeout is complete or PM explicitly grants an exception.
+- Wave 5 QA evidence is accepted for MVP 1 app acceptance closeout.
+- Docker CLI absence is approved as an environment exception for MVP 1 closeout. Compose smoke remains a follow-up infra gate, not an MVP 1 app acceptance blocker.
+- Headless Chrome render evidence plus actual API write smoke is accepted as `INT-005` browser/manual UAT evidence. Full click automation remains a follow-up when tooling is available.
+- MVP 2 implementation may begin in Wave 6, starting with contract hardening plus the first thin Backend/Frontend slices for profiling, segments, prompts, extraction jobs, and deterministic mock extraction.
 - `/api/v1/dashboard` is not part of MVP 1 actual API contract. Frontend actual API mode must compute dashboard data from P0 APIs or keep dashboard mock-only/P1 boundary.
-- Browser click smoke is preferred for INT-001; if automation is unavailable, QA must leave manual UAT evidence or explicit not-run reason.
 - `docs/api/openapi-mvp1.json` is the MVP 1 canonical OpenAPI export artifact.
 - Source delete uses internal `is_deleted` soft delete; `SourceStatus` enum is not extended for delete/archive in MVP 1.
 - Relation/edge cardinality uses the full Backend/OpenAPI `Cardinality` enum in Frontend for MVP 1.
 - `OntologyGraph.classes[]` and `relations[]` are optional/deprecated compatibility fields, not canonical required fields.
-- INT-001 full pass requires actual FE-to-BE smoke with `VITE_USE_MOCK_API=false`; Backend API full flow plus FE mock route smoke is only partial.
 - `hana-style-component` install script delay and npm audit findings are P2 dependency hardening follow-up, not MVP 1 release blockers.
 - MVP 1 UI style foundation is tracked as `FE-012`; this is a minimal token/primitive/layout/status/hana-adapter guide, not a large redesign.
 - 모든 역할 에이전트는 `.agents/skills/handoff-reporting/SKILL.md`를 작업 시작 전 읽고, 종료 시 지정된 `docs/handoffs/wave-XXX/{ROLE}_REPORT.md`에 보고서를 남긴다.
@@ -34,23 +35,21 @@
 → preview 확인
 ```
 
-## Current Blockers
+## Current Blockers / Follow-ups
 
 | Area | Blocker | Linked IDs |
 |---|---|---|
-| Backend | Backend Project/Ontology/Source API smoke PASS, OpenAPI export freshness PASS | BE-001, BE-003, BE-004, BE-005, BE-006, BE-007, BE-009, BE-010 |
-| Infra | Docker CLI 부재로 Compose 실제 `up` 검증 미수행 | BE-002 |
-| Frontend Contract | Dashboard client calls missing `/api/v1/dashboard`; graph compatibility nullable type precision remains | FE-008, FE-009, INT-003 |
-| Frontend Authoring | Actual API mode ontology authoring wrappers/UI not complete | FE-005, FE-014, INT-001 |
-| Frontend Integration | Browser interaction smoke not run; actual FE-to-BE route/API smoke passed only partially | FE-006, FE-007, INT-001, INT-005 |
-| QA | INT-001 and INT-003 remain PARTIAL | INT-001, INT-003 |
+| MVP 1 App Acceptance | Closed. Backend regression, OpenAPI freshness, actual FE-to-BE smoke, ontology authoring smoke, source preview smoke, and UAT evidence accepted. | INT-001, INT-003, INT-005 |
+| Infra | Docker CLI 부재로 Compose 실제 `up` 검증 미수행. 총괄 환경 예외 승인, 후속 gate로 유지. | BE-002 |
+| Browser Automation | Headless render evidence accepted. Full click automation is useful but no longer blocks MVP 1 closeout. | INT-005 |
+| MVP 2 Contract | `SourceSegment`, `SourceProfileColumn`, `ExtractionJob.status`, evidence policy, raw payload masking, candidate filters require Wave 6 hardening. | PM2-001~PM2-005, BE2-001~BE2-007, INT2-001 |
 
 ## Next Gate
 
-1. PM: Dashboard exclusion, UAT smoke rule, MVP 2 readiness docs review.
-2. Frontend: Remove/replace `/api/v1/dashboard` actual call, fix graph compatibility nullable type, add ontology authoring actual API boundary.
-3. Backend: Support only; no dashboard endpoint unless PM reopens contract.
-4. QA: Re-run INT-003 and INT-001, decide MVP 2 readiness.
+1. PM: Lock MVP 2 user flow, evidence policy, enum/status policy, and mock provider acceptance.
+2. Backend: Implement the first MVP 2 thin slice: SourceSegment/profile/parse contract plus prompt/job/model-run/mock-provider/candidate scaffold as ordered.
+3. Frontend: Add MVP 2 navigation and mock/API boundary for profiling, chunks, extraction jobs, candidate results, and evidence.
+4. QA: Prepare MVP 2 contract tests and deterministic fixtures; verify MVP 1 remains green.
 
 ## Latest Role Reports
 
@@ -68,6 +67,10 @@
 | Backend | wave-004 | `PASS / GRAPH COMPATIBILITY CLEANUP DONE` | OpenAPI required cleanup and freshness PASS |
 | Frontend | wave-004 | `PASS / CONTRACT FIXES AND STYLE FOUNDATION DONE` | API smoke partial, style guide done, browser click not run |
 | QA | wave-004 | `PARTIAL / INT-001 AND INT-003 REMAIN` | INT-002 PASS, INT-003 partial, INT-001 partial |
+| PM | wave-005 | `PASS / CLOSEOUT DOCS READY` | Dashboard exclusion, UAT rule, MVP 2 entry gate, ADR 0004 documented |
+| Backend | wave-005 | `PASS / NO BACKEND CHANGE REQUIRED` | Regression PASS, OpenAPI freshness PASS, `/api/v1/dashboard` remains excluded |
+| Frontend | wave-005 | `PASS / ACTUAL API BOUNDARY CLOSED` | Dashboard mismatch fixed, ontology authoring API smoke PASS |
+| QA | wave-005 | `PASS WITH ENVIRONMENT EXCEPTION` | INT-003 PASS, INT-001 app acceptance PASS, INT-005 evidence accepted; Docker follow-up |
 
 ## Report Index
 
@@ -77,4 +80,5 @@
 | wave-002 | `wave-002/PM_REPORT.md` | `wave-002/BACKEND_REPORT.md` | `wave-002/FRONTEND_REPORT.md` | `wave-002/QA_REPORT.md` | `wave-002/NEXT_ORDERS.md` |
 | wave-003 | `wave-003/PM_REPORT.md` | `wave-003/BACKEND_REPORT.md` | `wave-003/FRONTEND_REPORT.md` | `wave-003/QA_REPORT.md` | `wave-003/NEXT_ORDERS.md` |
 | wave-004 | `wave-004/PM_REPORT.md` | `wave-004/BACKEND_REPORT.md` | `wave-004/FRONTEND_REPORT.md` | `wave-004/QA_REPORT.md` | `wave-004/NEXT_ORDERS.md` |
-| wave-005 | `wave-005/PM_REPORT.md` | `wave-005/BACKEND_REPORT.md` | `wave-005/FRONTEND_REPORT.md` | `wave-005/QA_REPORT.md` | pending |
+| wave-005 | `wave-005/PM_REPORT.md` | `wave-005/BACKEND_REPORT.md` | `wave-005/FRONTEND_REPORT.md` | `wave-005/QA_REPORT.md` | `wave-005/NEXT_ORDERS.md` |
+| wave-006 | `wave-006/PM_REPORT.md` | `wave-006/BACKEND_REPORT.md` | `wave-006/FRONTEND_REPORT.md` | `wave-006/QA_REPORT.md` | pending |

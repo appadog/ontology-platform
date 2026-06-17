@@ -1,19 +1,19 @@
 # MVP 2 Draft Backlog
 
-Status: `DRAFT / DESIGN REVIEW ONLY / DO NOT IMPLEMENT UNTIL MVP 1 ACCEPTANCE CLOSEOUT`
+Status: `READY FOR WAVE 6 IMPLEMENTATION KICKOFF / CONTRACT STILL DRAFT`
 
-This backlog is a planning draft. It may be reviewed for scope, naming, DTO consistency, risk, and acceptance criteria, but it is not an implementation order. Backend, Frontend, and QA work starts only after MVP 1 closeout or an explicit PM/Commander exception.
+This backlog is now eligible for Wave 6 implementation kickoff. The contract is still draft, so Wave 6 must keep implementation thin and report any enum, DTO, job lifecycle, evidence, or privacy issue before expanding scope.
 
 ## MVP 2 Entry Gate
 
-- MVP 1 `INT-001`, `INT-002`, and `INT-003` are PASS or explicitly accepted as PM exceptions.
-- `/api/v1/dashboard` has been removed from Frontend actual API mode or isolated as mock-only/P1 boundary. Backend does not add the endpoint for MVP 1.
-- Source upload/list/detail/preview actual FE-to-BE smoke is PASS.
-- Ontology draft/class/property/relation actual API smoke is PASS.
-- Browser click smoke is PASS, or manual UAT evidence plus not-run reason is accepted by PM.
-- `docs/api/openapi-mvp1.json` remains the canonical and fresh MVP 1 OpenAPI artifact.
-- Remaining MVP 1 blockers do not change MVP 2 source/evidence/extraction/candidate domain assumptions.
-- Docker/local infra status is either PASS or documented as an accepted environment exception.
+- [x] MVP 1 `INT-001`, `INT-002`, and `INT-003` are PASS or explicitly accepted as PM exceptions.
+- [x] `/api/v1/dashboard` has been removed from Frontend actual API mode or isolated as mock-only/P1 boundary. Backend does not add the endpoint for MVP 1.
+- [x] Source upload/list/detail/preview actual FE-to-BE smoke is PASS.
+- [x] Ontology draft/class/property/relation actual API smoke is PASS.
+- [x] Browser click smoke is PASS, or manual UAT evidence plus not-run reason is accepted by PM.
+- [x] `docs/api/openapi-mvp1.json` remains the canonical and fresh MVP 1 OpenAPI artifact.
+- [x] Remaining MVP 1 blockers do not change MVP 2 source/evidence/extraction/candidate domain assumptions.
+- [x] Docker/local infra status is either PASS or documented as an accepted environment exception.
 
 ## PM Backlog
 

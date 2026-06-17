@@ -2,9 +2,9 @@
 
 ## Status
 
-`DRAFT / DESIGN REVIEW ONLY / DO NOT IMPLEMENT UNTIL MVP 1 ACCEPTANCE CLOSEOUT`
+`READY FOR WAVE 6 IMPLEMENTATION KICKOFF / CONTRACT STILL DRAFT`
 
-MVP 2 설계 준비 문서다. Wave 5 기준으로 이 문서는 architecture/design review까지만 허용하며, backend endpoint, migration, frontend route, worker, dependency 추가 같은 구현 지시는 내리지 않는다. 구현 착수 조건은 MVP 1 `INT-001`, `INT-002`, `INT-003`이 PASS 또는 PM 승인 예외 상태가 되는 것이다.
+MVP 2 설계 준비 문서다. Wave 5 기준으로 MVP 1 app acceptance는 통과했고 Docker Compose 검증은 환경 예외로 분리되었다. Wave 6부터 구현을 시작할 수 있지만, 이 문서의 계약은 아직 draft이므로 첫 wave는 계약 hardening과 얇은 end-to-end slice에 집중한다.
 
 ## MVP 2 Goal
 
@@ -22,11 +22,11 @@ MVP 2 설계 준비 문서다. Wave 5 기준으로 이 문서는 architecture/de
 - Docker Compose/local infra smoke PASS 또는 Docker CLI 부재 같은 환경 blocker가 PM 예외로 분리됨.
 - 남은 MVP 1 blocker가 MVP 2 `SourceSegment`, `ExtractionJob`, `ModelRun`, `CandidateEvidence` domain model을 흔들지 않음.
 
-## Implementation Hold
+## Implementation Gate
 
-- MVP 2 구현은 위 entry criteria가 충족되거나 총괄/PM이 명시 예외를 승인하기 전까지 시작하지 않는다.
-- MVP 2 draft 문서 보완, 용어/DTO 검토, 위험 식별, acceptance 초안 정리는 가능하다.
-- Backend/Frontend/QA에게 MVP 2 코드 작성, migration 생성, endpoint 추가, UI route 추가를 지시하지 않는다.
+- Wave 6 구현 착수 가능.
+- 첫 구현 범위는 SourceSegment/profile/parse, Prompt/ExtractionJob/ModelRun/MockProvider, candidate/evidence scaffold, Frontend mock/API boundary, QA deterministic fixtures로 제한한다.
+- Expert review, publish graph, RAG, automatic approval, large distributed processing은 여전히 제외한다.
 
 ## Scope
 
