@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     neo4j_password: str = "ontology-password"
     llm_provider: str = "mock"
     llm_api_key: str = ""
+    local_storage_path: str = ".local/storage"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

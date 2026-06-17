@@ -8,3 +8,4 @@ from app.modules.ontology.models import (  # noqa: E402,F401
     OntologyVersion,
 )
 from app.modules.project.models import Project  # noqa: E402,F401
+from app.modules.source.models import SourceData  # noqa: E402,F401

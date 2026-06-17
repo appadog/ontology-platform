@@ -1,6 +1,13 @@
 import { PropsWithChildren } from "react";
 import styled from "styled-components";
-import { ProjectStatus, SourceStatus, ValidationStatus, OntologyVersionStatus } from "../../api/types";
+import {
+  OntologyElementStatus,
+  OntologyVersionStatus,
+  ProjectStatus,
+  SourcePreviewStatus,
+  SourceStatus,
+  ValidationStatus,
+} from "../../api/types";
 
 type BadgeTone = "neutral" | "success" | "warning" | "danger" | "progress" | "muted";
 
@@ -8,7 +15,10 @@ interface HanaBadgeProps extends PropsWithChildren {
   tone?: BadgeTone;
 }
 
-const statusTone: Record<ProjectStatus | SourceStatus | ValidationStatus | OntologyVersionStatus, BadgeTone> = {
+const statusTone: Record<
+  ProjectStatus | SourceStatus | SourcePreviewStatus | ValidationStatus | OntologyVersionStatus | OntologyElementStatus,
+  BadgeTone
+> = {
   ACTIVE: "success",
   ARCHIVED: "muted",
   DELETED: "danger",
@@ -20,6 +30,9 @@ const statusTone: Record<ProjectStatus | SourceStatus | ValidationStatus | Ontol
   PROFILED: "success",
   EXTRACTION_READY: "success",
   FAILED: "danger",
+  PENDING: "progress",
+  READY: "success",
+  NOT_AVAILABLE: "muted",
   NOT_VALIDATED: "muted",
   PASSED: "success",
   WARNING: "warning",

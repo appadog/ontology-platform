@@ -76,7 +76,9 @@ INT-001의 기준 happy path는 아래 순서로 고정한다.
 | POST | `/api/v1/projects/{project_id}/sources/upload` | multipart 파일 업로드와 source metadata 생성 |
 | GET | `/api/v1/sources/{source_id}` | source 상세 |
 | GET | `/api/v1/sources/{source_id}/preview` | CSV/Excel sample preview |
-| DELETE | `/api/v1/sources/{source_id}` | source archive/delete |
+| DELETE | `/api/v1/sources/{source_id}` | source internal soft delete |
+
+Source list는 `source_type`, `preview_status`, `limit`, `offset` query를 지원할 수 있다. 삭제된 source는 list/detail/preview와 project `source_count`에서 제외한다.
 
 ## 3. DTO Draft
 
@@ -161,6 +163,8 @@ nodes[]
 edges[]
 properties[]
 ```
+
+`nodes[]`, `edges[]`, `properties[]`가 canonical graph payload다. Backend가 transition 기간에 `classes[]`, `relations[]`를 함께 반환할 수는 있지만, 이 둘은 compatibility field이며 FE/QA contract 판정 기준으로 사용하지 않는다.
 
 ### OntologyGraphNode
 
@@ -404,9 +408,12 @@ Backend OpenAPI examples and frontend `shared/mocks` fixtures must include the s
 - Enum 문자열은 `docs/pm/GLOSSARY.md`와 동일하게 쓴다.
 - Backend는 OpenAPI schema에 request/response DTO를 노출한다.
 - Frontend는 `shared/api`에 API client와 타입 경계를 둔다.
+- `OntologyGraph`의 canonical field는 `nodes`, `edges`, `properties`다. `classes`, `relations`는 backend compatibility field로만 허용하며 frontend 신규 구현과 QA contract review는 canonical field만 기준으로 삼는다.
 - Breaking change는 `docs/adr` 또는 API change note로 기록한다.
 - MVP 1 API는 candidate/review/publish를 구현하지 않지만, naming이 후속 확장을 막지 않아야 한다.
 - 모든 timestamp는 ISO 8601 문자열로 반환한다.
 - ID는 문자열 UUID를 기본값으로 둔다.
-- 삭제 API는 MVP 1에서 물리 삭제가 아니라 `ARCHIVED` 또는 `DELETED` 상태 변경으로 처리한다.
+- Project/Ontology 삭제 API는 MVP 1에서 물리 삭제가 아니라 `ARCHIVED` 또는 `DELETED` 상태 변경으로 처리한다.
+- Source delete는 `SourceStatus` enum을 늘리지 않고 backend internal `is_deleted` soft delete로 처리한다. 삭제된 source는 목록, 상세, preview, project `source_count`에서 제외하며 이후 detail/preview 조회는 not found로 간주한다.
 - TXT/PDF는 `SourcePreviewStatus=NOT_AVAILABLE`로 반환하고, CSV/Excel만 sample row preview를 제공한다.
+- `BE-010` OpenAPI/type sharing 결정: Backend는 `docs/api/openapi-mvp1.json`을 canonical OpenAPI export로 제공한다. Frontend는 이 파일에서 타입을 생성하거나 수동 동기화하며, QA는 이 파일을 INT-002/INT-003 contract review 기준으로 사용한다.

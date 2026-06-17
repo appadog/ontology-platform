@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.modules.ontology.models import OntologyVersion
 from app.modules.project.models import Project
 from app.modules.project.schemas import ProjectCreateRequest, ProjectDetail, ProjectSummary, ProjectUpdateRequest
+from app.modules.source.models import SourceData
 
 router = APIRouter(prefix="/projects", tags=["Project"])
 
@@ -18,6 +19,17 @@ def _ontology_version_count(db: Session, project_id: str) -> int:
     ) or 0
 
 
+def _source_count(db: Session, project_id: str) -> int:
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(SourceData)
+            .where(SourceData.project_id == project_id, SourceData.is_deleted.is_(False))
+        )
+        or 0
+    )
+
+
 def _to_summary(db: Session, project: Project) -> ProjectSummary:
     return ProjectSummary(
         id=project.id,
@@ -26,7 +38,7 @@ def _to_summary(db: Session, project: Project) -> ProjectSummary:
         status=project.status,
         created_at=project.created_at,
         updated_at=project.updated_at,
-        source_count=0,
+        source_count=_source_count(db, project.id),
         ontology_version_count=_ontology_version_count(db, project.id),
     )
 
@@ -38,7 +50,7 @@ def _to_detail(db: Session, project: Project) -> ProjectDetail:
         description=project.description,
         status=project.status,
         current_ontology_version_id=project.current_ontology_version_id,
-        source_count=0,
+        source_count=_source_count(db, project.id),
         ontology_version_count=_ontology_version_count(db, project.id),
         created_at=project.created_at,
         updated_at=project.updated_at,

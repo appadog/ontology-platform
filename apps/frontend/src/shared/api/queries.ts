@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
+import { ProjectCreateRequest, ProjectUpdateRequest, SourceUploadRequest } from "./types";
 
 export function useDashboardSummary() {
   return useQuery({
@@ -15,11 +16,36 @@ export function useProjects() {
   });
 }
 
+export function useCreateProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: ProjectCreateRequest) => apiClient.createProject(payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 export function useProject(projectId: string) {
   return useQuery({
     queryKey: ["projects", projectId],
     queryFn: () => apiClient.getProject(projectId),
     enabled: Boolean(projectId),
+  });
+}
+
+export function useUpdateProject(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: ProjectUpdateRequest) => apiClient.updateProject(projectId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 }
 
@@ -47,6 +73,20 @@ export function useSources(projectId: string) {
   });
 }
 
+export function useUploadSource(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: SourceUploadRequest) => apiClient.uploadSource(projectId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "sources"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 export function useSource(sourceId: string) {
   return useQuery({
     queryKey: ["sources", sourceId],
@@ -55,10 +95,10 @@ export function useSource(sourceId: string) {
   });
 }
 
-export function useSourcePreview(sourceId: string) {
+export function useSourcePreview(sourceId: string, enabled = true) {
   return useQuery({
     queryKey: ["sources", sourceId, "preview"],
     queryFn: () => apiClient.getSourcePreview(sourceId),
-    enabled: Boolean(sourceId),
+    enabled: Boolean(sourceId) && enabled,
   });
 }

@@ -1,9 +1,11 @@
 import {
   CandidateReviewStatus,
   ExtractionJobStatus,
+  OntologyElementStatus,
   OntologyVersionStatus,
   ProjectStatus,
   PublishStatus,
+  SourcePreviewStatus,
   SourceStatus,
   ValidationStatus,
 } from "../api/types";
@@ -11,6 +13,8 @@ import {
 export const PROJECT_STATUSES: ProjectStatus[] = ["DRAFT", "ACTIVE", "ARCHIVED", "DELETED"];
 
 export const ONTOLOGY_VERSION_STATUSES: OntologyVersionStatus[] = ["DRAFT", "PUBLISHED", "ARCHIVED"];
+
+export const ONTOLOGY_ELEMENT_STATUSES: OntologyElementStatus[] = ["DRAFT", "ACTIVE", "ARCHIVED", "DELETED"];
 
 export const SOURCE_STATUSES: SourceStatus[] = [
   "UPLOADED",
@@ -20,6 +24,8 @@ export const SOURCE_STATUSES: SourceStatus[] = [
   "EXTRACTION_READY",
   "FAILED",
 ];
+
+export const SOURCE_PREVIEW_STATUSES: SourcePreviewStatus[] = ["PENDING", "READY", "NOT_AVAILABLE", "FAILED"];
 
 export const CANDIDATE_REVIEW_STATUSES: CandidateReviewStatus[] = [
   "PENDING",

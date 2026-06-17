@@ -1,3 +1,4 @@
+import { FileText } from "lucide-react";
 import { useParams } from "react-router-dom";
 import styled from "styled-components";
 import { useSource, useSourcePreview } from "../shared/api/queries";
@@ -9,13 +10,14 @@ import { formatBytes, formatDateTime } from "../shared/lib/format";
 export function SourceDetailPage() {
   const { sourceId = "" } = useParams();
   const { data: source, isLoading, isError, refetch } = useSource(sourceId);
-  const { data: preview, isLoading: isPreviewLoading, isError: isPreviewError } = useSourcePreview(sourceId);
+  const shouldLoadPreview = source?.preview_status === "READY";
+  const { data: preview, isLoading: isPreviewLoading, isError: isPreviewError } = useSourcePreview(sourceId, shouldLoadPreview);
 
-  if (isLoading || isPreviewLoading) {
+  if (isLoading || (shouldLoadPreview && isPreviewLoading)) {
     return <PageState kind="loading" title="Source preview를 불러오는 중" description="파일 메타데이터와 CSV/Excel sample row를 준비하고 있습니다." />;
   }
 
-  if (isError || isPreviewError || !source || !preview) {
+  if (isError || !source || (shouldLoadPreview && (isPreviewError || !preview))) {
     return (
       <PageState
         kind="error"
@@ -50,27 +52,51 @@ export function SourceDetailPage() {
         </HanaCard>
         <HanaCard title="Preview summary">
           <MetaList>
+            <dt>Preview Status</dt>
+            <dd>{source.preview_status}</dd>
             <dt>Rows Sampled</dt>
-            <dd>{preview.row_count_sampled}</dd>
+            <dd>{preview?.row_count_sampled ?? "-"}</dd>
             <dt>Total Rows</dt>
-            <dd>{preview.total_row_count}</dd>
+            <dd>{preview?.total_row_count ?? "-"}</dd>
             <dt>Sheet</dt>
-            <dd>{preview.sheet_name ?? "N/A"}</dd>
+            <dd>{preview?.sheet_name ?? "N/A"}</dd>
             <dt>Warnings</dt>
-            <dd>{preview.warnings.length}</dd>
+            <dd>{preview?.warnings.length ?? "-"}</dd>
           </MetaList>
         </HanaCard>
       </DetailGrid>
-      {preview.rows.length === 0 ? (
+      {source.preview_status === "NOT_AVAILABLE" ? (
+        <PreviewNotice>
+          <FileText aria-hidden="true" />
+          <div>
+            <strong>Preview not available</strong>
+            <span>TXT/PDF source는 MVP 1에서 metadata만 제공하며 SourcePreviewStatus=NOT_AVAILABLE로 표시합니다.</span>
+          </div>
+        </PreviewNotice>
+      ) : source.preview_status === "PENDING" ? (
+        <PageState kind="empty" title="Preview 준비 중" description="CSV/Excel preview가 생성되면 SourcePreviewStatus=READY 상태로 table이 표시됩니다." />
+      ) : source.preview_status === "FAILED" ? (
+        <PageState kind="error" title="Preview 생성 실패" description="Backend preview job 또는 file parsing 상태를 확인하세요." />
+      ) : !preview || preview.rows.length === 0 ? (
         <PageState kind="empty" title="Preview row가 없습니다" description="CSV/Excel preview API가 sample rows를 반환하면 여기에 표시됩니다." />
       ) : (
         <HanaCard title="CSV/Excel sample rows" description="MVP 1에서는 sample preview만 표시하고 profiling 상세는 후속 작업으로 둡니다.">
+          <ColumnList>
+            {preview.columns.map((column) => (
+              <ColumnPill key={column.name}>
+                <strong>{column.name}</strong>
+                <span>
+                  {column.data_type} · {column.nullable ? "nullable" : "required"}
+                </span>
+              </ColumnPill>
+            ))}
+          </ColumnList>
           <PreviewTable>
             <table>
               <thead>
                 <tr>
                   {preview.columns.map((column) => (
-                    <th key={column}>{column}</th>
+                    <th key={column.name}>{column.name}</th>
                   ))}
                 </tr>
               </thead>
@@ -78,13 +104,20 @@ export function SourceDetailPage() {
                 {preview.rows.map((row, index) => (
                   <tr key={index}>
                     {preview.columns.map((column) => (
-                      <td key={column}>{row[column] ?? "-"}</td>
+                      <td key={column.name}>{row[column.name] ?? "-"}</td>
                     ))}
                   </tr>
                 ))}
               </tbody>
             </table>
           </PreviewTable>
+          {preview.warnings.length > 0 && (
+            <WarningList>
+              {preview.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </WarningList>
+          )}
         </HanaCard>
       )}
     </>
@@ -140,4 +173,60 @@ const PreviewTable = styled.div`
     font-size: 12px;
     text-transform: uppercase;
   }
+`;
+
+const PreviewNotice = styled.section`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.color.surfaceRaised};
+
+  svg {
+    width: 28px;
+    height: 28px;
+    color: ${({ theme }) => theme.color.textMuted};
+  }
+
+  div {
+    display: grid;
+    gap: 4px;
+  }
+
+  span {
+    color: ${({ theme }) => theme.color.textMuted};
+  }
+`;
+
+const ColumnList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 18px 18px 0;
+`;
+
+const ColumnPill = styled.div`
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.sm};
+
+  strong {
+    font-size: 13px;
+  }
+
+  span {
+    color: ${({ theme }) => theme.color.textMuted};
+    font-size: 12px;
+  }
+`;
+
+const WarningList = styled.ul`
+  margin: 0;
+  padding: 0 18px 18px 38px;
+  color: ${({ theme }) => theme.color.warning};
+  font-weight: 700;
 `;

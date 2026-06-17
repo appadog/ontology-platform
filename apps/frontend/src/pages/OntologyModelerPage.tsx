@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import ReactFlow, { Background, Controls, Edge, Node } from "react-flow-renderer";
 import styled from "styled-components";
 import { Plus, Search } from "lucide-react";
+import { useParams } from "react-router-dom";
 import { useOntologyGraph, useOntologyVersions } from "../shared/api/queries";
 import { mockProjects } from "../shared/mocks/fixtures";
 import { PageHeader } from "../shared/layout/PageHeader";
@@ -12,7 +13,8 @@ const currentProjectId = mockProjects[0].id;
 
 export function OntologyModelerPage() {
   const [selectedClassId, setSelectedClassId] = useState("class-policy");
-  const { data: versions, isLoading: isVersionsLoading, isError: isVersionsError } = useOntologyVersions(currentProjectId);
+  const { projectId = currentProjectId } = useParams();
+  const { data: versions, isLoading: isVersionsLoading, isError: isVersionsError } = useOntologyVersions(projectId);
   const versionId = versions?.[0]?.id ?? "";
   const { data: graph, isLoading, isError, refetch } = useOntologyGraph(versionId);
 
@@ -21,21 +23,21 @@ export function OntologyModelerPage() {
       return [];
     }
 
-    return graph.classes.map((ontologyClass) => ({
-      id: ontologyClass.id,
+    return graph.nodes.map((graphNode) => ({
+      id: graphNode.class_id,
       type: "default",
-      position: ontologyClass.position,
+      position: graphNode.position,
       data: {
         label: (
           <GraphNodeLabel>
-            <strong>{ontologyClass.label}</strong>
-            <span>{ontologyClass.name}</span>
-            <HanaBadge tone={statusToTone(ontologyClass.validation_status)}>{ontologyClass.validation_status}</HanaBadge>
+            <strong>{graphNode.label}</strong>
+            <span>{graphNode.class_id}</span>
+            <HanaBadge tone={statusToTone(graphNode.status)}>{graphNode.status}</HanaBadge>
           </GraphNodeLabel>
         ),
       },
       style: {
-        borderColor: ontologyClass.validation_status === "WARNING" ? "#b45309" : "#1f5f8b",
+        borderColor: graphNode.status === "ACTIVE" ? "#1f5f8b" : "#475569",
         borderRadius: 8,
         borderWidth: 2,
         padding: 0,
@@ -49,15 +51,15 @@ export function OntologyModelerPage() {
       return [];
     }
 
-    return graph.relations.map((relation) => ({
-      id: relation.id,
-      source: relation.domain_class_id,
-      target: relation.range_class_id,
-      label: relation.label,
-      animated: relation.validation_status === "WARNING",
+    return graph.edges.map((edge) => ({
+      id: edge.id,
+      source: edge.source_class_id,
+      target: edge.target_class_id,
+      label: edge.label,
+      animated: edge.status === "DRAFT",
       arrowHeadType: "arrowclosed",
       style: {
-        stroke: relation.validation_status === "WARNING" ? "#b45309" : "#7c3aed",
+        stroke: edge.status === "ACTIVE" ? "#7c3aed" : "#475569",
         strokeWidth: 2,
       },
     }));
@@ -79,14 +81,15 @@ export function OntologyModelerPage() {
     );
   }
 
-  if (graph.classes.length === 0) {
+  if (graph.nodes.length === 0) {
     return <PageState kind="empty" title="클래스가 없습니다" description="새 OntologyClass를 만들면 그래프에 node로 표시됩니다." />;
   }
 
-  const selectedClass = graph.classes.find((ontologyClass) => ontologyClass.id === selectedClassId) ?? graph.classes[0];
-  const selectedProperties = graph.properties.filter((property) => property.class_id === selectedClass.id);
-  const selectedRelations = graph.relations.filter(
-    (relation) => relation.domain_class_id === selectedClass.id || relation.range_class_id === selectedClass.id,
+  const selectedNode = graph.nodes.find((node) => node.class_id === selectedClassId) ?? graph.nodes[0];
+  const selectedClass = graph.classes?.find((ontologyClass) => ontologyClass.id === selectedNode.class_id);
+  const selectedProperties = graph.properties.filter((property) => property.class_id === selectedNode.class_id);
+  const selectedEdges = graph.edges.filter(
+    (edge) => edge.source_class_id === selectedNode.class_id || edge.target_class_id === selectedNode.class_id,
   );
 
   return (
@@ -102,23 +105,23 @@ export function OntologyModelerPage() {
         <LeftPanel>
           <PanelHeader>
             <h2>Classes</h2>
-            <HanaBadge tone="neutral">{graph.classes.length}</HanaBadge>
+            <HanaBadge tone="neutral">{graph.nodes.length}</HanaBadge>
           </PanelHeader>
           <SearchBox>
             <Search aria-hidden="true" />
             <HanaInput placeholder="Search class" />
           </SearchBox>
           <EntityList>
-            {graph.classes.map((ontologyClass) => (
+            {graph.nodes.map((graphNode) => (
               <button
-                key={ontologyClass.id}
+                key={graphNode.id}
                 type="button"
-                data-selected={ontologyClass.id === selectedClass.id}
-                onClick={() => setSelectedClassId(ontologyClass.id)}
+                data-selected={graphNode.class_id === selectedNode.class_id}
+                onClick={() => setSelectedClassId(graphNode.class_id)}
               >
-                <strong>{ontologyClass.label}</strong>
-                <span>{ontologyClass.name}</span>
-                <HanaBadge tone={statusToTone(ontologyClass.validation_status)}>{ontologyClass.validation_status}</HanaBadge>
+                <strong>{graphNode.label}</strong>
+                <span>{graphNode.class_id}</span>
+                <HanaBadge tone={statusToTone(graphNode.status)}>{graphNode.status}</HanaBadge>
               </button>
             ))}
           </EntityList>
@@ -131,10 +134,10 @@ export function OntologyModelerPage() {
         </CanvasCard>
         <RightPanel>
           <PanelHeader>
-            <h2>{selectedClass.label}</h2>
-            <HanaBadge tone={statusToTone(selectedClass.status)}>{selectedClass.status}</HanaBadge>
+            <h2>{selectedNode.label}</h2>
+            <HanaBadge tone={statusToTone(selectedNode.status)}>{selectedNode.status}</HanaBadge>
           </PanelHeader>
-          <Description>{selectedClass.description}</Description>
+          <Description>{selectedClass?.description ?? "Canonical OntologyGraph node payload에서 선택된 class입니다."}</Description>
           <DetailGroup>
             <h3>Properties</h3>
             {selectedProperties.length === 0 ? (
@@ -146,22 +149,22 @@ export function OntologyModelerPage() {
                     <strong>{property.label}</strong>
                     <span>{property.name}</span>
                   </div>
-                  <HanaBadge tone={statusToTone(property.validation_status)}>{property.validation_status}</HanaBadge>
+                  <HanaBadge tone={statusToTone(property.status)}>{property.status}</HanaBadge>
                 </DetailRow>
               ))
             )}
           </DetailGroup>
           <DetailGroup>
             <h3>Relations</h3>
-            {selectedRelations.map((relation) => (
-              <DetailRow key={relation.id}>
+            {selectedEdges.map((edge) => (
+              <DetailRow key={edge.id}>
                 <div>
-                  <strong>{relation.label}</strong>
+                  <strong>{edge.label}</strong>
                   <span>
-                    {relation.cardinality} · {relation.required ? "required" : "optional"}
+                    {edge.source_class_id} → {edge.target_class_id} · {edge.cardinality}
                   </span>
                 </div>
-                <HanaBadge tone={statusToTone(relation.validation_status)}>{relation.validation_status}</HanaBadge>
+                <HanaBadge tone={statusToTone(edge.status)}>{edge.status}</HanaBadge>
               </DetailRow>
             ))}
           </DetailGroup>

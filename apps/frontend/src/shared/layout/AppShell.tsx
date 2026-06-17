@@ -18,12 +18,21 @@ export function AppShell({ children }: PropsWithChildren) {
           <span>Data Platform</span>
         </Brand>
         <Nav aria-label="MVP 1 navigation">
-          {navigationItems.map((item) => (
-            <NavLink key={item.path} to={item.path}>
+          {navigationItems.map((item) => {
+            const path =
+              item.path === "/ontology"
+                ? `/projects/${selectedProject.id}/ontology`
+                : item.path === "/sources"
+                  ? `/projects/${selectedProject.id}/sources`
+                  : item.path;
+
+            return (
+            <NavLink key={item.path} to={path}>
               <item.icon aria-hidden="true" />
               {item.label}
             </NavLink>
-          ))}
+            );
+          })}
         </Nav>
       </Sidebar>
       <MainArea>

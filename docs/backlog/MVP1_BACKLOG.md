@@ -67,6 +67,7 @@ PM-001/002/003
 | FE-008 | P1 | Frontend | Dashboard 초안 | FE-004, FE-006 | 프로젝트/소스/온톨로지 요약 지표가 표시됨 |
 | FE-009 | P0 | Frontend | Mock fixtures/API client boundary | FE-001, PM-003, PM-005 | `shared/api`와 `shared/mocks` 경계가 분리되고 P0 DTO/enum fixture가 있음 |
 | FE-010 | P2 | Frontend | 기본 테스트/Storybook 준비 | FE-003 | 핵심 공통 UI adapter의 smoke test 또는 story가 있음 |
+| FE-011 | P2 | Frontend | Dependency hardening | FE-003 | npm audit 5건의 실제 영향도를 분류하고 필요한 patch/override/교체안을 제안함 |
 
 ## Integration Backlog
 
@@ -125,4 +126,14 @@ PM-001/002/003
 | Resolved | 화면 route와 API 의존성 불명확 | IA에 route contract와 screen acceptance를 추가한다. |
 | Resolved | Dev Auth 우선순위 | `/api/v1/me`가 P0 API이므로 BE-009를 P0로 승격한다. |
 | Resolved | FE mock/API boundary 우선순위 | contract-first 병렬 개발을 위해 FE-009를 P0로 승격한다. |
-| Open | OpenAPI 타입 공유 방식 | BE-010에서 export 또는 FE 수동 타입 동기화 방식을 결정한다. |
+| Resolved | OpenAPI 타입 공유 방식 | `docs/api/openapi-mvp1.json`을 canonical OpenAPI export로 두고, FE는 이 파일에서 타입 생성 또는 수동 동기화한다. QA는 이 파일로 INT-002/INT-003 contract review를 수행한다. |
+
+## Risk / Follow-up Register
+
+| 상태 | 항목 | 판정 | 후속 조치 |
+|---|---|---|---|
+| Risk | `hana-style-component` install script 지연 | MVP 1 blocker는 아니며 dependency install risk로 추적한다. 현재 frontend는 `npm install --ignore-scripts`와 adapter 경계로 우회 가능하다. | FE-003/FE-010 검증에서 adapter import와 build smoke를 유지한다. |
+| Task | `npm audit` 취약점 5건 | 보안/운영 추적이 필요하므로 별도 P2 task로 분리한다. | FE-011에서 audit severity, 영향 dependency, patch/override/교체 필요성을 판단한다. |
+| Contract | `OntologyGraph.classes`/`relations` compatibility field | Backend transition field로 허용하지만 canonical contract는 아니다. | FE 신규 구현과 QA contract review는 `nodes`, `edges`, `properties`만 기준으로 판정한다. |
+| Contract | Source upload/preview enum/DTO 모호성 | `SourceStatus`와 `SourcePreviewStatus`는 분리 유지한다. | 구현 중 추가 모호성이 생기면 PM-005 결정으로 glossary/API 문서에 즉시 반영한다. |
+| Contract | Source delete 방식 | `SourceStatus`에 `ARCHIVED`/`DELETED`를 추가하지 않고 internal `is_deleted` soft delete를 수용한다. | 삭제된 source는 list/detail/preview와 project `source_count`에서 제외한다. |

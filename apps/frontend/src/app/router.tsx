@@ -7,6 +7,8 @@ import { ProjectListPage } from "../pages/ProjectListPage";
 import { SourceDetailPage } from "../pages/SourceDetailPage";
 import { SourceManagerPage } from "../pages/SourceManagerPage";
 
+const defaultProjectId = "project-corp-knowledge";
+
 export const router = createBrowserRouter([
   {
     element: <App />,
@@ -28,12 +30,24 @@ export const router = createBrowserRouter([
         element: <ProjectDetailPage />,
       },
       {
-        path: "/ontology",
+        path: "/projects/:projectId/ontology",
         element: <OntologyModelerPage />,
       },
       {
-        path: "/sources",
+        path: "/projects/:projectId/sources",
         element: <SourceManagerPage />,
+      },
+      {
+        path: "/projects/:projectId/sources/:sourceId",
+        element: <SourceDetailPage />,
+      },
+      {
+        path: "/ontology",
+        element: <Navigate to={`/projects/${defaultProjectId}/ontology`} replace />,
+      },
+      {
+        path: "/sources",
+        element: <Navigate to={`/projects/${defaultProjectId}/sources`} replace />,
       },
       {
         path: "/sources/:sourceId",

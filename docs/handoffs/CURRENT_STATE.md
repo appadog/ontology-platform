@@ -4,8 +4,8 @@
 
 ## Latest Wave
 
-- Current wave: `wave-002`
-- Overall status: `PARTIAL / FRONTEND MOCK SURFACE AND BACKEND PROJECT-ONTOLOGY PATH REPORTED`
+- Current wave: `wave-003`
+- Overall status: `ORDERED / SOURCE FLOW AND CONTRACT EXPORT ARE NEXT GATE`
 - 기준일: 2026-06-17
 
 ## Latest Decisions
@@ -44,8 +44,8 @@
 
 1. Backend: `BE-006`, `BE-007` Source upload/list/detail/preview API 구현
 2. Backend contract: `BE-010` OpenAPI export 또는 FE 타입 공유 방식 확정
-3. Frontend: Backend OpenAPI 준비 후 `shared/api` contract 조정, `FE-006`, `FE-007` 실제 upload/API 연결 확장
-4. QA: Backend Project/Ontology path smoke와 Frontend mock flow smoke 확인 가능
+3. Frontend: Backend Source/OpenAPI 계약에 맞춰 `FE-006`, `FE-007`, `FE-009` 조정
+4. QA: Backend Project/Ontology path와 Frontend mock flow partial smoke
 5. QA: Source API와 OpenAPI export 준비 후 `INT-002`, `INT-003` 재실행
 6. Source upload/preview가 준비된 뒤 `INT-001` full demo flow 재검증
 
@@ -63,4 +63,5 @@
 | Wave | PM | Backend | Frontend | QA | Next Orders |
 |---|---|---|---|---|---|
 | wave-001 | `wave-001/PM_REPORT.md` | `wave-001/BACKEND_REPORT.md` | `wave-001/FRONTEND_REPORT.md` | `wave-001/QA_REPORT.md` | `wave-001/NEXT_ORDERS.md` |
-| wave-002 | `wave-002/PM_REPORT.md` | `wave-002/BACKEND_REPORT.md` | `wave-002/FRONTEND_REPORT.md` | `wave-002/QA_REPORT.md` | pending |
+| wave-002 | `wave-002/PM_REPORT.md` | `wave-002/BACKEND_REPORT.md` | `wave-002/FRONTEND_REPORT.md` | `wave-002/QA_REPORT.md` | `wave-002/NEXT_ORDERS.md` |
+| wave-003 | `wave-003/PM_REPORT.md` | `wave-003/BACKEND_REPORT.md` | `wave-003/FRONTEND_REPORT.md` | `wave-003/QA_REPORT.md` | pending |

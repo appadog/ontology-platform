@@ -1,17 +1,46 @@
+import { ChangeEvent, useState } from "react";
 import { Upload } from "lucide-react";
 import styled from "styled-components";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { mockProjects } from "../shared/mocks/fixtures";
-import { useSources } from "../shared/api/queries";
+import { useSources, useUploadSource } from "../shared/api/queries";
 import { PageHeader } from "../shared/layout/PageHeader";
-import { HanaBadge, HanaButton, HanaCard, statusToTone } from "../shared/ui/hana";
+import { HanaBadge, HanaButton, HanaCard, HanaInput, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
 import { formatBytes, formatDateTime } from "../shared/lib/format";
+import { SourceType } from "../shared/api/types";
 
 const currentProjectId = mockProjects[0].id;
 
 export function SourceManagerPage() {
-  const { data: sources, isLoading, isError, refetch } = useSources(currentProjectId);
+  const { projectId = currentProjectId } = useParams();
+  const { data: sources, isLoading, isError, refetch } = useSources(projectId);
+  const uploadSource = useUploadSource(projectId);
+  const [file, setFile] = useState<File | null>(null);
+  const [sourceType, setSourceType] = useState<SourceType>("CSV");
+  const [displayName, setDisplayName] = useState("");
+
+  const canUpload = Boolean(file) && !uploadSource.isPending;
+
+  function handleUpload() {
+    if (!file) {
+      return;
+    }
+
+    uploadSource.mutate(
+      {
+        file,
+        source_type: sourceType,
+        display_name: displayName.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          setFile(null);
+          setDisplayName("");
+        },
+      },
+    );
+  }
 
   if (isLoading) {
     return <PageState kind="loading" title="원천 데이터 목록을 불러오는 중" description="SourceData fixture와 upload 상태를 조회하고 있습니다." />;
@@ -32,11 +61,37 @@ export function SourceManagerPage() {
   return (
     <>
       <PageHeader title="Sources" description="업로드된 CSV, Excel, PDF, TXT 원천 데이터 상태와 preview 준비 상태를 확인합니다.">
-        <HanaButton variant="primary" type="button">
+        <HanaButton variant="primary" type="button" disabled={!canUpload} onClick={handleUpload}>
           <Upload aria-hidden="true" />
-          Upload Source
+          {uploadSource.isPending ? "Uploading" : "Upload Source"}
         </HanaButton>
       </PageHeader>
+      <HanaCard title="Upload source" description="SourceUploadRequest(file, source_type, display_name)를 multipart API로 보낼 준비가 된 입력 영역입니다.">
+        <UploadGrid>
+          <Field>
+            <span>File</span>
+            <FileInput type="file" onChange={(event: ChangeEvent<HTMLInputElement>) => setFile(event.target.files?.[0] ?? null)} />
+          </Field>
+          <Field>
+            <span>Source Type</span>
+            <HanaSelect value={sourceType} onChange={(event) => setSourceType(event.target.value as SourceType)}>
+              <option value="CSV">CSV</option>
+              <option value="EXCEL">EXCEL</option>
+              <option value="TXT">TXT</option>
+              <option value="PDF">PDF</option>
+            </HanaSelect>
+          </Field>
+          <Field>
+            <span>Display Name</span>
+            <HanaInput
+              value={displayName}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setDisplayName(event.target.value)}
+              placeholder={file?.name ?? "선택 사항"}
+            />
+          </Field>
+        </UploadGrid>
+        {uploadSource.isError && <InlineError>업로드 요청에 실패했습니다. mock/API boundary와 backend Source API 상태를 확인하세요.</InlineError>}
+      </HanaCard>
       {sources.length === 0 ? (
         <PageState kind="empty" title="업로드된 원천 데이터가 없습니다" description="SourceData를 업로드하면 parse/profile 상태와 preview 링크가 표시됩니다." />
       ) : (
@@ -57,7 +112,7 @@ export function SourceManagerPage() {
                 {sources.map((source) => (
                   <tr key={source.id}>
                     <td>
-                      <SourceLink to={`/sources/${source.id}`}>
+                      <SourceLink to={`/projects/${projectId}/sources/${source.id}`}>
                         <strong>{source.file_name}</strong>
                         <span>{source.storage_uri}</span>
                       </SourceLink>
@@ -123,4 +178,44 @@ const SourceLink = styled(Link)`
     color: ${({ theme }) => theme.color.textMuted};
     font-size: 12px;
   }
+`;
+
+const UploadGrid = styled.div`
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) 160px minmax(180px, 1fr);
+  gap: 12px;
+  padding: 18px;
+
+  @media (max-width: 880px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Field = styled.label`
+  display: grid;
+  gap: 6px;
+
+  span {
+    color: ${({ theme }) => theme.color.textMuted};
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+`;
+
+const FileInput = styled.input`
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  color: ${({ theme }) => theme.color.text};
+`;
+
+const InlineError = styled.p`
+  margin: 0;
+  padding: 0 18px 18px;
+  color: ${({ theme }) => theme.color.danger};
+  font-weight: 800;
 `;
