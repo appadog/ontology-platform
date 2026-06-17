@@ -18,17 +18,17 @@ export function MetricCard({ label, value, children }: MetricCardProps) {
 
 const Metric = styled.article`
   display: grid;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.sm};
   min-width: 0;
-  padding: 18px;
+  padding: ${({ theme }) => theme.spacing.lg};
   border: 1px solid ${({ theme }) => theme.color.border};
   border-radius: ${({ theme }) => theme.radius.md};
   background: ${({ theme }) => theme.color.surfaceRaised};
 
   span {
     color: ${({ theme }) => theme.color.textMuted};
-    font-size: 13px;
-    font-weight: 800;
+    font-size: ${({ theme }) => theme.typography.fontSize.sm};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   }
 
   strong {
@@ -39,7 +39,7 @@ const Metric = styled.article`
   p {
     margin: 0;
     color: ${({ theme }) => theme.color.textMuted};
-    font-size: 13px;
-    line-height: 1.5;
+    font-size: ${({ theme }) => theme.typography.fontSize.sm};
+    line-height: ${({ theme }) => theme.typography.lineHeight.normal};
   }
 `;

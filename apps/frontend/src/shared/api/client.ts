@@ -9,7 +9,7 @@ import {
 import {
   DashboardSummary,
   OntologyGraph,
-  OntologyVersionSummary,
+  OntologyVersion,
   ProjectCreateRequest,
   ProjectDetail,
   ProjectSummary,
@@ -143,7 +143,7 @@ export const apiClient = {
       const project: ProjectDetail = {
         id: `project-${Date.now()}`,
         name: payload.name,
-        description: payload.description ?? "",
+        description: payload.description ?? null,
         status: "DRAFT",
         current_ontology_version_id: null,
         created_at: now,
@@ -187,7 +187,9 @@ export const apiClient = {
 
       const updatedProject: ProjectDetail = {
         ...project,
-        ...payload,
+        name: payload.name ?? project.name,
+        description: payload.description === undefined ? project.description : payload.description,
+        status: payload.status ?? project.status,
         updated_at: new Date().toISOString(),
       };
 
@@ -202,12 +204,12 @@ export const apiClient = {
     });
   },
 
-  async listOntologyVersions(projectId: string): Promise<OntologyVersionSummary[]> {
+  async listOntologyVersions(projectId: string): Promise<OntologyVersion[]> {
     if (USE_MOCK_API) {
       return delay(mockOntologyVersions.filter((version) => version.project_id === projectId));
     }
 
-    return request<OntologyVersionSummary[]>(`/api/v1/projects/${projectId}/ontology/versions`);
+    return request<OntologyVersion[]>(`/api/v1/projects/${projectId}/ontology/versions`);
   },
 
   async getOntologyGraph(versionId: string): Promise<OntologyGraph> {
@@ -266,7 +268,7 @@ export const apiClient = {
         project_id: projectId,
         file_name: payload.display_name?.trim() || payload.file.name,
         source_type: payload.source_type,
-        mime_type: payload.file.type || "application/octet-stream",
+        mime_type: payload.file.type || null,
         size_bytes: payload.file.size,
         status: "UPLOADED",
         preview_status: isTabular ? "READY" : "NOT_AVAILABLE",

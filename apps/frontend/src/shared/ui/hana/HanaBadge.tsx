@@ -4,6 +4,7 @@ import {
   OntologyElementStatus,
   OntologyVersionStatus,
   ProjectStatus,
+  PublishStatus,
   SourcePreviewStatus,
   SourceStatus,
   ValidationStatus,
@@ -16,7 +17,7 @@ interface HanaBadgeProps extends PropsWithChildren {
 }
 
 const statusTone: Record<
-  ProjectStatus | SourceStatus | SourcePreviewStatus | ValidationStatus | OntologyVersionStatus | OntologyElementStatus,
+  ProjectStatus | SourceStatus | SourcePreviewStatus | ValidationStatus | OntologyVersionStatus | OntologyElementStatus | PublishStatus,
   BadgeTone
 > = {
   ACTIVE: "success",
@@ -34,7 +35,9 @@ const statusTone: Record<
   READY: "success",
   NOT_AVAILABLE: "muted",
   NOT_VALIDATED: "muted",
+  NOT_PUBLISHED: "muted",
   PASSED: "success",
+  ROLLED_BACK: "warning",
   WARNING: "warning",
 };
 
@@ -49,14 +52,14 @@ export function HanaBadge({ tone = "neutral", children }: HanaBadgeProps) {
 const Badge = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: ${({ theme }) => theme.spacing.xs};
   width: fit-content;
   max-width: 100%;
   min-height: 24px;
   padding: 0 9px;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   line-height: 1;
   white-space: nowrap;
 

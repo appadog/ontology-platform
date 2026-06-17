@@ -1,7 +1,7 @@
 import {
   DashboardSummary,
   OntologyGraph,
-  OntologyVersionSummary,
+  OntologyVersion,
   ProjectSummary,
   SourceData,
   SourcePreview,
@@ -21,7 +21,7 @@ export const mockProjects: ProjectSummary[] = [
   {
     id: "project-product-catalog",
     name: "제품 카탈로그 모델링",
-    description: "제품, 공급사, 카테고리 관계를 구조화하기 위한 초안 작업 공간",
+    description: null,
     status: "DRAFT",
     created_at: "2026-06-03T10:30:00+09:00",
     updated_at: "2026-06-13T11:10:00+09:00",
@@ -30,22 +30,24 @@ export const mockProjects: ProjectSummary[] = [
   },
 ];
 
-export const mockOntologyVersions: OntologyVersionSummary[] = [
+export const mockOntologyVersions: OntologyVersion[] = [
   {
     id: "onto-v1-draft",
     project_id: "project-corp-knowledge",
-    name: "Corporate Knowledge Draft",
+    version: 1,
     status: "DRAFT",
     created_at: "2026-06-08T13:00:00+09:00",
-    updated_at: "2026-06-16T15:20:00+09:00",
+    published_at: null,
+    created_by: "dev-admin",
   },
   {
     id: "onto-v0-published",
     project_id: "project-corp-knowledge",
-    name: "Baseline Published",
+    version: 0,
     status: "PUBLISHED",
     created_at: "2026-06-01T09:00:00+09:00",
-    updated_at: "2026-06-07T17:00:00+09:00",
+    published_at: "2026-06-07T17:00:00+09:00",
+    created_by: "dev-admin",
   },
 ];
 
@@ -262,7 +264,7 @@ export const mockSources: SourceData[] = [
     project_id: "project-corp-knowledge",
     file_name: "security-guidelines.txt",
     source_type: "TXT",
-    mime_type: "text/plain",
+    mime_type: null,
     size_bytes: 50244,
     status: "UPLOADED",
     preview_status: "NOT_AVAILABLE",

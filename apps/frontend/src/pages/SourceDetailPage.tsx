@@ -41,7 +41,7 @@ export function SourceDetailPage() {
             <dt>Source Type</dt>
             <dd>{source.source_type}</dd>
             <dt>MIME Type</dt>
-            <dd>{source.mime_type}</dd>
+            <dd>{source.mime_type ?? "N/A"}</dd>
             <dt>Size</dt>
             <dd>{formatBytes(source.size_bytes)}</dd>
             <dt>Uploaded At</dt>
@@ -61,7 +61,7 @@ export function SourceDetailPage() {
             <dt>Sheet</dt>
             <dd>{preview?.sheet_name ?? "N/A"}</dd>
             <dt>Warnings</dt>
-            <dd>{preview?.warnings.length ?? "-"}</dd>
+            <dd>{preview?.warnings?.length ?? "-"}</dd>
           </MetaList>
         </HanaCard>
       </DetailGrid>
@@ -111,9 +111,9 @@ export function SourceDetailPage() {
               </tbody>
             </table>
           </PreviewTable>
-          {preview.warnings.length > 0 && (
+          {(preview.warnings?.length ?? 0) > 0 && (
             <WarningList>
-              {preview.warnings.map((warning) => (
+              {preview.warnings?.map((warning) => (
                 <li key={warning}>{warning}</li>
               ))}
             </WarningList>

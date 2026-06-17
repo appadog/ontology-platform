@@ -2,6 +2,8 @@
 
 MVP 1은 contract-first로 진행한다. 백엔드는 OpenAPI와 mock response를 먼저 노출하고, 프론트엔드는 mock fixture로 병렬 구현한다.
 
+Canonical OpenAPI artifact는 `docs/api/openapi-mvp1.json`이다. Backend는 이 파일을 최신 export로 유지하고, Frontend는 이 파일에서 타입을 생성하거나 수동 동기화한다. QA는 이 파일을 INT-002/INT-003 contract review 기준으로 사용한다.
+
 ## 1. Priority Order
 
 | Priority | Domain | 이유 |
@@ -27,6 +29,8 @@ INT-001의 기준 happy path는 아래 순서로 고정한다.
 4. class, property, relation을 생성하고 `GET /api/v1/ontology/versions/{version_id}/graph`로 모델러 그래프를 조회한다.
 5. `POST /api/v1/projects/{project_id}/sources/upload`로 CSV/Excel을 업로드한다.
 6. `GET /api/v1/sources/{source_id}/preview`로 sample rows와 columns를 확인한다.
+
+INT-001 full pass는 backend API full flow와 frontend mock route smoke만으로 판정하지 않는다. 최소 1회 `VITE_USE_MOCK_API=false` 실제 FE-to-BE smoke가 필요하다.
 
 ## 2. Endpoint Draft
 
@@ -164,7 +168,7 @@ edges[]
 properties[]
 ```
 
-`nodes[]`, `edges[]`, `properties[]`가 canonical graph payload다. Backend가 transition 기간에 `classes[]`, `relations[]`를 함께 반환할 수는 있지만, 이 둘은 compatibility field이며 FE/QA contract 판정 기준으로 사용하지 않는다.
+`nodes[]`, `edges[]`, `properties[]`가 canonical graph payload다. Backend가 transition 기간에 `classes[]`, `relations[]`를 함께 반환할 수는 있지만, 이 둘은 optional/deprecated compatibility field이며 FE/QA contract 판정 기준으로 사용하지 않는다.
 
 ### OntologyGraphNode
 
@@ -408,7 +412,9 @@ Backend OpenAPI examples and frontend `shared/mocks` fixtures must include the s
 - Enum 문자열은 `docs/pm/GLOSSARY.md`와 동일하게 쓴다.
 - Backend는 OpenAPI schema에 request/response DTO를 노출한다.
 - Frontend는 `shared/api`에 API client와 타입 경계를 둔다.
-- `OntologyGraph`의 canonical field는 `nodes`, `edges`, `properties`다. `classes`, `relations`는 backend compatibility field로만 허용하며 frontend 신규 구현과 QA contract review는 canonical field만 기준으로 삼는다.
+- OpenAPI artifact는 `docs/api/openapi-mvp1.json`이다.
+- `OntologyGraph`의 canonical field는 `nodes`, `edges`, `properties`다. `classes`, `relations`는 backend optional/deprecated compatibility field로만 허용하며 frontend 신규 구현과 QA contract review는 canonical field만 기준으로 삼는다.
+- `Cardinality`는 backend/OpenAPI full enum을 frontend relation/edge type에서도 그대로 수용한다. relation/edge 전용 축소 enum을 별도로 만들지 않는다.
 - Breaking change는 `docs/adr` 또는 API change note로 기록한다.
 - MVP 1 API는 candidate/review/publish를 구현하지 않지만, naming이 후속 확장을 막지 않아야 한다.
 - 모든 timestamp는 ISO 8601 문자열로 반환한다.

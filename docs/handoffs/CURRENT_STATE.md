@@ -4,12 +4,19 @@
 
 ## Latest Wave
 
-- Current wave: `wave-003`
-- Overall status: `ORDERED / SOURCE FLOW AND CONTRACT EXPORT ARE NEXT GATE`
+- Current wave: `wave-004`
+- Overall status: `ORDERED / CONTRACT CLEANUP AND REAL FE-BE SMOKE REQUIRED`
 - 기준일: 2026-06-17
 
 ## Latest Decisions
 
+- `docs/api/openapi-mvp1.json` is the MVP 1 canonical OpenAPI export artifact.
+- Source delete uses internal `is_deleted` soft delete; `SourceStatus` enum is not extended for delete/archive in MVP 1.
+- Relation/edge cardinality uses the full Backend/OpenAPI `Cardinality` enum in Frontend for MVP 1.
+- `OntologyGraph.classes[]` and `relations[]` are compatibility fields and should be optional/deprecated, not canonical required fields.
+- INT-001 full pass requires actual FE-to-BE smoke with `VITE_USE_MOCK_API=false`; Backend API full flow plus FE mock route smoke is only partial.
+- `hana-style-component` install script delay and npm audit findings are P2 dependency hardening follow-up, not MVP 1 release blockers.
+- MVP 1 UI style foundation is now tracked as `FE-012`; this is a minimal token/primitive/layout/status/hana-adapter guide, not a large redesign.
 - 모든 역할 에이전트는 `.agents/skills/handoff-reporting/SKILL.md`를 작업 시작 전 읽고, 종료 시 지정된 `docs/handoffs/wave-XXX/{ROLE}_REPORT.md`에 보고서를 남긴다.
 - 작업 완료는 보고서 작성까지 포함한다.
 - MVP 1 P0 demo flow:
@@ -31,23 +38,21 @@
 
 | Area | Blocker | Linked IDs |
 |---|---|---|
-| Backend | FastAPI scaffold, `/health`, `/api/v1/me`, Project/Ontology P0 API 완료 보고됨. 총괄/QA 독립 검증 대기 | BE-001, BE-009, BE-003, BE-004, BE-005 |
-| Backend Source | Source upload/list/detail/preview API 미구현 | BE-006, BE-007 |
-| Backend Contract | OpenAPI 노출은 보고됐으나 export 방식 또는 FE 타입 공유 방식 미결정 | BE-010 |
+| Backend | Backend Project/Ontology/Source API smoke PASS, OpenAPI export freshness PASS | BE-001, BE-003, BE-004, BE-005, BE-006, BE-007, BE-009, BE-010 |
+| Backend Contract | `OntologyGraph.classes[]`, `relations[]` are still required compatibility fields in OpenAPI | BE-010, BE-004, INT-003 |
 | Infra | Docker CLI 부재로 Compose 실제 `up` 검증 미수행 | BE-002 |
-| Frontend | runnable Vite app, app shell, mock P0 화면 완료 보고됨. QA/총괄 독립 검증 대기 | FE-001, FE-002, FE-004, FE-005 |
-| Frontend Contract | `shared/api`, `shared/mocks` 구성 보고됨. Backend OpenAPI 부재로 contract diff 대기 | FE-009, BE-010, INT-002, INT-003 |
-| Frontend Follow-up | 실제 API 연결, Source upload 확장, create/edit mutation, FE smoke/Storybook 미완료 | FE-006, FE-007, FE-010 |
-| QA | INT-001 full flow는 Source upload/preview 미구현으로 아직 full pass 불가 | INT-001, BE-006, BE-007 |
+| Frontend | Contract mismatches remain: OntologyVersionSummary, relation/edge Cardinality, nullable fields | FE-009, FE-005, INT-002, INT-003 |
+| Frontend Style | MVP 1 UI style foundation needs to be written before screens grow further | FE-012 |
+| Frontend Integration | Actual FE-to-BE smoke with `VITE_USE_MOCK_API=false` not verified | FE-006, FE-007, INT-001 |
+| QA | INT-001 full flow PARTIAL until actual FE-to-BE smoke passes | INT-001 |
 
 ## Next Gate
 
-1. Backend: `BE-006`, `BE-007` Source upload/list/detail/preview API 구현
-2. Backend contract: `BE-010` OpenAPI export 또는 FE 타입 공유 방식 확정
-3. Frontend: Backend Source/OpenAPI 계약에 맞춰 `FE-006`, `FE-007`, `FE-009` 조정
-4. QA: Backend Project/Ontology path와 Frontend mock flow partial smoke
-5. QA: Source API와 OpenAPI export 준비 후 `INT-002`, `INT-003` 재실행
-6. Source upload/preview가 준비된 뒤 `INT-001` full demo flow 재검증
+1. PM: Wave 4 총괄 결정을 API/backlog/ADR에 반영
+2. Backend: `OntologyGraph.classes[]`, `relations[]` optional/deprecated cleanup and OpenAPI regeneration
+3. Frontend: Fix OntologyVersionSummary, full Cardinality enum, nullable DTO precision, add FE-012 UI style foundation, then real API smoke
+4. QA: Re-run INT-002/INT-003 contract review
+5. QA: Re-run INT-001 with actual FE-to-BE smoke if environment allows
 
 ## Latest Role Reports
 
@@ -57,6 +62,10 @@
 | QA | wave-001 | `FAIL / NOT RUNNABLE` | Runtime surface missing at the time |
 | Frontend | wave-002 | `PARTIAL / MOCK SURFACE REPORTED` | Runnable Vite app and mock P0 screens reported; QA verification pending |
 | Backend | wave-002 | `PARTIAL / PROJECT-ONTOLOGY PATH REPORTED` | BE-001/002/003/004/005/009 reported complete; Source API and OpenAPI export remain |
+| Backend | wave-003 | `PASS / SOURCE API AND OPENAPI EXPORT READY` | Source API, preview, seed, OpenAPI export ready; Docker compose unverified |
+| Frontend | wave-003 | `PARTIAL / SOURCE UI READY` | Source UI/API boundary ready; contract precision fixes and real API smoke pending |
+| PM | wave-003 | `PASS / CONTRACT DECISIONS RECORDED` | OpenAPI artifact, soft delete, graph compatibility caveat recorded |
+| QA | wave-003 | `PARTIAL / CONTRACT FINDINGS REMAIN` | Backend API flow PASS, FE route smoke PASS, INT-002/003 findings remain |
 
 ## Report Index
 
@@ -64,4 +73,5 @@
 |---|---|---|---|---|---|
 | wave-001 | `wave-001/PM_REPORT.md` | `wave-001/BACKEND_REPORT.md` | `wave-001/FRONTEND_REPORT.md` | `wave-001/QA_REPORT.md` | `wave-001/NEXT_ORDERS.md` |
 | wave-002 | `wave-002/PM_REPORT.md` | `wave-002/BACKEND_REPORT.md` | `wave-002/FRONTEND_REPORT.md` | `wave-002/QA_REPORT.md` | `wave-002/NEXT_ORDERS.md` |
-| wave-003 | `wave-003/PM_REPORT.md` | `wave-003/BACKEND_REPORT.md` | `wave-003/FRONTEND_REPORT.md` | `wave-003/QA_REPORT.md` | pending |
+| wave-003 | `wave-003/PM_REPORT.md` | `wave-003/BACKEND_REPORT.md` | `wave-003/FRONTEND_REPORT.md` | `wave-003/QA_REPORT.md` | `wave-003/NEXT_ORDERS.md` |
+| wave-004 | `wave-004/PM_REPORT.md` | `wave-004/BACKEND_REPORT.md` | `wave-004/FRONTEND_REPORT.md` | `wave-004/QA_REPORT.md` | pending |

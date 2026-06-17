@@ -200,8 +200,16 @@ class OntologyGraph(BaseModel):
     nodes: list[OntologyGraphNode]
     edges: list[OntologyGraphEdge]
     properties: list[OntologyProperty]
-    classes: list[OntologyClass]
-    relations: list[OntologyRelation]
+    classes: list[OntologyClass] | None = Field(
+        default=None,
+        description="Deprecated compatibility field. Use nodes[] as the canonical graph payload.",
+        json_schema_extra={"deprecated": True},
+    )
+    relations: list[OntologyRelation] | None = Field(
+        default=None,
+        description="Deprecated compatibility field. Use edges[] as the canonical graph payload.",
+        json_schema_extra={"deprecated": True},
+    )
 
     model_config = ConfigDict(
         json_schema_extra={

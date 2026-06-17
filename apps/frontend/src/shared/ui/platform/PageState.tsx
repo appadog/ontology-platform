@@ -45,9 +45,9 @@ const spin = keyframes`
 const StateBox = styled.div`
   display: grid;
   justify-items: center;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.md};
   min-height: 240px;
-  padding: 40px 18px;
+  padding: 40px ${({ theme }) => theme.spacing.lg};
   border: 1px dashed ${({ theme }) => theme.color.borderStrong};
   border-radius: ${({ theme }) => theme.radius.md};
   background: ${({ theme }) => theme.color.surfaceRaised};
@@ -69,13 +69,13 @@ const StateBox = styled.div`
 
   h2 {
     margin: 0;
-    font-size: 18px;
+    font-size: ${({ theme }) => theme.typography.fontSize.lg};
   }
 
   p {
     max-width: 520px;
     margin: 0;
     color: ${({ theme }) => theme.color.textMuted};
-    line-height: 1.6;
+    line-height: ${({ theme }) => theme.typography.lineHeight.relaxed};
   }
 `;

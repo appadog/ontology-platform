@@ -25,7 +25,7 @@ export function ProjectListPage() {
     createProject.mutate(
       {
         name: name.trim(),
-        description: description.trim(),
+        description: description.trim() || null,
       },
       {
         onSuccess: () => {
@@ -105,7 +105,7 @@ export function ProjectListPage() {
                     <td>
                       <ProjectLink to={`/projects/${project.id}`}>
                         <strong>{project.name}</strong>
-                        <span>{project.description}</span>
+                        <span>{project.description ?? "No description"}</span>
                       </ProjectLink>
                     </td>
                     <td>

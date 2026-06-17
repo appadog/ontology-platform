@@ -4,6 +4,15 @@ export type OntologyVersionStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
 export type OntologyElementStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "DELETED";
 
+export type Cardinality =
+  | "ONE_TO_ONE"
+  | "ONE_TO_MANY"
+  | "MANY_TO_ONE"
+  | "MANY_TO_MANY"
+  | "OPTIONAL"
+  | "REQUIRED"
+  | "MULTIPLE";
+
 export type SourceType = "CSV" | "EXCEL" | "TXT" | "PDF";
 
 export type SourceStatus =
@@ -35,7 +44,7 @@ export type ExtractionJobStatus =
 export interface ProjectSummary {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   status: ProjectStatus;
   created_at: string;
   updated_at: string;
@@ -44,27 +53,28 @@ export interface ProjectSummary {
 }
 
 export interface ProjectDetail extends ProjectSummary {
-  current_ontology_version_id?: string | null;
+  current_ontology_version_id: string | null;
 }
 
 export interface ProjectCreateRequest {
   name: string;
-  description?: string;
+  description?: string | null;
 }
 
 export interface ProjectUpdateRequest {
-  name?: string;
-  description?: string;
-  status?: ProjectStatus;
+  name?: string | null;
+  description?: string | null;
+  status?: ProjectStatus | null;
 }
 
-export interface OntologyVersionSummary {
+export interface OntologyVersion {
   id: string;
   project_id: string;
-  name: string;
+  version: number;
   status: OntologyVersionStatus;
   created_at: string;
-  updated_at: string;
+  published_at: string | null;
+  created_by: string;
 }
 
 export interface OntologyClass {
@@ -72,7 +82,7 @@ export interface OntologyClass {
   version_id: string;
   name: string;
   label: string;
-  description: string;
+  description: string | null;
   status: OntologyElementStatus;
   position: {
     x: number;
@@ -87,10 +97,10 @@ export interface OntologyRelation {
   version_id: string;
   name: string;
   label: string;
-  description: string;
+  description: string | null;
   domain_class_id: string;
   range_class_id: string;
-  cardinality: "ONE_TO_ONE" | "ONE_TO_MANY" | "MANY_TO_ONE" | "MANY_TO_MANY";
+  cardinality: Cardinality;
   required: boolean;
   status: OntologyElementStatus;
   created_at: string;
@@ -105,7 +115,7 @@ export interface OntologyProperty {
   label: string;
   description?: string | null;
   data_type: "STRING" | "TEXT" | "INTEGER" | "FLOAT" | "BOOLEAN" | "DATE" | "DATETIME" | "URI";
-  cardinality: "OPTIONAL" | "REQUIRED" | "MULTIPLE" | "ONE_TO_ONE" | "ONE_TO_MANY" | "MANY_TO_ONE" | "MANY_TO_MANY";
+  cardinality: Cardinality;
   required: boolean;
   status: OntologyElementStatus;
   created_at: string;
@@ -129,7 +139,7 @@ export interface OntologyGraphEdge {
   source_class_id: string;
   target_class_id: string;
   label: string;
-  cardinality: OntologyRelation["cardinality"];
+  cardinality: Cardinality;
   status: OntologyElementStatus;
 }
 
@@ -148,14 +158,14 @@ export interface SourceData {
   project_id: string;
   file_name: string;
   source_type: SourceType;
-  mime_type: string;
+  mime_type: string | null;
   size_bytes: number;
   status: SourceStatus;
   preview_status: SourcePreviewStatus;
   storage_uri: string;
   uploaded_at: string;
   created_by: string;
-  metadata: Record<string, string | number | boolean>;
+  metadata?: Record<string, string | number | boolean>;
 }
 
 export interface SourceUploadRequest {
@@ -178,7 +188,7 @@ export interface SourcePreview {
   row_count_sampled: number;
   total_row_count: number;
   sheet_name?: string | null;
-  warnings: string[];
+  warnings?: string[];
 }
 
 export interface DashboardSummary {

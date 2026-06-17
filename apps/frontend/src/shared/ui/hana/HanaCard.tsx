@@ -28,18 +28,18 @@ const Card = styled.section`
 `;
 
 const CardHeader = styled.div`
-  padding: 18px 18px 0;
+  padding: ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg} 0;
 
   h2 {
     margin: 0;
-    font-size: 17px;
-    line-height: 1.3;
+    font-size: ${({ theme }) => theme.typography.fontSize.lg};
+    line-height: ${({ theme }) => theme.typography.lineHeight.tight};
   }
 
   p {
-    margin: 6px 0 0;
+    margin: ${({ theme }) => theme.spacing.sm} 0 0;
     color: ${({ theme }) => theme.color.textMuted};
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: ${({ theme }) => theme.typography.fontSize.md};
+    line-height: ${({ theme }) => theme.typography.lineHeight.normal};
   }
 `;

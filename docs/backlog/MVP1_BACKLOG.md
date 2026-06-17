@@ -67,13 +67,14 @@ PM-001/002/003
 | FE-008 | P1 | Frontend | Dashboard 초안 | FE-004, FE-006 | 프로젝트/소스/온톨로지 요약 지표가 표시됨 |
 | FE-009 | P0 | Frontend | Mock fixtures/API client boundary | FE-001, PM-003, PM-005 | `shared/api`와 `shared/mocks` 경계가 분리되고 P0 DTO/enum fixture가 있음 |
 | FE-010 | P2 | Frontend | 기본 테스트/Storybook 준비 | FE-003 | 핵심 공통 UI adapter의 smoke test 또는 story가 있음 |
-| FE-011 | P2 | Frontend | Dependency hardening | FE-003 | npm audit 5건의 실제 영향도를 분류하고 필요한 patch/override/교체안을 제안함 |
+| FE-011 | P2 | Frontend | Dependency hardening | FE-003 | hana-style-component install script 지연과 npm audit 5건의 실제 영향도를 분류하고 필요한 patch/override/교체안을 제안함 |
+| FE-012 | P1 | Frontend/PM | MVP 1 UI style foundation | FE-002, FE-003 | `docs/frontend/UI_STYLE_GUIDE_MVP1.md`가 작성되고 theme token, UI primitive, status tone, layout, hana adapter 사용 기준이 정리됨 |
 
 ## Integration Backlog
 
 | ID | Priority | Owner | Task | Dependencies | Acceptance |
 |---|---|---|---|---|---|
-| INT-001 | P0 | PM/Fullstack | MVP 1 데모 시나리오 검증 | BE-003, BE-004, BE-005, BE-006, BE-007, BE-009, FE-004, FE-005, FE-006, FE-007, FE-009 | 프로젝트 생성 → 온톨로지 작성 → 파일 업로드 → preview 확인 흐름이 통과함 |
+| INT-001 | P0 | PM/Fullstack | MVP 1 데모 시나리오 검증 | BE-003, BE-004, BE-005, BE-006, BE-007, BE-009, FE-004, FE-005, FE-006, FE-007, FE-009 | 프로젝트 생성 → 온톨로지 작성 → 파일 업로드 → preview 확인 흐름이 실제 FE-to-BE smoke에서 통과함 |
 | INT-002 | P1 | Backend/Frontend | API enum 동기화 | PM-005, BE-010, FE-009 | UI와 API가 같은 enum 문자열을 사용함 |
 | INT-003 | P1 | PM/Backend/Frontend | OpenAPI 기반 contract review | BE-010, FE-009 | missing field, naming mismatch, status mismatch가 backlog로 정리됨 |
 | INT-004 | P2 | PM/QA | MVP 1 acceptance checklist | INT-001 | 수용 기준 통과/미통과가 문서화됨 |
@@ -97,7 +98,10 @@ PM-001/002/003
 
 - [ ] PRD, IA, API contract, Glossary가 같은 P0 범위를 가리킨다.
 - [ ] `docs/adr`에 P0 API와 demo flow 결정이 기록되어 있다.
+- [ ] `docs/api/openapi-mvp1.json`이 canonical OpenAPI artifact로 사용된다.
 - [ ] `SourceType`, `SourceStatus`, `SourcePreviewStatus`, `OntologyElementStatus`, `Cardinality`, `PropertyDataType` enum이 OpenAPI와 UI mock fixture에 반영되어 있다.
+- [ ] `Cardinality`는 FE relation/edge type에서도 OpenAPI full enum을 수용한다.
+- [ ] `OntologyGraph.classes`/`relations`는 optional/deprecated compatibility field이며 canonical field가 아니다.
 
 ### Backend
 
@@ -115,6 +119,8 @@ PM-001/002/003
 - [ ] Ontology modeler는 class node, relation edge, property list를 같은 `version_id` 기준으로 렌더링한다.
 - [ ] Source detail은 CSV/Excel table preview와 TXT/PDF `NOT_AVAILABLE` notice를 구분한다.
 - [ ] API mock fixture의 DTO/enum 이름이 `docs/api/API_CONTRACT_PRIORITY_MVP1.md`와 `docs/pm/GLOSSARY.md`와 일치한다.
+- [ ] INT-001 full pass 전 `VITE_USE_MOCK_API=false` 실제 FE-to-BE Source list/detail/upload/preview smoke가 통과한다.
+- [ ] MVP 1 UI style foundation이 `docs/frontend/UI_STYLE_GUIDE_MVP1.md`에 정리되어 있고 화면/공통 UI가 이를 따른다.
 
 ## Backend/Frontend Blockers
 
@@ -132,8 +138,10 @@ PM-001/002/003
 
 | 상태 | 항목 | 판정 | 후속 조치 |
 |---|---|---|---|
-| Risk | `hana-style-component` install script 지연 | MVP 1 blocker는 아니며 dependency install risk로 추적한다. 현재 frontend는 `npm install --ignore-scripts`와 adapter 경계로 우회 가능하다. | FE-003/FE-010 검증에서 adapter import와 build smoke를 유지한다. |
-| Task | `npm audit` 취약점 5건 | 보안/운영 추적이 필요하므로 별도 P2 task로 분리한다. | FE-011에서 audit severity, 영향 dependency, patch/override/교체 필요성을 판단한다. |
-| Contract | `OntologyGraph.classes`/`relations` compatibility field | Backend transition field로 허용하지만 canonical contract는 아니다. | FE 신규 구현과 QA contract review는 `nodes`, `edges`, `properties`만 기준으로 판정한다. |
+| Task | `hana-style-component` install script 지연과 `npm audit` 취약점 5건 | MVP 1 release blocker가 아니며 P2 dependency hardening follow-up으로 추적한다. | FE-011에서 install script 지연, audit severity, 영향 dependency, patch/override/교체 필요성을 판단한다. |
+| Task | MVP 1 UI style foundation | 화면이 늘어나기 전에 최소 스타일 기준을 고정해야 한다. 대규모 리디자인은 하지 않는다. | FE-012에서 theme token, primitive usage, layout, status tone, hana adapter 정책을 문서화하고 현재 화면과 맞춘다. |
+| Contract | `OntologyGraph.classes`/`relations` compatibility field | Backend optional/deprecated transition field로 허용하지만 canonical contract는 아니다. | FE 신규 구현과 QA contract review는 `nodes`, `edges`, `properties`만 기준으로 판정한다. |
+| Contract | Relation/edge cardinality | Backend/OpenAPI `Cardinality` full enum을 FE relation/edge에서도 수용한다. 별도 축소 enum은 만들지 않는다. | FE-009와 INT-002/INT-003에서 relation/edge cardinality type이 full enum인지 확인한다. |
 | Contract | Source upload/preview enum/DTO 모호성 | `SourceStatus`와 `SourcePreviewStatus`는 분리 유지한다. | 구현 중 추가 모호성이 생기면 PM-005 결정으로 glossary/API 문서에 즉시 반영한다. |
 | Contract | Source delete 방식 | `SourceStatus`에 `ARCHIVED`/`DELETED`를 추가하지 않고 internal `is_deleted` soft delete를 수용한다. | 삭제된 source는 list/detail/preview와 project `source_count`에서 제외한다. |
+| Gate | INT-001 full pass 기준 | Backend API full flow와 FE mock route smoke만으로는 partial이다. | `VITE_USE_MOCK_API=false` actual FE-to-BE smoke가 최소 1회 통과해야 full pass로 판정한다. |

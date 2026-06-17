@@ -24,7 +24,7 @@ export function ProjectDetailPage() {
     }
 
     setName(project.name);
-    setDescription(project.description);
+    setDescription(project.description ?? "");
     setStatus(project.status);
   }, [project]);
 
@@ -46,7 +46,7 @@ export function ProjectDetailPage() {
 
   return (
     <>
-      <PageHeader title={project.name} description={project.description}>
+      <PageHeader title={project.name} description={project.description ?? "No description"}>
         <HanaBadge tone={statusToTone(project.status)}>{project.status}</HanaBadge>
       </PageHeader>
       <MetricGrid>
@@ -105,7 +105,7 @@ export function ProjectDetailPage() {
               onClick={() =>
                 updateProject.mutate({
                   name: name.trim(),
-                  description: description.trim(),
+                  description: description.trim() || null,
                   status,
                 })
               }

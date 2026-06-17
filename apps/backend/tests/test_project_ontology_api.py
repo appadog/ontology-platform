@@ -174,6 +174,17 @@ def test_openapi_exposes_source_contract() -> None:
     assert "SourcePreviewStatus" in schema["components"]["schemas"]
 
 
+def test_openapi_ontology_graph_compat_fields_are_optional_deprecated() -> None:
+    schema = client.get("/api/v1/openapi.json").json()
+    ontology_graph = schema["components"]["schemas"]["OntologyGraph"]
+    required_fields = set(ontology_graph["required"])
+    assert {"nodes", "edges", "properties"}.issubset(required_fields)
+    assert "classes" not in required_fields
+    assert "relations" not in required_fields
+    assert ontology_graph["properties"]["classes"]["deprecated"] is True
+    assert ontology_graph["properties"]["relations"]["deprecated"] is True
+
+
 def _minimal_xlsx_bytes() -> bytes:
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w") as workbook:

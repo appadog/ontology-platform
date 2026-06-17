@@ -11,14 +11,7 @@ export const GlobalStyle = createGlobalStyle`
     min-height: 100vh;
     color: ${({ theme }) => theme.color.text};
     background: ${({ theme }) => theme.color.surface};
-    font-family:
-      Inter,
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      sans-serif;
+    font-family: ${({ theme }) => theme.typography.fontFamily};
     letter-spacing: 0;
   }
 

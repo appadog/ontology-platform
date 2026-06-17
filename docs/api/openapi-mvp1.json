@@ -2081,18 +2081,36 @@
             "title": "Properties"
           },
           "classes": {
-            "items": {
-              "$ref": "#/components/schemas/OntologyClass"
-            },
-            "type": "array",
-            "title": "Classes"
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OntologyClass"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classes",
+            "description": "Deprecated compatibility field. Use nodes[] as the canonical graph payload.",
+            "deprecated": true
           },
           "relations": {
-            "items": {
-              "$ref": "#/components/schemas/OntologyRelation"
-            },
-            "type": "array",
-            "title": "Relations"
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OntologyRelation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relations",
+            "description": "Deprecated compatibility field. Use edges[] as the canonical graph payload.",
+            "deprecated": true
           }
         },
         "type": "object",
@@ -2101,9 +2119,7 @@
           "version_status",
           "nodes",
           "edges",
-          "properties",
-          "classes",
-          "relations"
+          "properties"
         ],
         "title": "OntologyGraph",
         "example": {
