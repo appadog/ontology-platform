@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "ontology-platform-backend"
+version = "0.1.0"
+description = "FastAPI backend for the ontology data platform MVP."
+authors = ["Ontology Platform Team"]
+readme = "README.md"
+packages = [{ include = "app" }]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<4.0"
+fastapi = "^0.115.6"
+uvicorn = { extras = ["standard"], version = "^0.34.0" }
+pydantic = "^2.10.4"
+pydantic-settings = "^2.7.1"
+sqlalchemy = "^2.0.36"
+alembic = "^1.14.0"
+psycopg = { extras = ["binary"], version = "^3.2.3" }
+python-multipart = "^0.0.20"
+
+[tool.poetry.group.dev.dependencies]
+httpx = "^0.28.1"
+pytest = "^8.3.4"
+ruff = "^0.8.4"
+
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

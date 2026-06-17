@@ -1,0 +1,53 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from app.api.router import api_router
+from app.core.config import settings
+from app.core.errors import ApiException, api_exception_handler
+
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    environment: str
+
+
+class VersionResponse(BaseModel):
+    name: str
+    version: str
+    api_prefix: str
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title=settings.app_name,
+        version="0.1.0",
+        description="Ontology Platform MVP backend API.",
+        openapi_url=f"{settings.api_v1_prefix}/openapi.json",
+        docs_url="/docs",
+        redoc_url="/redoc",
+    )
+    app.add_exception_handler(ApiException, api_exception_handler)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    app.include_router(api_router, prefix=settings.api_v1_prefix)
+    return app
+
+
+app = create_app()
+
+
+@app.get("/health", response_model=HealthResponse, tags=["Health"], summary="Backend health")
+def health() -> HealthResponse:
+    return HealthResponse(status="ok", service=settings.app_name, environment=settings.app_env)
+
+
+@app.get("/version", response_model=VersionResponse, tags=["Health"], summary="Backend version")
+def version() -> VersionResponse:
+    return VersionResponse(name=settings.app_name, version="0.1.0", api_prefix=settings.api_v1_prefix)

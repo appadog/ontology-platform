@@ -1,0 +1,33 @@
+export const theme = {
+  color: {
+    surface: "#f7f9fb",
+    surfaceRaised: "#ffffff",
+    surfaceMuted: "#eef2f7",
+    border: "#d8e0ea",
+    borderStrong: "#aab7c8",
+    text: "#172033",
+    textMuted: "#65748b",
+    primary: "#1d4ed8",
+    primarySoft: "#dbeafe",
+    positive: "#047857",
+    positiveSoft: "#d1fae5",
+    warning: "#b45309",
+    warningSoft: "#fef3c7",
+    danger: "#b91c1c",
+    dangerSoft: "#fee2e2",
+    progress: "#0f766e",
+    progressSoft: "#ccfbf1",
+    draft: "#475569",
+    draftSoft: "#e2e8f0",
+    graphNode: "#1f5f8b",
+    graphRelation: "#7c3aed",
+  },
+  shadow: {
+    soft: "0 14px 34px rgba(23, 32, 51, 0.08)",
+  },
+  radius: {
+    sm: "6px",
+    md: "8px",
+  },
+  sidebarWidth: "248px",
+};

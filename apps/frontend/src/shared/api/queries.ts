@@ -1,0 +1,64 @@
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "./client";
+
+export function useDashboardSummary() {
+  return useQuery({
+    queryKey: ["dashboard"],
+    queryFn: apiClient.getDashboardSummary,
+  });
+}
+
+export function useProjects() {
+  return useQuery({
+    queryKey: ["projects"],
+    queryFn: apiClient.listProjects,
+  });
+}
+
+export function useProject(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId],
+    queryFn: () => apiClient.getProject(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useOntologyVersions(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "ontology", "versions"],
+    queryFn: () => apiClient.listOntologyVersions(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useOntologyGraph(versionId: string) {
+  return useQuery({
+    queryKey: ["ontology", "versions", versionId, "graph"],
+    queryFn: () => apiClient.getOntologyGraph(versionId),
+    enabled: Boolean(versionId),
+  });
+}
+
+export function useSources(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "sources"],
+    queryFn: () => apiClient.listSources(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useSource(sourceId: string) {
+  return useQuery({
+    queryKey: ["sources", sourceId],
+    queryFn: () => apiClient.getSource(sourceId),
+    enabled: Boolean(sourceId),
+  });
+}
+
+export function useSourcePreview(sourceId: string) {
+  return useQuery({
+    queryKey: ["sources", sourceId, "preview"],
+    queryFn: () => apiClient.getSourcePreview(sourceId),
+    enabled: Boolean(sourceId),
+  });
+}
