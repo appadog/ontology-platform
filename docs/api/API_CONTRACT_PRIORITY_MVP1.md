@@ -19,6 +19,8 @@ Canonical OpenAPI artifact는 `docs/api/openapi-mvp1.json`이다. Backend는 이
 | P1 | Seed Data | 데모와 테스트 안정화 |
 | P2 | Audit-lite | 후속 audit log 확장 지점 |
 
+`Dashboard Summary`는 MVP 1 actual API endpoint가 아니다. `/api/v1/dashboard`는 `docs/api/openapi-mvp1.json`에 추가하지 않고, Frontend actual API mode는 P0 API 조합으로 summary를 계산하거나 dashboard를 mock-only/P1 boundary로 분리한다. QA는 actual API mode에서 `/api/v1/dashboard` 호출이 남아 있으면 contract mismatch로 판정한다.
+
 ## 1.1 P0 Demo API Flow
 
 INT-001의 기준 happy path는 아래 순서로 고정한다.
@@ -31,6 +33,8 @@ INT-001의 기준 happy path는 아래 순서로 고정한다.
 6. `GET /api/v1/sources/{source_id}/preview`로 sample rows와 columns를 확인한다.
 
 INT-001 full pass는 backend API full flow와 frontend mock route smoke만으로 판정하지 않는다. 최소 1회 `VITE_USE_MOCK_API=false` 실제 FE-to-BE smoke가 필요하다.
+
+Browser click smoke는 INT-001 full pass의 선호 증거다. 자동 browser 도구 또는 Playwright/Cypress 환경이 없으면 QA는 동일 단계의 manual UAT checklist, 실행 환경, 미수행 사유를 남기고 PM이 예외 승인 여부를 판정한다.
 
 ## 2. Endpoint Draft
 
@@ -413,6 +417,7 @@ Backend OpenAPI examples and frontend `shared/mocks` fixtures must include the s
 - Backend는 OpenAPI schema에 request/response DTO를 노출한다.
 - Frontend는 `shared/api`에 API client와 타입 경계를 둔다.
 - OpenAPI artifact는 `docs/api/openapi-mvp1.json`이다.
+- `/api/v1/dashboard`는 MVP 1 actual API contract에 포함하지 않는다. Backend는 dashboard endpoint를 추가하지 않고, Frontend는 actual API mode에서 P0 Project/Ontology/Source API 조합 또는 mock-only/P1 boundary로 처리한다.
 - `OntologyGraph`의 canonical field는 `nodes`, `edges`, `properties`다. `classes`, `relations`는 backend optional/deprecated compatibility field로만 허용하며 frontend 신규 구현과 QA contract review는 canonical field만 기준으로 삼는다.
 - `Cardinality`는 backend/OpenAPI full enum을 frontend relation/edge type에서도 그대로 수용한다. relation/edge 전용 축소 enum을 별도로 만들지 않는다.
 - Breaking change는 `docs/adr` 또는 API change note로 기록한다.

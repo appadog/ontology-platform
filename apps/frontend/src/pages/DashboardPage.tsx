@@ -10,7 +10,7 @@ export function DashboardPage() {
   const { data, isLoading, isError, refetch } = useDashboardSummary();
 
   if (isLoading) {
-    return <PageState kind="loading" title="대시보드를 불러오는 중" description="mock fixture를 통해 MVP 1 요약 상태를 준비하고 있습니다." />;
+    return <PageState kind="loading" title="대시보드를 불러오는 중" description="MVP 1 P0 API 조합으로 요약 상태를 준비하고 있습니다." />;
   }
 
   if (isError || !data) {
@@ -58,7 +58,7 @@ export function DashboardPage() {
       </HanaCard>
       <Notice>
         <HanaBadge tone="muted">DEV MODE</HanaBadge>
-        <span>Mock fixture API로 로컬 화면 상태를 확인합니다.</span>
+        <span>Mock 또는 P0 API 조합으로 로컬 화면 상태를 확인합니다.</span>
       </Notice>
     </>
   );

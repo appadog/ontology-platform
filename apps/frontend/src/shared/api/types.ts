@@ -25,6 +25,8 @@ export type SourceStatus =
 
 export type SourcePreviewStatus = "PENDING" | "READY" | "NOT_AVAILABLE" | "FAILED";
 
+export type PropertyDataType = "STRING" | "TEXT" | "INTEGER" | "FLOAT" | "BOOLEAN" | "DATE" | "DATETIME" | "URI";
+
 export type CandidateReviewStatus = "PENDING" | "APPROVED" | "REJECTED" | "MODIFIED" | "NEEDS_DISCUSSION";
 
 export type ValidationStatus = "NOT_VALIDATED" | "PASSED" | "WARNING" | "FAILED";
@@ -77,6 +79,15 @@ export interface OntologyVersion {
   created_by: string;
 }
 
+export interface OntologyVersionCreateRequest {
+  created_by?: string | null;
+}
+
+export interface Position {
+  x: number;
+  y: number;
+}
+
 export interface OntologyClass {
   id: string;
   version_id: string;
@@ -84,12 +95,16 @@ export interface OntologyClass {
   label: string;
   description: string | null;
   status: OntologyElementStatus;
-  position: {
-    x: number;
-    y: number;
-  };
+  position: Position;
   created_at: string;
   updated_at: string;
+}
+
+export interface OntologyClassCreateRequest {
+  name: string;
+  label?: string | null;
+  description?: string | null;
+  position?: Position;
 }
 
 export interface OntologyRelation {
@@ -114,7 +129,7 @@ export interface OntologyProperty {
   name: string;
   label: string;
   description?: string | null;
-  data_type: "STRING" | "TEXT" | "INTEGER" | "FLOAT" | "BOOLEAN" | "DATE" | "DATETIME" | "URI";
+  data_type: PropertyDataType;
   cardinality: Cardinality;
   required: boolean;
   status: OntologyElementStatus;
@@ -122,14 +137,31 @@ export interface OntologyProperty {
   updated_at: string;
 }
 
+export interface OntologyPropertyCreateRequest {
+  class_id: string;
+  name: string;
+  label?: string | null;
+  description?: string | null;
+  data_type?: PropertyDataType;
+  cardinality?: Cardinality;
+  required?: boolean;
+}
+
+export interface OntologyRelationCreateRequest {
+  name: string;
+  label?: string | null;
+  description?: string | null;
+  domain_class_id: string;
+  range_class_id: string;
+  cardinality?: Cardinality;
+  required?: boolean;
+}
+
 export interface OntologyGraphNode {
   id: string;
   class_id: string;
   label: string;
-  position: {
-    x: number;
-    y: number;
-  };
+  position: Position;
   status: OntologyElementStatus;
 }
 
@@ -149,8 +181,8 @@ export interface OntologyGraph {
   nodes: OntologyGraphNode[];
   edges: OntologyGraphEdge[];
   properties: OntologyProperty[];
-  classes?: OntologyClass[];
-  relations?: OntologyRelation[];
+  classes?: OntologyClass[] | null;
+  relations?: OntologyRelation[] | null;
 }
 
 export interface SourceData {
@@ -176,7 +208,7 @@ export interface SourceUploadRequest {
 
 export interface SourcePreviewColumn {
   name: string;
-  data_type: OntologyProperty["data_type"];
+  data_type: PropertyDataType;
   nullable: boolean;
   sample_values: Array<string | number | boolean | null>;
 }

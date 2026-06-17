@@ -1,5 +1,4 @@
 import {
-  mockDashboard,
   mockOntologyGraph,
   mockOntologyVersions,
   mockProjects,
@@ -9,7 +8,14 @@ import {
 import {
   DashboardSummary,
   OntologyGraph,
+  OntologyClass,
+  OntologyClassCreateRequest,
+  OntologyProperty,
+  OntologyPropertyCreateRequest,
+  OntologyRelation,
+  OntologyRelationCreateRequest,
   OntologyVersion,
+  OntologyVersionCreateRequest,
   ProjectCreateRequest,
   ProjectDetail,
   ProjectSummary,
@@ -25,6 +31,17 @@ let mockProjectStore: ProjectDetail[] = mockProjects.map((project) => ({
   ...project,
   current_ontology_version_id: project.id === "project-corp-knowledge" ? "onto-v1-draft" : null,
 }));
+let mockOntologyVersionStore: OntologyVersion[] = [...mockOntologyVersions];
+let mockOntologyGraphStore: Record<string, OntologyGraph> = {
+  [mockOntologyGraph.version_id]: {
+    ...mockOntologyGraph,
+    nodes: [...mockOntologyGraph.nodes],
+    edges: [...mockOntologyGraph.edges],
+    properties: [...mockOntologyGraph.properties],
+    classes: mockOntologyGraph.classes ? [...mockOntologyGraph.classes] : null,
+    relations: mockOntologyGraph.relations ? [...mockOntologyGraph.relations] : null,
+  },
+};
 let mockSourceStore: SourceData[] = [...mockSources];
 const mockPreviewStore: Record<string, SourcePreview> = { ...mockSourcePreviews };
 
@@ -116,17 +133,106 @@ function createMockPreview(source: SourceData): SourcePreview {
   };
 }
 
+function cloneGraph(graph: OntologyGraph): OntologyGraph {
+  return {
+    ...graph,
+    nodes: [...graph.nodes],
+    edges: [...graph.edges],
+    properties: [...graph.properties],
+    classes: graph.classes ? [...graph.classes] : graph.classes,
+    relations: graph.relations ? [...graph.relations] : graph.relations,
+  };
+}
+
+function slugify(value: string): string {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return slug || "item";
+}
+
+function pickLatestVersion(versions: OntologyVersion[]): OntologyVersion | undefined {
+  return [...versions].sort((a, b) => b.version - a.version)[0];
+}
+
+function buildDashboardSummary(projects: ProjectSummary[], sources: SourceData[], graphs: OntologyGraph[]): DashboardSummary {
+  const recentActivity = [
+    ...sources.map((source) => ({
+      id: `source-${source.id}`,
+      label: `${source.file_name} ${source.preview_status}`,
+      timestamp: source.uploaded_at,
+    })),
+    ...projects.map((project) => ({
+      id: `project-${project.id}`,
+      label: `${project.name} ${project.status}`,
+      timestamp: project.updated_at,
+    })),
+  ]
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 5);
+
+  return {
+    active_project_count: projects.filter((project) => project.status === "ACTIVE").length,
+    source_count: sources.length,
+    ontology_class_count: graphs.reduce((sum, graph) => sum + graph.nodes.length, 0),
+    ontology_relation_count: graphs.reduce((sum, graph) => sum + graph.edges.length, 0),
+    failed_source_count: sources.filter((source) => source.status === "FAILED").length,
+    recent_activity: recentActivity,
+  };
+}
+
+function buildMockDashboardSummary(): DashboardSummary {
+  const graphs = mockProjectStore
+    .map((project) => pickLatestVersion(mockOntologyVersionStore.filter((version) => version.project_id === project.id)))
+    .filter((version): version is OntologyVersion => Boolean(version))
+    .map((version) => mockOntologyGraphStore[version.id])
+    .filter((graph): graph is OntologyGraph => Boolean(graph));
+
+  return buildDashboardSummary(mockProjectStore, mockSourceStore, graphs);
+}
+
+async function buildActualDashboardSummary(): Promise<DashboardSummary> {
+  const projects = await request<ProjectSummary[]>("/api/v1/projects");
+  const sourceLists = await Promise.all(
+    projects.map((project) => request<SourceData[]>(`/api/v1/projects/${project.id}/sources`).catch(() => [])),
+  );
+  const versionLists = await Promise.all(
+    projects.map((project) =>
+      request<OntologyVersion[]>(`/api/v1/projects/${project.id}/ontology/versions`).catch(() => []),
+    ),
+  );
+  const latestVersions = versionLists
+    .map((versions) => pickLatestVersion(versions))
+    .filter((version): version is OntologyVersion => Boolean(version));
+  const graphs = (
+    await Promise.all(
+      latestVersions.map((version) => request<OntologyGraph>(`/api/v1/ontology/versions/${version.id}/graph`).catch(() => null)),
+    )
+  ).filter((graph): graph is OntologyGraph => Boolean(graph));
+
+  return buildDashboardSummary(projects, sourceLists.flat(), graphs);
+}
+
+function getMockGraph(versionId: string): OntologyGraph {
+  const graph = mockOntologyGraphStore[versionId];
+
+  if (!graph) {
+    throw new Error("Ontology graph not found");
+  }
+
+  return graph;
+}
+
 export const apiClient = {
   async getDashboardSummary(): Promise<DashboardSummary> {
     if (USE_MOCK_API) {
-      return delay({
-        ...mockDashboard,
-        source_count: mockSourceStore.length,
-        failed_source_count: mockSourceStore.filter((source) => source.status === "FAILED").length,
-      });
+      return delay(buildMockDashboardSummary());
     }
 
-    return request<DashboardSummary>("/api/v1/dashboard");
+    return buildActualDashboardSummary();
   },
 
   async listProjects(): Promise<ProjectSummary[]> {
@@ -206,21 +312,186 @@ export const apiClient = {
 
   async listOntologyVersions(projectId: string): Promise<OntologyVersion[]> {
     if (USE_MOCK_API) {
-      return delay(mockOntologyVersions.filter((version) => version.project_id === projectId));
+      return delay(
+        mockOntologyVersionStore
+          .filter((version) => version.project_id === projectId)
+          .sort((a, b) => b.version - a.version),
+      );
     }
 
     return request<OntologyVersion[]>(`/api/v1/projects/${projectId}/ontology/versions`);
   },
 
+  async createOntologyVersion(projectId: string, payload: OntologyVersionCreateRequest = {}): Promise<OntologyVersion> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const nextVersion =
+        (pickLatestVersion(mockOntologyVersionStore.filter((version) => version.project_id === projectId))?.version ?? 0) + 1;
+      const version: OntologyVersion = {
+        id: `onto-v${nextVersion}-${Date.now()}`,
+        project_id: projectId,
+        version: nextVersion,
+        status: "DRAFT",
+        created_at: now,
+        published_at: null,
+        created_by: payload.created_by ?? "dev-admin",
+      };
+
+      mockOntologyVersionStore = [version, ...mockOntologyVersionStore];
+      mockOntologyGraphStore[version.id] = {
+        version_id: version.id,
+        version_status: "DRAFT",
+        nodes: [],
+        edges: [],
+        properties: [],
+        classes: [],
+        relations: [],
+      };
+      mockProjectStore = mockProjectStore.map((project) =>
+        project.id === projectId
+          ? {
+              ...project,
+              current_ontology_version_id: version.id,
+              ontology_version_count: project.ontology_version_count + 1,
+              updated_at: now,
+            }
+          : project,
+      );
+
+      return delay(version);
+    }
+
+    return jsonRequest<OntologyVersion>(`/api/v1/projects/${projectId}/ontology/versions`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
   async getOntologyGraph(versionId: string): Promise<OntologyGraph> {
     if (USE_MOCK_API) {
-      return delay({
-        ...mockOntologyGraph,
-        version_id: versionId,
-      });
+      return delay(cloneGraph(getMockGraph(versionId)));
     }
 
     return request<OntologyGraph>(`/api/v1/ontology/versions/${versionId}/graph`);
+  },
+
+  async createOntologyClass(versionId: string, payload: OntologyClassCreateRequest): Promise<OntologyClass> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const graph = getMockGraph(versionId);
+      const classSlug = slugify(payload.name);
+      const ontologyClass: OntologyClass = {
+        id: `class-${classSlug}-${Date.now()}`,
+        version_id: versionId,
+        name: payload.name,
+        label: payload.label || payload.name,
+        description: payload.description ?? null,
+        status: "ACTIVE",
+        position: payload.position ?? { x: 140 + graph.nodes.length * 180, y: 140 + graph.nodes.length * 40 },
+        created_at: now,
+        updated_at: now,
+      };
+
+      mockOntologyGraphStore[versionId] = {
+        ...graph,
+        nodes: [
+          ...graph.nodes,
+          {
+            id: ontologyClass.id,
+            class_id: ontologyClass.id,
+            label: ontologyClass.label,
+            position: ontologyClass.position,
+            status: ontologyClass.status,
+          },
+        ],
+        classes: [...(graph.classes ?? []), ontologyClass],
+      };
+
+      return delay(ontologyClass);
+    }
+
+    return jsonRequest<OntologyClass>(`/api/v1/ontology/versions/${versionId}/classes`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async createOntologyProperty(versionId: string, payload: OntologyPropertyCreateRequest): Promise<OntologyProperty> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const graph = getMockGraph(versionId);
+      const property: OntologyProperty = {
+        id: `property-${slugify(payload.name)}-${Date.now()}`,
+        version_id: versionId,
+        class_id: payload.class_id,
+        name: payload.name,
+        label: payload.label || payload.name,
+        description: payload.description ?? null,
+        data_type: payload.data_type ?? "STRING",
+        cardinality: payload.cardinality ?? "OPTIONAL",
+        required: payload.required ?? false,
+        status: "ACTIVE",
+        created_at: now,
+        updated_at: now,
+      };
+
+      mockOntologyGraphStore[versionId] = {
+        ...graph,
+        properties: [...graph.properties, property],
+      };
+
+      return delay(property);
+    }
+
+    return jsonRequest<OntologyProperty>(`/api/v1/ontology/versions/${versionId}/properties`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async createOntologyRelation(versionId: string, payload: OntologyRelationCreateRequest): Promise<OntologyRelation> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const graph = getMockGraph(versionId);
+      const relation: OntologyRelation = {
+        id: `relation-${slugify(payload.name)}-${Date.now()}`,
+        version_id: versionId,
+        name: payload.name,
+        label: payload.label || payload.name,
+        description: payload.description ?? null,
+        domain_class_id: payload.domain_class_id,
+        range_class_id: payload.range_class_id,
+        cardinality: payload.cardinality ?? "MANY_TO_MANY",
+        required: payload.required ?? false,
+        status: "ACTIVE",
+        created_at: now,
+        updated_at: now,
+      };
+
+      mockOntologyGraphStore[versionId] = {
+        ...graph,
+        edges: [
+          ...graph.edges,
+          {
+            id: relation.id,
+            relation_id: relation.id,
+            source_class_id: relation.domain_class_id,
+            target_class_id: relation.range_class_id,
+            label: relation.label,
+            cardinality: relation.cardinality,
+            status: relation.status,
+          },
+        ],
+        relations: [...(graph.relations ?? []), relation],
+      };
+
+      return delay(relation);
+    }
+
+    return jsonRequest<OntologyRelation>(`/api/v1/ontology/versions/${versionId}/relations`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   async listSources(projectId: string): Promise<SourceData[]> {

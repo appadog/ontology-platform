@@ -4,11 +4,12 @@ import styled from "styled-components";
 interface HanaCardProps extends PropsWithChildren {
   title?: string;
   description?: string;
+  className?: string;
 }
 
-export function HanaCard({ title, description, children }: HanaCardProps) {
+export function HanaCard({ title, description, children, className }: HanaCardProps) {
   return (
-    <Card>
+    <Card className={className}>
       {(title || description) && (
         <CardHeader>
           {title && <h2>{title}</h2>}

@@ -7,11 +7,14 @@
 | 경로 | 목적 |
 |---|---|
 | `pm/PRD_MVP1.md` | MVP 1차 제품 요구사항 초안 |
+| `pm/MVP2_PREP_BRIEF.md` | MVP 2차 준비 브리프와 진입 조건 |
 | `pm/IA_MVP1.md` | MVP 1차 정보구조와 화면 흐름 |
 | `pm/GLOSSARY.md` | PM/Backend/Frontend 공통 용어집 |
 | `pm/ROLE_POLICY_MVP1.md` | MVP 1차 사용자 역할과 개발용 권한 정책 |
 | `api/API_CONTRACT_PRIORITY_MVP1.md` | API contract-first 우선순위 |
+| `api/API_CONTRACT_PRIORITY_MVP2_DRAFT.md` | MVP 2차 API 계약 초안 |
 | `backlog/MVP1_BACKLOG.md` | MVP 1차 백로그 |
+| `backlog/MVP2_DRAFT_BACKLOG.md` | MVP 2차 draft 백로그 |
 | `backlog/ISSUE_TEMPLATE.md` | 에이전트 작업 이슈 템플릿 |
 | `handoffs/` | 역할별 완료 보고, 총괄 상태판, 다음 지시 |
 | `adr/` | Architecture Decision Records |

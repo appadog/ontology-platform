@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
-import { ProjectCreateRequest, ProjectUpdateRequest, SourceUploadRequest } from "./types";
+import {
+  OntologyClassCreateRequest,
+  OntologyPropertyCreateRequest,
+  OntologyRelationCreateRequest,
+  OntologyVersionCreateRequest,
+  ProjectCreateRequest,
+  ProjectUpdateRequest,
+  SourceUploadRequest,
+} from "./types";
 
 export function useDashboardSummary() {
   return useQuery({
@@ -57,11 +65,62 @@ export function useOntologyVersions(projectId: string) {
   });
 }
 
+export function useCreateOntologyVersion(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: OntologyVersionCreateRequest = {}) => apiClient.createOntologyVersion(projectId, payload),
+    onSuccess: (version) => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "ontology", "versions"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: ["ontology", "versions", version.id, "graph"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 export function useOntologyGraph(versionId: string) {
   return useQuery({
     queryKey: ["ontology", "versions", versionId, "graph"],
     queryFn: () => apiClient.getOntologyGraph(versionId),
     enabled: Boolean(versionId),
+  });
+}
+
+export function useCreateOntologyClass(versionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: OntologyClassCreateRequest) => apiClient.createOntologyClass(versionId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["ontology", "versions", versionId, "graph"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useCreateOntologyProperty(versionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: OntologyPropertyCreateRequest) => apiClient.createOntologyProperty(versionId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["ontology", "versions", versionId, "graph"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useCreateOntologyRelation(versionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: OntologyRelationCreateRequest) => apiClient.createOntologyRelation(versionId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["ontology", "versions", versionId, "graph"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 }
 
