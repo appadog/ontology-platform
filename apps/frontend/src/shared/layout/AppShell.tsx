@@ -6,6 +6,11 @@ import { mockProjects } from "../mocks/fixtures";
 import { navigationItems } from "./navigation";
 import { HanaBadge, HanaSelect, statusToTone } from "../ui/hana";
 
+const defaultProfileSourceId = "source-policy-csv";
+const defaultChunkSourceId = "source-handbook-pdf";
+const defaultJobId = "job-policy-extraction";
+const defaultEvidenceId = "evidence-policy-row-1";
+
 export function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const selectedProject = mockProjects[0];
@@ -17,20 +22,15 @@ export function AppShell({ children }: PropsWithChildren) {
           <strong>Ontology</strong>
           <span>Data Platform</span>
         </Brand>
-        <Nav aria-label="MVP 1 navigation">
+        <Nav aria-label="Application navigation">
           {navigationItems.map((item) => {
-            const path =
-              item.path === "/ontology"
-                ? `/projects/${selectedProject.id}/ontology`
-                : item.path === "/sources"
-                  ? `/projects/${selectedProject.id}/sources`
-                  : item.path;
+            const path = resolveNavigationPath(item.path, selectedProject.id);
 
             return (
-            <NavLink key={item.path} to={path}>
-              <item.icon aria-hidden="true" />
-              {item.label}
-            </NavLink>
+              <NavLink key={item.path} to={path}>
+                <item.icon aria-hidden="true" />
+                {item.label}
+              </NavLink>
             );
           })}
         </Nav>
@@ -66,6 +66,29 @@ export function AppShell({ children }: PropsWithChildren) {
       </MainArea>
     </Shell>
   );
+}
+
+function resolveNavigationPath(path: string, projectId: string) {
+  switch (path) {
+    case "/ontology":
+      return `/projects/${projectId}/ontology`;
+    case "/sources":
+      return `/projects/${projectId}/sources`;
+    case "/profile":
+      return `/projects/${projectId}/sources/${defaultProfileSourceId}/profile`;
+    case "/chunks":
+      return `/projects/${projectId}/sources/${defaultChunkSourceId}/chunks`;
+    case "/extraction/new":
+      return `/projects/${projectId}/extraction/new`;
+    case "/extraction-jobs":
+      return `/projects/${projectId}/extraction-jobs`;
+    case "/candidates":
+      return `/extraction-jobs/${defaultJobId}/candidates`;
+    case "/evidence":
+      return `/candidate-evidence/${defaultEvidenceId}`;
+    default:
+      return path;
+  }
 }
 
 const Shell = styled.div`
@@ -137,7 +160,7 @@ const Nav = styled.nav`
   }
 
   @media (max-width: 860px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
 
     a {
       justify-content: center;

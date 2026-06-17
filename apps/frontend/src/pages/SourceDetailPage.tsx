@@ -1,5 +1,5 @@
 import { FileText } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
 import { useSource, useSourcePreview } from "../shared/api/queries";
 import { PageHeader } from "../shared/layout/PageHeader";
@@ -34,6 +34,8 @@ export function SourceDetailPage() {
       <PageHeader title={source.file_name} description="업로드 파일의 메타데이터와 샘플 preview를 확인합니다.">
         <HanaBadge tone={statusToTone(source.status)}>{source.status}</HanaBadge>
         <HanaBadge tone={statusToTone(source.preview_status)}>{source.preview_status}</HanaBadge>
+        <HeaderLink to={`/projects/${source.project_id}/sources/${source.id}/profile`}>Profile</HeaderLink>
+        <HeaderLink to={`/projects/${source.project_id}/sources/${source.id}/chunks`}>Chunks</HeaderLink>
       </PageHeader>
       <DetailGrid>
         <HanaCard title="Metadata">
@@ -229,4 +231,17 @@ const WarningList = styled.ul`
   padding: 0 18px 18px 38px;
   color: ${({ theme }) => theme.color.warning};
   font-weight: 700;
+`;
+
+const HeaderLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 ${({ theme }) => theme.spacing.md};
+  border: 1px solid ${({ theme }) => theme.color.borderStrong};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  color: ${({ theme }) => theme.color.text};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
 `;

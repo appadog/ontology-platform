@@ -38,6 +38,9 @@ app/
     project/
     ontology/
     source/
+    prompt/
+    extraction/
+    candidate/
 tests/
 scripts/
 ```
@@ -82,6 +85,17 @@ docker compose up --build
 - OpenAPI JSON export script
 - MVP 1 seed data script
 
+## Implemented MVP 2 Draft Thin Slice
+
+- SourceSegment persistence scaffold
+- CSV/Excel source profiling
+- deterministic TXT/PDF and tabular source parse/chunk endpoints
+- PromptTemplate/PromptVersion scaffold
+- ExtractionJob/ModelRun scaffold
+- deterministic MockProvider only
+- CandidateEntity/CandidateRelation/CandidateEvidence persistence scaffold
+- read-only candidate/evidence query endpoints
+
 ## P0 API Flow
 
 ```bash
@@ -121,11 +135,12 @@ poetry run alembic downgrade -1
 
 ## OpenAPI Export
 
-BE-010 type sharing decision: backend exports the canonical OpenAPI JSON to `docs/api/openapi-mvp1.json`; frontend can generate or manually sync API types from that file.
+BE-010 type sharing decision: backend exports OpenAPI JSON for FE type generation/manual sync.
+MVP 1 canonical acceptance artifact remains `docs/api/openapi-mvp1.json`; current MVP 2 draft backend contract exports to `docs/api/openapi-mvp2-draft.json`.
 
 ```bash
 cd apps/backend
-poetry run python scripts/export_openapi.py --output ../../docs/api/openapi-mvp1.json
+poetry run python scripts/export_openapi.py
 ```
 
 ## Seed Data

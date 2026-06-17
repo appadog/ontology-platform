@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, JSON, String
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.enums import SourcePreviewStatus, SourceStatus, SourceType
+from app.core.enums import SourcePreviewStatus, SourceSegmentType, SourceStatus, SourceType
 from app.db.base_class import Base
 
 
@@ -50,3 +50,43 @@ class SourceData(Base):
     sheet_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     preview_warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+
+
+class SourceProfile(Base):
+    __tablename__ = "source_profiles"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    source_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("source_data.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    columns: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    sample_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now
+    )
+
+
+class SourceSegment(Base):
+    __tablename__ = "source_segments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    source_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("source_data.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    segment_type: Mapped[SourceSegmentType] = mapped_column(
+        Enum(SourceSegmentType, native_enum=False, length=32), nullable=False, index=True
+    )
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False, default=0, index=True)
+    row_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    column_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    section_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    paragraph_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    chunk_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now
+    )

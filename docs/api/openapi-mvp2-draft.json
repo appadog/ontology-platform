@@ -1,0 +1,6071 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform Backend",
+    "description": "Ontology Platform MVP backend API.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/me": {
+      "get": {
+        "tags": [
+          "Dev Auth"
+        ],
+        "summary": "Get development user",
+        "operationId": "get_me_api_v1_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DevUser"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "tags": [
+          "Project"
+        ],
+        "summary": "List projects",
+        "operationId": "list_projects_api_v1_projects_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ProjectStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectSummary"
+                  },
+                  "title": "Response List Projects Api V1 Projects Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Project"
+        ],
+        "summary": "Create project",
+        "operationId": "create_project_api_v1_projects_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "Project"
+        ],
+        "summary": "Get project detail",
+        "operationId": "get_project_api_v1_projects__project_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Project"
+        ],
+        "summary": "Update project",
+        "operationId": "update_project_api_v1_projects__project_id__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Project"
+        ],
+        "summary": "Archive project",
+        "operationId": "archive_project_api_v1_projects__project_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/ontology/versions": {
+      "get": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "List ontology versions",
+        "operationId": "list_versions_api_v1_projects__project_id__ontology_versions_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OntologyVersion"
+                  },
+                  "title": "Response List Versions Api V1 Projects  Project Id  Ontology Versions Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Create draft ontology version",
+        "operationId": "create_version_api_v1_projects__project_id__ontology_versions_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/OntologyVersionCreateRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyVersion"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ontology/versions/{version_id}/publish": {
+      "post": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Publish ontology version",
+        "operationId": "publish_version_api_v1_ontology_versions__version_id__publish_post",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyVersion"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ontology/versions/{version_id}/classes": {
+      "get": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "List ontology classes",
+        "operationId": "list_classes_api_v1_ontology_versions__version_id__classes_get",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OntologyClass"
+                  },
+                  "title": "Response List Classes Api V1 Ontology Versions  Version Id  Classes Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Create ontology class",
+        "operationId": "create_class_api_v1_ontology_versions__version_id__classes_post",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OntologyClassCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyClass"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ontology/classes/{class_id}": {
+      "patch": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Update ontology class",
+        "operationId": "update_class_api_v1_ontology_classes__class_id__patch",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Class Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OntologyClassUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyClass"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Delete ontology class",
+        "operationId": "delete_class_api_v1_ontology_classes__class_id__delete",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Class Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyClass"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ontology/versions/{version_id}/properties": {
+      "get": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "List ontology properties",
+        "operationId": "list_properties_api_v1_ontology_versions__version_id__properties_get",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OntologyProperty"
+                  },
+                  "title": "Response List Properties Api V1 Ontology Versions  Version Id  Properties Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Create ontology property",
+        "operationId": "create_property_api_v1_ontology_versions__version_id__properties_post",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OntologyPropertyCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyProperty"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ontology/properties/{property_id}": {
+      "patch": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Update ontology property",
+        "operationId": "update_property_api_v1_ontology_properties__property_id__patch",
+        "parameters": [
+          {
+            "name": "property_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Property Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OntologyPropertyUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyProperty"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Delete ontology property",
+        "operationId": "delete_property_api_v1_ontology_properties__property_id__delete",
+        "parameters": [
+          {
+            "name": "property_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Property Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyProperty"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ontology/versions/{version_id}/relations": {
+      "get": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "List ontology relations",
+        "operationId": "list_relations_api_v1_ontology_versions__version_id__relations_get",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OntologyRelation"
+                  },
+                  "title": "Response List Relations Api V1 Ontology Versions  Version Id  Relations Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Create ontology relation",
+        "operationId": "create_relation_api_v1_ontology_versions__version_id__relations_post",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OntologyRelationCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyRelation"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ontology/relations/{relation_id}": {
+      "patch": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Update ontology relation",
+        "operationId": "update_relation_api_v1_ontology_relations__relation_id__patch",
+        "parameters": [
+          {
+            "name": "relation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Relation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OntologyRelationUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyRelation"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Delete ontology relation",
+        "operationId": "delete_relation_api_v1_ontology_relations__relation_id__delete",
+        "parameters": [
+          {
+            "name": "relation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Relation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyRelation"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ontology/versions/{version_id}/graph": {
+      "get": {
+        "tags": [
+          "Ontology"
+        ],
+        "summary": "Get ontology modeler graph",
+        "operationId": "get_graph_api_v1_ontology_versions__version_id__graph_get",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyGraph"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/sources": {
+      "get": {
+        "tags": [
+          "Source"
+        ],
+        "summary": "List source data",
+        "operationId": "list_sources_api_v1_projects__project_id__sources_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "source_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SourceType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Type"
+            }
+          },
+          {
+            "name": "preview_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SourcePreviewStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Preview Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceData"
+                  },
+                  "title": "Response List Sources Api V1 Projects  Project Id  Sources Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/sources/upload": {
+      "post": {
+        "tags": [
+          "Source"
+        ],
+        "summary": "Upload source data",
+        "operationId": "upload_source_api_v1_projects__project_id__sources_upload_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_source_api_v1_projects__project_id__sources_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceData"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sources/{source_id}": {
+      "get": {
+        "tags": [
+          "Source"
+        ],
+        "summary": "Get source data detail",
+        "operationId": "get_source_api_v1_sources__source_id__get",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceData"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Source"
+        ],
+        "summary": "Archive source data",
+        "operationId": "archive_source_api_v1_sources__source_id__delete",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceData"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sources/{source_id}/preview": {
+      "get": {
+        "tags": [
+          "Source"
+        ],
+        "summary": "Get source preview",
+        "operationId": "get_source_preview_api_v1_sources__source_id__preview_get",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourcePreview"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sources/{source_id}/profile": {
+      "post": {
+        "tags": [
+          "Source"
+        ],
+        "summary": "Build source profile",
+        "operationId": "build_source_profile_api_v1_sources__source_id__profile_post",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceProfile"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Source"
+        ],
+        "summary": "Get source profile",
+        "operationId": "get_source_profile_api_v1_sources__source_id__profile_get",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceProfile"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sources/{source_id}/parse": {
+      "post": {
+        "tags": [
+          "Source"
+        ],
+        "summary": "Parse source into deterministic local segments",
+        "operationId": "parse_source_api_v1_sources__source_id__parse_post",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SourceParseRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceParseResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sources/{source_id}/segments": {
+      "get": {
+        "tags": [
+          "Source"
+        ],
+        "summary": "List source segments",
+        "operationId": "list_source_segments_api_v1_sources__source_id__segments_get",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          },
+          {
+            "name": "segment_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SourceSegmentType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Segment Type"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceSegment"
+                  },
+                  "title": "Response List Source Segments Api V1 Sources  Source Id  Segments Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/prompts": {
+      "get": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "List prompt templates",
+        "operationId": "list_prompt_templates_api_v1_projects__project_id__prompts_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PromptTemplate"
+                  },
+                  "title": "Response List Prompt Templates Api V1 Projects  Project Id  Prompts Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Create prompt template",
+        "operationId": "create_prompt_template_api_v1_projects__project_id__prompts_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptTemplateCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptTemplate"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/prompts/{prompt_id}/versions": {
+      "get": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "List prompt versions",
+        "operationId": "list_prompt_versions_api_v1_prompts__prompt_id__versions_get",
+        "parameters": [
+          {
+            "name": "prompt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Prompt Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PromptVersion"
+                  },
+                  "title": "Response List Prompt Versions Api V1 Prompts  Prompt Id  Versions Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Create prompt version",
+        "operationId": "create_prompt_version_api_v1_prompts__prompt_id__versions_post",
+        "parameters": [
+          {
+            "name": "prompt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Prompt Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptVersionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptVersion"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/extraction-jobs": {
+      "get": {
+        "tags": [
+          "Extraction"
+        ],
+        "summary": "List extraction jobs",
+        "operationId": "list_extraction_jobs_api_v1_projects__project_id__extraction_jobs_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ExtractionJobStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExtractionJob"
+                  },
+                  "title": "Response List Extraction Jobs Api V1 Projects  Project Id  Extraction Jobs Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Extraction"
+        ],
+        "summary": "Create extraction job",
+        "operationId": "create_extraction_job_api_v1_projects__project_id__extraction_jobs_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractionJobCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionJob"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
+    "/api/v1/extraction-jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Extraction"
+        ],
+        "summary": "Get extraction job detail",
+        "operationId": "get_extraction_job_api_v1_extraction_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionJobDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/extraction-jobs/{job_id}/run": {
+      "post": {
+        "tags": [
+          "Extraction"
+        ],
+        "summary": "Run extraction job with deterministic mock provider",
+        "operationId": "run_extraction_job_api_v1_extraction_jobs__job_id__run_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionJobDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/extraction-jobs/{job_id}/retry": {
+      "post": {
+        "tags": [
+          "Extraction"
+        ],
+        "summary": "Create retry extraction job",
+        "operationId": "retry_extraction_job_api_v1_extraction_jobs__job_id__retry_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionJob"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/extraction-jobs/{job_id}/candidates/entities": {
+      "get": {
+        "tags": [
+          "Candidate"
+        ],
+        "summary": "List candidate entities for an extraction job",
+        "operationId": "list_candidate_entities_api_v1_extraction_jobs__job_id__candidates_entities_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Id"
+            }
+          },
+          {
+            "name": "ontology_version_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ontology Version Id"
+            }
+          },
+          {
+            "name": "validation_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ValidationStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Validation Status"
+            }
+          },
+          {
+            "name": "has_evidence",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Evidence"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CandidateEntity"
+                  },
+                  "title": "Response List Candidate Entities Api V1 Extraction Jobs  Job Id  Candidates Entities Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/extraction-jobs/{job_id}/candidates/relations": {
+      "get": {
+        "tags": [
+          "Candidate"
+        ],
+        "summary": "List candidate relations for an extraction job",
+        "operationId": "list_candidate_relations_api_v1_extraction_jobs__job_id__candidates_relations_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Id"
+            }
+          },
+          {
+            "name": "ontology_version_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ontology Version Id"
+            }
+          },
+          {
+            "name": "validation_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ValidationStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Validation Status"
+            }
+          },
+          {
+            "name": "has_evidence",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Evidence"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CandidateRelation"
+                  },
+                  "title": "Response List Candidate Relations Api V1 Extraction Jobs  Job Id  Candidates Relations Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidate-evidence/{evidence_id}": {
+      "get": {
+        "tags": [
+          "Candidate"
+        ],
+        "summary": "Get candidate evidence detail",
+        "operationId": "get_candidate_evidence_api_v1_candidate_evidence__evidence_id__get",
+        "parameters": [
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateEvidence"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Backend health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/version": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Backend version",
+        "operationId": "version_version_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiError"
+      },
+      "ApiErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ApiErrorResponse"
+      },
+      "Body_upload_source_api_v1_projects__project_id__sources_upload_post": {
+        "properties": {
+          "source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_type",
+          "file"
+        ],
+        "title": "Body_upload_source_api_v1_projects__project_id__sources_upload_post"
+      },
+      "CandidateEntity": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "extraction_job_id": {
+            "type": "string",
+            "title": "Extraction Job Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "source_segment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Segment Id"
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "title": "Ontology Version Id"
+          },
+          "class_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Id"
+          },
+          "model_run_id": {
+            "type": "string",
+            "title": "Model Run Id"
+          },
+          "prompt_version_id": {
+            "type": "string",
+            "title": "Prompt Version Id"
+          },
+          "entity_name": {
+            "type": "string",
+            "title": "Entity Name"
+          },
+          "normalized_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Name"
+          },
+          "property_values": {
+            "type": "object",
+            "title": "Property Values"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          },
+          "raw_payload": {
+            "type": "object",
+            "title": "Raw Payload"
+          },
+          "validation_status": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "validation_codes": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateValidationCode"
+            },
+            "type": "array",
+            "title": "Validation Codes"
+          },
+          "review_status": {
+            "$ref": "#/components/schemas/CandidateReviewStatus"
+          },
+          "publish_status": {
+            "$ref": "#/components/schemas/PublishStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "extraction_job_id",
+          "project_id",
+          "source_id",
+          "source_segment_id",
+          "ontology_version_id",
+          "class_id",
+          "model_run_id",
+          "prompt_version_id",
+          "entity_name",
+          "normalized_name",
+          "property_values",
+          "confidence",
+          "evidence_ids",
+          "raw_payload",
+          "validation_status",
+          "validation_codes",
+          "review_status",
+          "publish_status",
+          "created_at"
+        ],
+        "title": "CandidateEntity",
+        "example": {
+          "class_id": "class-company",
+          "confidence": 0.91,
+          "created_at": "2026-06-17T00:00:00Z",
+          "entity_name": "Company Candidate 1",
+          "evidence_ids": [
+            "evidence-demo"
+          ],
+          "extraction_job_id": "job-demo",
+          "id": "candidate-entity-demo",
+          "model_run_id": "model-run-demo",
+          "normalized_name": "company candidate 1",
+          "ontology_version_id": "ontology-version-demo",
+          "project_id": "project-demo",
+          "prompt_version_id": "prompt-version-demo",
+          "property_values": {},
+          "publish_status": "NOT_PUBLISHED",
+          "raw_payload": {
+            "fixture_id": "default"
+          },
+          "review_status": "PENDING",
+          "source_id": "source-demo-csv",
+          "source_segment_id": "segment-demo-row",
+          "validation_codes": [],
+          "validation_status": "PASSED"
+        }
+      },
+      "CandidateEvidence": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "source_segment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Segment Id"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name"
+          },
+          "sheet_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sheet Name"
+          },
+          "row_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Index"
+          },
+          "column_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Name"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number"
+          },
+          "section_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Title"
+          },
+          "paragraph_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paragraph Id"
+          },
+          "chunk_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Id"
+          },
+          "evidence_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Text"
+          },
+          "start_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Offset"
+          },
+          "end_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Offset"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Metadata"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_id",
+          "source_segment_id",
+          "source_type",
+          "file_name",
+          "created_at"
+        ],
+        "title": "CandidateEvidence",
+        "example": {
+          "column_name": "company_name",
+          "created_at": "2026-06-17T00:00:00Z",
+          "end_offset": 42,
+          "evidence_text": "company_name=Acme Corp | employee_count=42",
+          "file_name": "companies.csv",
+          "id": "evidence-demo",
+          "metadata": {
+            "segment_type": "ROW"
+          },
+          "row_index": 1,
+          "source_id": "source-demo-csv",
+          "source_segment_id": "segment-demo-row",
+          "source_type": "CSV",
+          "start_offset": 0
+        }
+      },
+      "CandidateRelation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "extraction_job_id": {
+            "type": "string",
+            "title": "Extraction Job Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "source_segment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Segment Id"
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "title": "Ontology Version Id"
+          },
+          "relation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Id"
+          },
+          "model_run_id": {
+            "type": "string",
+            "title": "Model Run Id"
+          },
+          "prompt_version_id": {
+            "type": "string",
+            "title": "Prompt Version Id"
+          },
+          "source_candidate_entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Candidate Entity Id"
+          },
+          "target_candidate_entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Candidate Entity Id"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          },
+          "raw_payload": {
+            "type": "object",
+            "title": "Raw Payload"
+          },
+          "validation_status": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "validation_codes": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateValidationCode"
+            },
+            "type": "array",
+            "title": "Validation Codes"
+          },
+          "review_status": {
+            "$ref": "#/components/schemas/CandidateReviewStatus"
+          },
+          "publish_status": {
+            "$ref": "#/components/schemas/PublishStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "extraction_job_id",
+          "project_id",
+          "source_id",
+          "source_segment_id",
+          "ontology_version_id",
+          "relation_id",
+          "model_run_id",
+          "prompt_version_id",
+          "source_candidate_entity_id",
+          "target_candidate_entity_id",
+          "confidence",
+          "evidence_ids",
+          "raw_payload",
+          "validation_status",
+          "validation_codes",
+          "review_status",
+          "publish_status",
+          "created_at"
+        ],
+        "title": "CandidateRelation",
+        "example": {
+          "confidence": 0.84,
+          "created_at": "2026-06-17T00:00:00Z",
+          "evidence_ids": [
+            "evidence-demo"
+          ],
+          "extraction_job_id": "job-demo",
+          "id": "candidate-relation-demo",
+          "model_run_id": "model-run-demo",
+          "ontology_version_id": "ontology-version-demo",
+          "project_id": "project-demo",
+          "prompt_version_id": "prompt-version-demo",
+          "publish_status": "NOT_PUBLISHED",
+          "raw_payload": {
+            "fixture_id": "default"
+          },
+          "relation_id": "relation-has-department",
+          "review_status": "PENDING",
+          "source_candidate_entity_id": "candidate-entity-company",
+          "source_id": "source-demo-csv",
+          "source_segment_id": "segment-demo-row",
+          "target_candidate_entity_id": "candidate-entity-department",
+          "validation_codes": [],
+          "validation_status": "PASSED"
+        }
+      },
+      "CandidateReviewStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "APPROVED",
+          "REJECTED",
+          "MODIFIED",
+          "NEEDS_DISCUSSION"
+        ],
+        "title": "CandidateReviewStatus"
+      },
+      "CandidateValidationCode": {
+        "type": "string",
+        "enum": [
+          "MISSING_EVIDENCE",
+          "INVALID_EVIDENCE_REFERENCE",
+          "SCHEMA_MISMATCH",
+          "ONTOLOGY_ELEMENT_NOT_FOUND",
+          "RELATION_ENDPOINT_MISSING",
+          "LOW_CONFIDENCE",
+          "PROVIDER_OUTPUT_INVALID"
+        ],
+        "title": "CandidateValidationCode"
+      },
+      "Cardinality": {
+        "type": "string",
+        "enum": [
+          "ONE_TO_ONE",
+          "ONE_TO_MANY",
+          "MANY_TO_ONE",
+          "MANY_TO_MANY",
+          "OPTIONAL",
+          "REQUIRED",
+          "MULTIPLE"
+        ],
+        "title": "Cardinality"
+      },
+      "DevUser": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            },
+            "type": "array",
+            "title": "Roles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "roles"
+        ],
+        "title": "DevUser",
+        "example": {
+          "id": "dev-user",
+          "name": "Local Dev User",
+          "roles": [
+            "PROJECT_ADMIN",
+            "ONTOLOGY_MANAGER",
+            "DATA_MANAGER",
+            "VIEWER"
+          ]
+        }
+      },
+      "ExtractionJob": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "title": "Ontology Version Id"
+          },
+          "prompt_version_id": {
+            "type": "string",
+            "title": "Prompt Version Id"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "fixture_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExtractionJobStatus"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress"
+          },
+          "retry_of_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Of Job Id"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "candidate_entity_count": {
+            "type": "integer",
+            "title": "Candidate Entity Count",
+            "default": 0
+          },
+          "candidate_relation_count": {
+            "type": "integer",
+            "title": "Candidate Relation Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "source_id",
+          "ontology_version_id",
+          "prompt_version_id",
+          "provider",
+          "model_name",
+          "fixture_id",
+          "status",
+          "progress",
+          "retry_of_job_id",
+          "error_code",
+          "error_message",
+          "created_at",
+          "started_at",
+          "ended_at"
+        ],
+        "title": "ExtractionJob",
+        "example": {
+          "candidate_entity_count": 2,
+          "candidate_relation_count": 1,
+          "created_at": "2026-06-17T00:00:00Z",
+          "ended_at": "2026-06-17T00:00:01Z",
+          "fixture_id": "default",
+          "id": "job-demo",
+          "model_name": "mock-deterministic",
+          "ontology_version_id": "ontology-version-demo",
+          "progress": 100,
+          "project_id": "project-demo",
+          "prompt_version_id": "prompt-version-demo",
+          "provider": "mock",
+          "source_id": "source-demo-csv",
+          "started_at": "2026-06-17T00:00:00Z",
+          "status": "SUCCESS"
+        }
+      },
+      "ExtractionJobCreateRequest": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "title": "Ontology Version Id"
+          },
+          "prompt_version_id": {
+            "type": "string",
+            "title": "Prompt Version Id"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "default": "mock"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name",
+            "default": "mock-deterministic"
+          },
+          "fixture_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Id",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "ontology_version_id",
+          "prompt_version_id"
+        ],
+        "title": "ExtractionJobCreateRequest"
+      },
+      "ExtractionJobDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "title": "Ontology Version Id"
+          },
+          "prompt_version_id": {
+            "type": "string",
+            "title": "Prompt Version Id"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "fixture_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExtractionJobStatus"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress"
+          },
+          "retry_of_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Of Job Id"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "candidate_entity_count": {
+            "type": "integer",
+            "title": "Candidate Entity Count",
+            "default": 0
+          },
+          "candidate_relation_count": {
+            "type": "integer",
+            "title": "Candidate Relation Count",
+            "default": 0
+          },
+          "model_runs": {
+            "items": {
+              "$ref": "#/components/schemas/ModelRun"
+            },
+            "type": "array",
+            "title": "Model Runs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "source_id",
+          "ontology_version_id",
+          "prompt_version_id",
+          "provider",
+          "model_name",
+          "fixture_id",
+          "status",
+          "progress",
+          "retry_of_job_id",
+          "error_code",
+          "error_message",
+          "created_at",
+          "started_at",
+          "ended_at"
+        ],
+        "title": "ExtractionJobDetail",
+        "example": {
+          "candidate_entity_count": 2,
+          "candidate_relation_count": 1,
+          "created_at": "2026-06-17T00:00:00Z",
+          "ended_at": "2026-06-17T00:00:01Z",
+          "fixture_id": "default",
+          "id": "job-demo",
+          "model_name": "mock-deterministic",
+          "ontology_version_id": "ontology-version-demo",
+          "progress": 100,
+          "project_id": "project-demo",
+          "prompt_version_id": "prompt-version-demo",
+          "provider": "mock",
+          "source_id": "source-demo-csv",
+          "started_at": "2026-06-17T00:00:00Z",
+          "status": "SUCCESS"
+        }
+      },
+      "ExtractionJobStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "QUEUED",
+          "RUNNING",
+          "SUCCESS",
+          "PARTIAL_FAILED",
+          "FAILED",
+          "CANCELLED",
+          "RETRYING"
+        ],
+        "title": "ExtractionJobStatus"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "service",
+          "environment"
+        ],
+        "title": "HealthResponse"
+      },
+      "ModelRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "extraction_job_id": {
+            "type": "string",
+            "title": "Extraction Job Id"
+          },
+          "prompt_version_id": {
+            "type": "string",
+            "title": "Prompt Version Id"
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "title": "Ontology Version Id"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ModelRunStatus"
+          },
+          "input_token_count": {
+            "type": "integer",
+            "title": "Input Token Count"
+          },
+          "output_token_count": {
+            "type": "integer",
+            "title": "Output Token Count"
+          },
+          "cost_estimate": {
+            "type": "number",
+            "title": "Cost Estimate"
+          },
+          "raw_request": {
+            "type": "object",
+            "title": "Raw Request"
+          },
+          "raw_response": {
+            "type": "object",
+            "title": "Raw Response"
+          },
+          "masking_version": {
+            "type": "string",
+            "title": "Masking Version"
+          },
+          "redaction_summary": {
+            "type": "object",
+            "title": "Redaction Summary"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "extraction_job_id",
+          "prompt_version_id",
+          "ontology_version_id",
+          "provider",
+          "model_name",
+          "status",
+          "input_token_count",
+          "output_token_count",
+          "cost_estimate",
+          "raw_request",
+          "raw_response",
+          "masking_version",
+          "redaction_summary",
+          "started_at",
+          "ended_at"
+        ],
+        "title": "ModelRun",
+        "example": {
+          "cost_estimate": 0.0,
+          "ended_at": "2026-06-17T00:00:01Z",
+          "extraction_job_id": "job-demo",
+          "id": "model-run-demo",
+          "input_token_count": 0,
+          "masking_version": "v1",
+          "model_name": "mock-deterministic",
+          "ontology_version_id": "ontology-version-demo",
+          "output_token_count": 0,
+          "prompt_version_id": "prompt-version-demo",
+          "provider": "mock",
+          "raw_request": {
+            "fixture_id": "default",
+            "segment_count": 5,
+            "source_id": "source-demo-csv"
+          },
+          "raw_response": {
+            "entity_count": 2,
+            "relation_count": 1
+          },
+          "redaction_summary": {
+            "redacted_keys": [],
+            "truncated_fields": []
+          },
+          "started_at": "2026-06-17T00:00:00Z",
+          "status": "SUCCESS"
+        }
+      },
+      "ModelRunStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "RUNNING",
+          "SUCCESS",
+          "FAILED",
+          "CANCELLED"
+        ],
+        "title": "ModelRunStatus"
+      },
+      "OntologyClass": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version_id": {
+            "type": "string",
+            "title": "Version Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OntologyElementStatus"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version_id",
+          "name",
+          "label",
+          "description",
+          "status",
+          "position",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OntologyClass"
+      },
+      "OntologyClassCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "OntologyClassCreateRequest",
+        "example": {
+          "description": "Organization or legal entity.",
+          "label": "Company",
+          "name": "Company",
+          "position": {
+            "x": 120,
+            "y": 120
+          }
+        }
+      },
+      "OntologyClassUpdateRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OntologyElementStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "position": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Position"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "OntologyClassUpdateRequest"
+      },
+      "OntologyElementStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "ACTIVE",
+          "ARCHIVED",
+          "DELETED"
+        ],
+        "title": "OntologyElementStatus"
+      },
+      "OntologyGraph": {
+        "properties": {
+          "version_id": {
+            "type": "string",
+            "title": "Version Id"
+          },
+          "version_status": {
+            "$ref": "#/components/schemas/OntologyVersionStatus"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/OntologyGraphNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/OntologyGraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "properties": {
+            "items": {
+              "$ref": "#/components/schemas/OntologyProperty"
+            },
+            "type": "array",
+            "title": "Properties"
+          },
+          "classes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OntologyClass"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classes",
+            "description": "Deprecated compatibility field. Use nodes[] as the canonical graph payload.",
+            "deprecated": true
+          },
+          "relations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OntologyRelation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relations",
+            "description": "Deprecated compatibility field. Use edges[] as the canonical graph payload.",
+            "deprecated": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "version_id",
+          "version_status",
+          "nodes",
+          "edges",
+          "properties"
+        ],
+        "title": "OntologyGraph",
+        "example": {
+          "classes": [],
+          "edges": [],
+          "nodes": [
+            {
+              "class_id": "class-company",
+              "id": "class-company",
+              "label": "Company",
+              "position": {
+                "x": 120,
+                "y": 120
+              },
+              "status": "ACTIVE"
+            }
+          ],
+          "properties": [],
+          "relations": [],
+          "version_id": "version-demo-draft",
+          "version_status": "DRAFT"
+        }
+      },
+      "OntologyGraphEdge": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "relation_id": {
+            "type": "string",
+            "title": "Relation Id"
+          },
+          "source_class_id": {
+            "type": "string",
+            "title": "Source Class Id"
+          },
+          "target_class_id": {
+            "type": "string",
+            "title": "Target Class Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "cardinality": {
+            "$ref": "#/components/schemas/Cardinality"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OntologyElementStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "relation_id",
+          "source_class_id",
+          "target_class_id",
+          "label",
+          "cardinality",
+          "status"
+        ],
+        "title": "OntologyGraphEdge"
+      },
+      "OntologyGraphNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "class_id": {
+            "type": "string",
+            "title": "Class Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OntologyElementStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "class_id",
+          "label",
+          "position",
+          "status"
+        ],
+        "title": "OntologyGraphNode"
+      },
+      "OntologyProperty": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version_id": {
+            "type": "string",
+            "title": "Version Id"
+          },
+          "class_id": {
+            "type": "string",
+            "title": "Class Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "data_type": {
+            "$ref": "#/components/schemas/PropertyDataType"
+          },
+          "cardinality": {
+            "$ref": "#/components/schemas/Cardinality"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OntologyElementStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version_id",
+          "class_id",
+          "name",
+          "label",
+          "description",
+          "data_type",
+          "cardinality",
+          "required",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OntologyProperty"
+      },
+      "OntologyPropertyCreateRequest": {
+        "properties": {
+          "class_id": {
+            "type": "string",
+            "title": "Class Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "data_type": {
+            "$ref": "#/components/schemas/PropertyDataType",
+            "default": "STRING"
+          },
+          "cardinality": {
+            "$ref": "#/components/schemas/Cardinality",
+            "default": "OPTIONAL"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "class_id",
+          "name"
+        ],
+        "title": "OntologyPropertyCreateRequest",
+        "example": {
+          "cardinality": "REQUIRED",
+          "class_id": "class-company",
+          "data_type": "STRING",
+          "description": "Legal company name.",
+          "label": "Company Name",
+          "name": "company_name",
+          "required": true
+        }
+      },
+      "OntologyPropertyUpdateRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "data_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PropertyDataType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cardinality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Cardinality"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OntologyElementStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "OntologyPropertyUpdateRequest"
+      },
+      "OntologyRelation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version_id": {
+            "type": "string",
+            "title": "Version Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "domain_class_id": {
+            "type": "string",
+            "title": "Domain Class Id"
+          },
+          "range_class_id": {
+            "type": "string",
+            "title": "Range Class Id"
+          },
+          "cardinality": {
+            "$ref": "#/components/schemas/Cardinality"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OntologyElementStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version_id",
+          "name",
+          "label",
+          "description",
+          "domain_class_id",
+          "range_class_id",
+          "cardinality",
+          "required",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OntologyRelation"
+      },
+      "OntologyRelationCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "domain_class_id": {
+            "type": "string",
+            "title": "Domain Class Id"
+          },
+          "range_class_id": {
+            "type": "string",
+            "title": "Range Class Id"
+          },
+          "cardinality": {
+            "$ref": "#/components/schemas/Cardinality",
+            "default": "MANY_TO_MANY"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "domain_class_id",
+          "range_class_id"
+        ],
+        "title": "OntologyRelationCreateRequest",
+        "example": {
+          "cardinality": "ONE_TO_MANY",
+          "description": "Company has department.",
+          "domain_class_id": "class-company",
+          "label": "Has Department",
+          "name": "HAS_DEPARTMENT",
+          "range_class_id": "class-department",
+          "required": false
+        }
+      },
+      "OntologyRelationUpdateRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "domain_class_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain Class Id"
+          },
+          "range_class_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Class Id"
+          },
+          "cardinality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Cardinality"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OntologyElementStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "OntologyRelationUpdateRequest"
+      },
+      "OntologyVersion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OntologyVersionStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "version",
+          "status",
+          "created_at",
+          "published_at",
+          "created_by"
+        ],
+        "title": "OntologyVersion"
+      },
+      "OntologyVersionCreateRequest": {
+        "properties": {
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "title": "OntologyVersionCreateRequest",
+        "example": {
+          "created_by": "dev-user"
+        }
+      },
+      "OntologyVersionStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "PUBLISHED",
+          "ARCHIVED"
+        ],
+        "title": "OntologyVersionStatus"
+      },
+      "Position": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X",
+            "default": 0
+          },
+          "y": {
+            "type": "number",
+            "title": "Y",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "Position"
+      },
+      "ProfileInferredType": {
+        "type": "string",
+        "enum": [
+          "STRING",
+          "TEXT",
+          "INTEGER",
+          "FLOAT",
+          "BOOLEAN",
+          "DATE",
+          "DATETIME",
+          "URI",
+          "EMPTY",
+          "MIXED",
+          "UNKNOWN"
+        ],
+        "title": "ProfileInferredType"
+      },
+      "ProjectCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProjectCreateRequest",
+        "example": {
+          "description": "MVP 1 demo project",
+          "name": "Corporate Document Ontology Demo"
+        }
+      },
+      "ProjectDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProjectStatus"
+          },
+          "current_ontology_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ontology Version Id"
+          },
+          "source_count": {
+            "type": "integer",
+            "title": "Source Count"
+          },
+          "ontology_version_count": {
+            "type": "integer",
+            "title": "Ontology Version Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "status",
+          "current_ontology_version_id",
+          "source_count",
+          "ontology_version_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProjectDetail",
+        "example": {
+          "created_at": "2026-06-17T00:00:00Z",
+          "current_ontology_version_id": "version-demo-draft",
+          "description": "MVP 1 demo project",
+          "id": "project-demo",
+          "name": "Corporate Document Ontology Demo",
+          "ontology_version_count": 1,
+          "source_count": 0,
+          "status": "ACTIVE",
+          "updated_at": "2026-06-17T00:00:00Z"
+        }
+      },
+      "ProjectStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "ACTIVE",
+          "ARCHIVED",
+          "DELETED"
+        ],
+        "title": "ProjectStatus"
+      },
+      "ProjectSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProjectStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "source_count": {
+            "type": "integer",
+            "title": "Source Count"
+          },
+          "ontology_version_count": {
+            "type": "integer",
+            "title": "Ontology Version Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "status",
+          "created_at",
+          "updated_at",
+          "source_count",
+          "ontology_version_count"
+        ],
+        "title": "ProjectSummary"
+      },
+      "ProjectUpdateRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "ProjectUpdateRequest",
+        "example": {
+          "description": "Updated MVP 1 demo project",
+          "name": "Corporate Document Ontology Demo",
+          "status": "ACTIVE"
+        }
+      },
+      "PromptTemplate": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "name",
+          "description",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PromptTemplate",
+        "example": {
+          "created_at": "2026-06-17T00:00:00Z",
+          "description": "Deterministic MVP2 extraction prompt scaffold.",
+          "id": "prompt-template-demo",
+          "name": "Source entity extraction",
+          "project_id": "project-demo",
+          "updated_at": "2026-06-17T00:00:00Z"
+        }
+      },
+      "PromptTemplateCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PromptTemplateCreateRequest"
+      },
+      "PromptVersion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "prompt_template_id": {
+            "type": "string",
+            "title": "Prompt Template Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "template": {
+            "type": "string",
+            "title": "Template"
+          },
+          "output_schema": {
+            "type": "object",
+            "title": "Output Schema"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "prompt_template_id",
+          "version",
+          "template",
+          "output_schema",
+          "is_active",
+          "created_at",
+          "created_by"
+        ],
+        "title": "PromptVersion",
+        "example": {
+          "created_at": "2026-06-17T00:00:00Z",
+          "created_by": "dev-user",
+          "id": "prompt-version-demo",
+          "is_active": true,
+          "output_schema": {
+            "type": "object"
+          },
+          "prompt_template_id": "prompt-template-demo",
+          "template": "Extract candidate entities from source segments.",
+          "version": 1
+        }
+      },
+      "PromptVersionCreateRequest": {
+        "properties": {
+          "template": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Template"
+          },
+          "output_schema": {
+            "type": "object",
+            "title": "Output Schema"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "template"
+        ],
+        "title": "PromptVersionCreateRequest"
+      },
+      "PropertyDataType": {
+        "type": "string",
+        "enum": [
+          "STRING",
+          "TEXT",
+          "INTEGER",
+          "FLOAT",
+          "BOOLEAN",
+          "DATE",
+          "DATETIME",
+          "URI"
+        ],
+        "title": "PropertyDataType"
+      },
+      "PublishStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_PUBLISHED",
+          "PUBLISHED",
+          "ROLLED_BACK"
+        ],
+        "title": "PublishStatus"
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "SYSTEM_ADMIN",
+          "PROJECT_ADMIN",
+          "ONTOLOGY_MANAGER",
+          "DATA_MANAGER",
+          "EXTRACTION_MANAGER",
+          "REVIEWER",
+          "VIEWER",
+          "API_CLIENT"
+        ],
+        "title": "Role"
+      },
+      "SourceData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SourceStatus"
+          },
+          "preview_status": {
+            "$ref": "#/components/schemas/SourcePreviewStatus"
+          },
+          "storage_uri": {
+            "type": "string",
+            "title": "Storage Uri"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Uploaded At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "file_name",
+          "source_type",
+          "mime_type",
+          "size_bytes",
+          "status",
+          "preview_status",
+          "storage_uri",
+          "uploaded_at",
+          "created_by"
+        ],
+        "title": "SourceData",
+        "example": {
+          "created_by": "dev-user",
+          "file_name": "companies.csv",
+          "id": "source-demo-csv",
+          "metadata": {
+            "display_name": "Companies CSV"
+          },
+          "mime_type": "text/csv",
+          "preview_status": "READY",
+          "project_id": "project-demo",
+          "size_bytes": 2048,
+          "source_type": "CSV",
+          "status": "UPLOADED",
+          "storage_uri": "local://sources/source-demo-csv/companies.csv",
+          "uploaded_at": "2026-06-17T00:00:00Z"
+        }
+      },
+      "SourceParseRequest": {
+        "properties": {
+          "chunk_size": {
+            "type": "integer",
+            "maximum": 5000.0,
+            "minimum": 100.0,
+            "title": "Chunk Size",
+            "default": 500
+          }
+        },
+        "type": "object",
+        "title": "SourceParseRequest"
+      },
+      "SourceParseResponse": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "segment_count": {
+            "type": "integer",
+            "title": "Segment Count"
+          },
+          "segment_types": {
+            "items": {
+              "$ref": "#/components/schemas/SourceSegmentType"
+            },
+            "type": "array",
+            "title": "Segment Types"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "segment_count",
+          "segment_types"
+        ],
+        "title": "SourceParseResponse",
+        "example": {
+          "segment_count": 5,
+          "segment_types": [
+            "SHEET",
+            "ROW",
+            "CELL"
+          ],
+          "source_id": "source-demo-csv",
+          "warnings": []
+        }
+      },
+      "SourcePreview": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/SourcePreviewColumn"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "row_count_sampled": {
+            "type": "integer",
+            "title": "Row Count Sampled"
+          },
+          "total_row_count": {
+            "type": "integer",
+            "title": "Total Row Count"
+          },
+          "sheet_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sheet Name"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "columns",
+          "rows",
+          "row_count_sampled",
+          "total_row_count"
+        ],
+        "title": "SourcePreview",
+        "example": {
+          "columns": [
+            {
+              "data_type": "STRING",
+              "name": "company_name",
+              "nullable": false,
+              "sample_values": [
+                "Acme Corp"
+              ]
+            }
+          ],
+          "row_count_sampled": 1,
+          "rows": [
+            {
+              "company_name": "Acme Corp",
+              "department_name": "Research"
+            }
+          ],
+          "source_id": "source-demo-csv",
+          "total_row_count": 20,
+          "warnings": []
+        }
+      },
+      "SourcePreviewColumn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "data_type": {
+            "$ref": "#/components/schemas/PropertyDataType"
+          },
+          "nullable": {
+            "type": "boolean",
+            "title": "Nullable"
+          },
+          "sample_values": {
+            "items": {},
+            "type": "array",
+            "title": "Sample Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "data_type",
+          "nullable",
+          "sample_values"
+        ],
+        "title": "SourcePreviewColumn"
+      },
+      "SourcePreviewStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "READY",
+          "NOT_AVAILABLE",
+          "FAILED"
+        ],
+        "title": "SourcePreviewStatus"
+      },
+      "SourceProfile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/SourceProfileColumn"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count"
+          },
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_id",
+          "columns",
+          "row_count",
+          "sample_size",
+          "created_at"
+        ],
+        "title": "SourceProfile",
+        "example": {
+          "columns": [
+            {
+              "candidate_key_score": 1.0,
+              "distinct_count_sampled": 2,
+              "inferred_type": "STRING",
+              "name": "company_name",
+              "null_ratio": 0.0,
+              "nullable": false,
+              "sample_values": [
+                "Acme Corp",
+                "Beta LLC"
+              ]
+            }
+          ],
+          "created_at": "2026-06-17T00:00:00Z",
+          "id": "profile-demo",
+          "row_count": 20,
+          "sample_size": 20,
+          "source_id": "source-demo-csv",
+          "warnings": []
+        }
+      },
+      "SourceProfileColumn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "inferred_type": {
+            "$ref": "#/components/schemas/ProfileInferredType"
+          },
+          "nullable": {
+            "type": "boolean",
+            "title": "Nullable"
+          },
+          "null_ratio": {
+            "type": "number",
+            "title": "Null Ratio"
+          },
+          "distinct_count_sampled": {
+            "type": "integer",
+            "title": "Distinct Count Sampled"
+          },
+          "sample_values": {
+            "items": {},
+            "type": "array",
+            "title": "Sample Values"
+          },
+          "candidate_key_score": {
+            "type": "number",
+            "title": "Candidate Key Score",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "inferred_type",
+          "nullable",
+          "null_ratio",
+          "distinct_count_sampled",
+          "sample_values"
+        ],
+        "title": "SourceProfileColumn"
+      },
+      "SourceSegment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "segment_type": {
+            "$ref": "#/components/schemas/SourceSegmentType"
+          },
+          "sequence": {
+            "type": "integer",
+            "title": "Sequence"
+          },
+          "row_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Index"
+          },
+          "column_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Name"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number"
+          },
+          "section_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Title"
+          },
+          "paragraph_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paragraph Index"
+          },
+          "chunk_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Index"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Metadata"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_id",
+          "segment_type",
+          "sequence",
+          "created_at"
+        ],
+        "title": "SourceSegment"
+      },
+      "SourceSegmentType": {
+        "type": "string",
+        "enum": [
+          "SHEET",
+          "ROW",
+          "CELL",
+          "PAGE",
+          "SECTION",
+          "PARAGRAPH",
+          "CHUNK"
+        ],
+        "title": "SourceSegmentType"
+      },
+      "SourceStatus": {
+        "type": "string",
+        "enum": [
+          "UPLOADED",
+          "PARSING",
+          "PARSED",
+          "PROFILED",
+          "EXTRACTION_READY",
+          "FAILED"
+        ],
+        "title": "SourceStatus"
+      },
+      "SourceType": {
+        "type": "string",
+        "enum": [
+          "CSV",
+          "EXCEL",
+          "TXT",
+          "PDF"
+        ],
+        "title": "SourceType"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValidationStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_VALIDATED",
+          "PASSED",
+          "WARNING",
+          "FAILED"
+        ],
+        "title": "ValidationStatus"
+      },
+      "VersionResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "api_prefix": {
+            "type": "string",
+            "title": "Api Prefix"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "version",
+          "api_prefix"
+        ],
+        "title": "VersionResponse"
+      }
+    }
+  }
+}

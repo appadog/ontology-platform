@@ -27,6 +27,21 @@ export type SourcePreviewStatus = "PENDING" | "READY" | "NOT_AVAILABLE" | "FAILE
 
 export type PropertyDataType = "STRING" | "TEXT" | "INTEGER" | "FLOAT" | "BOOLEAN" | "DATE" | "DATETIME" | "URI";
 
+export type SourceSegmentType = "SHEET" | "ROW" | "CELL" | "PAGE" | "SECTION" | "PARAGRAPH" | "CHUNK";
+
+export type ProfileInferredType =
+  | "STRING"
+  | "TEXT"
+  | "INTEGER"
+  | "FLOAT"
+  | "BOOLEAN"
+  | "DATE"
+  | "DATETIME"
+  | "URI"
+  | "EMPTY"
+  | "MIXED"
+  | "UNKNOWN";
+
 export type CandidateReviewStatus = "PENDING" | "APPROVED" | "REJECTED" | "MODIFIED" | "NEEDS_DISCUSSION";
 
 export type ValidationStatus = "NOT_VALIDATED" | "PASSED" | "WARNING" | "FAILED";
@@ -42,6 +57,17 @@ export type ExtractionJobStatus =
   | "FAILED"
   | "CANCELLED"
   | "RETRYING";
+
+export type ModelRunStatus = "PENDING" | "RUNNING" | "SUCCESS" | "FAILED" | "CANCELLED";
+
+export type CandidateValidationCode =
+  | "MISSING_EVIDENCE"
+  | "INVALID_EVIDENCE_REFERENCE"
+  | "SCHEMA_MISMATCH"
+  | "ONTOLOGY_ELEMENT_NOT_FOUND"
+  | "RELATION_ENDPOINT_MISSING"
+  | "LOW_CONFIDENCE"
+  | "PROVIDER_OUTPUT_INVALID";
 
 export interface ProjectSummary {
   id: string;
@@ -221,6 +247,180 @@ export interface SourcePreview {
   total_row_count: number;
   sheet_name?: string | null;
   warnings?: string[];
+}
+
+export interface SourceProfileColumn {
+  name: string;
+  inferred_type: ProfileInferredType;
+  null_ratio: number;
+  distinct_count: number;
+  sample_values: Array<string | number | boolean | null>;
+  candidate_key_score: number;
+}
+
+export interface SourceProfile {
+  source_id: string;
+  columns: SourceProfileColumn[];
+  row_count: number;
+  sample_size: number;
+  warnings: string[];
+  created_at: string;
+}
+
+export interface SourceSegment {
+  id: string;
+  source_id: string;
+  segment_type: SourceSegmentType;
+  row_index?: number | null;
+  column_name?: string | null;
+  page_number?: number | null;
+  section_title?: string | null;
+  paragraph_index?: number | null;
+  chunk_index?: number | null;
+  text?: string | null;
+  metadata?: Record<string, string | number | boolean | null>;
+  created_at: string;
+}
+
+export interface PromptTemplate {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string | null;
+  active_version_id: string | null;
+  created_at: string;
+}
+
+export interface PromptVersion {
+  id: string;
+  prompt_id: string;
+  version: number;
+  status: "DRAFT" | "ACTIVE" | "ARCHIVED";
+  prompt_text: string;
+  created_at: string;
+}
+
+export interface ExtractionJob {
+  id: string;
+  project_id: string;
+  source_id: string;
+  ontology_version_id: string;
+  prompt_version_id: string;
+  provider: "MockProvider" | string;
+  model_name: string;
+  fixture_id?: string | null;
+  status: ExtractionJobStatus;
+  progress: number;
+  created_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  error_code: string | null;
+  error_message: string | null;
+  retry_of_job_id: string | null;
+  candidate_entity_count?: number;
+  candidate_relation_count?: number;
+}
+
+export interface ExtractionJobCreateRequest {
+  source_id: string;
+  ontology_version_id: string;
+  prompt_version_id: string;
+  provider: "MockProvider";
+  model_name: string;
+}
+
+export interface ModelRun {
+  id: string;
+  extraction_job_id: string;
+  provider: string;
+  model_name: string;
+  prompt_version_id: string;
+  ontology_version_id: string;
+  input_token_count: number;
+  output_token_count: number;
+  cost_estimate: number;
+  raw_request: Record<string, unknown>;
+  raw_response: Record<string, unknown>;
+  masking_version: string;
+  redaction_summary: Record<string, unknown>;
+  status: ModelRunStatus;
+  started_at: string;
+  ended_at: string | null;
+}
+
+export interface ExtractionJobDetail extends ExtractionJob {
+  model_runs: ModelRun[];
+}
+
+export interface CandidateEntity {
+  id: string;
+  project_id: string;
+  source_id: string;
+  source_segment_id: string | null;
+  ontology_version_id: string;
+  model_run_id: string;
+  prompt_version_id: string;
+  class_id: string;
+  entity_name: string;
+  normalized_name: string;
+  property_values: Record<string, string | number | boolean | null>;
+  confidence: number;
+  evidence_ids: string[];
+  raw_payload: Record<string, unknown>;
+  validation_status: ValidationStatus;
+  validation_codes: CandidateValidationCode[];
+  review_status: CandidateReviewStatus;
+  publish_status: PublishStatus;
+  created_at: string;
+}
+
+export interface CandidateRelation {
+  id: string;
+  project_id: string;
+  source_id: string;
+  source_segment_id: string | null;
+  ontology_version_id: string;
+  model_run_id: string;
+  prompt_version_id: string;
+  source_candidate_entity_id: string;
+  relation_id: string;
+  target_candidate_entity_id: string;
+  confidence: number;
+  evidence_ids: string[];
+  raw_payload: Record<string, unknown>;
+  validation_status: ValidationStatus;
+  validation_codes: CandidateValidationCode[];
+  review_status: CandidateReviewStatus;
+  publish_status: PublishStatus;
+  created_at: string;
+}
+
+export interface CandidateEvidence {
+  id: string;
+  source_id: string;
+  source_segment_id: string;
+  source_type: SourceType;
+  file_name: string;
+  sheet_name?: string | null;
+  row_index?: number | null;
+  column_name?: string | null;
+  page_number?: number | null;
+  section_title?: string | null;
+  paragraph_id?: string | null;
+  chunk_id?: string | null;
+  evidence_text: string;
+  start_offset?: number | null;
+  end_offset?: number | null;
+  metadata?: Record<string, string | number | boolean | null>;
+}
+
+export interface CandidateListFilters {
+  limit?: number;
+  offset?: number;
+  source_id?: string;
+  ontology_version_id?: string;
+  validation_status?: ValidationStatus;
+  has_evidence?: boolean;
 }
 
 export interface DashboardSummary {

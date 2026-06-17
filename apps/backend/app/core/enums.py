@@ -55,6 +55,16 @@ class SourcePreviewStatus(str, Enum):
     FAILED = "FAILED"
 
 
+class SourceSegmentType(str, Enum):
+    SHEET = "SHEET"
+    ROW = "ROW"
+    CELL = "CELL"
+    PAGE = "PAGE"
+    SECTION = "SECTION"
+    PARAGRAPH = "PARAGRAPH"
+    CHUNK = "CHUNK"
+
+
 class PropertyDataType(str, Enum):
     STRING = "STRING"
     TEXT = "TEXT"
@@ -64,6 +74,20 @@ class PropertyDataType(str, Enum):
     DATE = "DATE"
     DATETIME = "DATETIME"
     URI = "URI"
+
+
+class ProfileInferredType(str, Enum):
+    STRING = "STRING"
+    TEXT = "TEXT"
+    INTEGER = "INTEGER"
+    FLOAT = "FLOAT"
+    BOOLEAN = "BOOLEAN"
+    DATE = "DATE"
+    DATETIME = "DATETIME"
+    URI = "URI"
+    EMPTY = "EMPTY"
+    MIXED = "MIXED"
+    UNKNOWN = "UNKNOWN"
 
 
 class Cardinality(str, Enum):
@@ -106,3 +130,21 @@ class ExtractionJobStatus(str, Enum):
     FAILED = "FAILED"
     CANCELLED = "CANCELLED"
     RETRYING = "RETRYING"
+
+
+class ModelRunStatus(str, Enum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+class CandidateValidationCode(str, Enum):
+    MISSING_EVIDENCE = "MISSING_EVIDENCE"
+    INVALID_EVIDENCE_REFERENCE = "INVALID_EVIDENCE_REFERENCE"
+    SCHEMA_MISMATCH = "SCHEMA_MISMATCH"
+    ONTOLOGY_ELEMENT_NOT_FOUND = "ONTOLOGY_ELEMENT_NOT_FOUND"
+    RELATION_ENDPOINT_MISSING = "RELATION_ENDPOINT_MISSING"
+    LOW_CONFIDENCE = "LOW_CONFIDENCE"
+    PROVIDER_OUTPUT_INVALID = "PROVIDER_OUTPUT_INVALID"

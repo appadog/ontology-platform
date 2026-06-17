@@ -1,6 +1,9 @@
 import { PropsWithChildren } from "react";
 import styled from "styled-components";
 import {
+  CandidateReviewStatus,
+  ExtractionJobStatus,
+  ModelRunStatus,
   OntologyElementStatus,
   OntologyVersionStatus,
   ProjectStatus,
@@ -17,7 +20,16 @@ interface HanaBadgeProps extends PropsWithChildren {
 }
 
 const statusTone: Record<
-  ProjectStatus | SourceStatus | SourcePreviewStatus | ValidationStatus | OntologyVersionStatus | OntologyElementStatus | PublishStatus,
+  | ProjectStatus
+  | SourceStatus
+  | SourcePreviewStatus
+  | ValidationStatus
+  | OntologyVersionStatus
+  | OntologyElementStatus
+  | PublishStatus
+  | ExtractionJobStatus
+  | ModelRunStatus
+  | CandidateReviewStatus,
   BadgeTone
 > = {
   ACTIVE: "success",
@@ -36,8 +48,18 @@ const statusTone: Record<
   NOT_AVAILABLE: "muted",
   NOT_VALIDATED: "muted",
   NOT_PUBLISHED: "muted",
+  QUEUED: "progress",
   PASSED: "success",
+  PARTIAL_FAILED: "warning",
+  RETRYING: "progress",
+  REJECTED: "danger",
   ROLLED_BACK: "warning",
+  RUNNING: "progress",
+  SUCCESS: "success",
+  CANCELLED: "muted",
+  APPROVED: "success",
+  MODIFIED: "warning",
+  NEEDS_DISCUSSION: "warning",
   WARNING: "warning",
 };
 

@@ -6,7 +6,26 @@ import {
   mockSources,
 } from "../mocks/fixtures";
 import {
+  mockCandidateEntities,
+  mockCandidateEvidences,
+  mockCandidateRelations,
+  mockExtractionJobs,
+  mockModelRuns,
+  mockPromptTemplates,
+  mockPromptVersions,
+  mockSourceProfiles,
+  mockSourceSegments,
+} from "../mocks/mvp2Fixtures";
+import {
+  CandidateEntity,
+  CandidateListFilters,
+  CandidateEvidence,
+  CandidateRelation,
   DashboardSummary,
+  ExtractionJob,
+  ExtractionJobCreateRequest,
+  ExtractionJobDetail,
+  ModelRun,
   OntologyGraph,
   OntologyClass,
   OntologyClassCreateRequest,
@@ -20,8 +39,12 @@ import {
   ProjectDetail,
   ProjectSummary,
   ProjectUpdateRequest,
+  PromptTemplate,
+  PromptVersion,
   SourceData,
   SourcePreview,
+  SourceProfile,
+  SourceSegment,
   SourceUploadRequest,
 } from "./types";
 
@@ -44,6 +67,9 @@ let mockOntologyGraphStore: Record<string, OntologyGraph> = {
 };
 let mockSourceStore: SourceData[] = [...mockSources];
 const mockPreviewStore: Record<string, SourcePreview> = { ...mockSourcePreviews };
+const mockProfileStore: Record<string, SourceProfile> = { ...mockSourceProfiles };
+const mockSegmentStore: Record<string, SourceSegment[]> = { ...mockSourceSegments };
+let mockExtractionJobStore: ExtractionJob[] = [...mockExtractionJobs];
 
 async function delay<T>(value: T): Promise<T> {
   await new Promise((resolve) => window.setTimeout(resolve, 180));
@@ -224,6 +250,57 @@ function getMockGraph(versionId: string): OntologyGraph {
   }
 
   return graph;
+}
+
+function buildQueryString(filters: CandidateListFilters = {}): string {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      params.set(key, String(value));
+    }
+  });
+
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+function filterCandidatesByJob<T extends CandidateEntity | CandidateRelation>(
+  candidates: T[],
+  jobId: string,
+  filters: CandidateListFilters = {},
+): T[] {
+  const job = mockExtractionJobStore.find((item) => item.id === jobId);
+
+  if (!job) {
+    return [];
+  }
+
+  return candidates.filter((candidate) => {
+    if (candidate.model_run_id && !mockModelRuns.some((run) => run.id === candidate.model_run_id && run.extraction_job_id === jobId)) {
+      return false;
+    }
+    if (filters.source_id && candidate.source_id !== filters.source_id) {
+      return false;
+    }
+    if (filters.ontology_version_id && candidate.ontology_version_id !== filters.ontology_version_id) {
+      return false;
+    }
+    if (filters.validation_status && candidate.validation_status !== filters.validation_status) {
+      return false;
+    }
+    if (filters.has_evidence !== undefined && (candidate.evidence_ids.length > 0) !== filters.has_evidence) {
+      return false;
+    }
+    return candidate.project_id === job.project_id;
+  });
+}
+
+function buildMockJobDetail(job: ExtractionJob): ExtractionJobDetail {
+  return {
+    ...job,
+    model_runs: mockModelRuns.filter((run) => run.extraction_job_id === job.id),
+  };
 }
 
 export const apiClient = {
@@ -578,5 +655,233 @@ export const apiClient = {
     }
 
     return uploadRequest<SourceData>(`/api/v1/projects/${projectId}/sources/upload`, formData);
+  },
+
+  async runSourceProfile(sourceId: string): Promise<SourceProfile> {
+    if (USE_MOCK_API) {
+      const profile = mockProfileStore[sourceId];
+
+      if (!profile) {
+        throw new Error("Source profile fixture not found");
+      }
+
+      return delay(profile);
+    }
+
+    return jsonRequest<SourceProfile>(`/api/v1/sources/${sourceId}/profile`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  },
+
+  async getSourceProfile(sourceId: string): Promise<SourceProfile> {
+    if (USE_MOCK_API) {
+      const profile = mockProfileStore[sourceId];
+
+      if (!profile) {
+        throw new Error("Source profile fixture not found");
+      }
+
+      return delay(profile);
+    }
+
+    return request<SourceProfile>(`/api/v1/sources/${sourceId}/profile`);
+  },
+
+  async parseSource(sourceId: string): Promise<SourceSegment[]> {
+    if (USE_MOCK_API) {
+      return delay(mockSegmentStore[sourceId] ?? []);
+    }
+
+    return jsonRequest<SourceSegment[]>(`/api/v1/sources/${sourceId}/parse`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  },
+
+  async listSourceSegments(sourceId: string): Promise<SourceSegment[]> {
+    if (USE_MOCK_API) {
+      return delay(mockSegmentStore[sourceId] ?? []);
+    }
+
+    return request<SourceSegment[]>(`/api/v1/sources/${sourceId}/segments`);
+  },
+
+  async listPromptTemplates(projectId: string): Promise<PromptTemplate[]> {
+    if (USE_MOCK_API) {
+      return delay(mockPromptTemplates.filter((prompt) => prompt.project_id === projectId));
+    }
+
+    return request<PromptTemplate[]>(`/api/v1/projects/${projectId}/prompts`);
+  },
+
+  async listPromptVersions(promptId: string): Promise<PromptVersion[]> {
+    if (USE_MOCK_API) {
+      return delay(mockPromptVersions[promptId] ?? []);
+    }
+
+    return request<PromptVersion[]>(`/api/v1/prompts/${promptId}/versions`);
+  },
+
+  async createExtractionJob(projectId: string, payload: ExtractionJobCreateRequest): Promise<ExtractionJob> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const job: ExtractionJob = {
+        id: `job-${Date.now()}`,
+        project_id: projectId,
+        source_id: payload.source_id,
+        ontology_version_id: payload.ontology_version_id,
+        prompt_version_id: payload.prompt_version_id,
+        provider: payload.provider,
+        model_name: payload.model_name,
+        status: "PENDING",
+        progress: 0,
+        created_at: now,
+        started_at: null,
+        ended_at: null,
+        error_code: null,
+        error_message: null,
+        retry_of_job_id: null,
+      };
+
+      mockExtractionJobStore = [job, ...mockExtractionJobStore];
+
+      return delay(job);
+    }
+
+    return jsonRequest<ExtractionJob>(`/api/v1/projects/${projectId}/extraction-jobs`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async listExtractionJobs(projectId: string): Promise<ExtractionJob[]> {
+    if (USE_MOCK_API) {
+      return delay(mockExtractionJobStore.filter((job) => job.project_id === projectId));
+    }
+
+    return request<ExtractionJob[]>(`/api/v1/projects/${projectId}/extraction-jobs`);
+  },
+
+  async getExtractionJob(jobId: string): Promise<ExtractionJobDetail> {
+    if (USE_MOCK_API) {
+      const job = mockExtractionJobStore.find((item) => item.id === jobId);
+
+      if (!job) {
+        throw new Error("Extraction job fixture not found");
+      }
+
+      return delay(buildMockJobDetail(job));
+    }
+
+    return request<ExtractionJobDetail>(`/api/v1/extraction-jobs/${jobId}`);
+  },
+
+  async runExtractionJob(jobId: string): Promise<ExtractionJobDetail> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      let updatedJob: ExtractionJob | undefined;
+
+      mockExtractionJobStore = mockExtractionJobStore.map((job) => {
+        if (job.id !== jobId) {
+          return job;
+        }
+
+        updatedJob = {
+          ...job,
+          status: "SUCCESS",
+          progress: 100,
+          started_at: job.started_at ?? now,
+          ended_at: now,
+          error_code: null,
+          error_message: null,
+        };
+
+        return updatedJob;
+      });
+
+      if (!updatedJob) {
+        throw new Error("Extraction job fixture not found");
+      }
+
+      return delay(buildMockJobDetail(updatedJob));
+    }
+
+    return jsonRequest<ExtractionJobDetail>(`/api/v1/extraction-jobs/${jobId}/run`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  },
+
+  async retryExtractionJob(jobId: string): Promise<ExtractionJob> {
+    if (USE_MOCK_API) {
+      const original = mockExtractionJobStore.find((job) => job.id === jobId);
+
+      if (!original) {
+        throw new Error("Extraction job fixture not found");
+      }
+
+      const now = new Date().toISOString();
+      const retryJob: ExtractionJob = {
+        ...original,
+        id: `job-retry-${Date.now()}`,
+        status: "RETRYING",
+        progress: 0,
+        created_at: now,
+        started_at: null,
+        ended_at: null,
+        error_code: null,
+        error_message: null,
+        retry_of_job_id: original.id,
+      };
+
+      mockExtractionJobStore = [retryJob, ...mockExtractionJobStore];
+
+      return delay(retryJob);
+    }
+
+    return jsonRequest<ExtractionJob>(`/api/v1/extraction-jobs/${jobId}/retry`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  },
+
+  async listCandidateEntities(jobId: string, filters: CandidateListFilters = {}): Promise<CandidateEntity[]> {
+    if (USE_MOCK_API) {
+      return delay(filterCandidatesByJob(mockCandidateEntities, jobId, filters));
+    }
+
+    return request<CandidateEntity[]>(`/api/v1/extraction-jobs/${jobId}/candidates/entities${buildQueryString(filters)}`);
+  },
+
+  async listCandidateRelations(jobId: string, filters: CandidateListFilters = {}): Promise<CandidateRelation[]> {
+    if (USE_MOCK_API) {
+      return delay(filterCandidatesByJob(mockCandidateRelations, jobId, filters));
+    }
+
+    return request<CandidateRelation[]>(`/api/v1/extraction-jobs/${jobId}/candidates/relations${buildQueryString(filters)}`);
+  },
+
+  async getCandidateEvidence(evidenceId: string): Promise<CandidateEvidence> {
+    if (USE_MOCK_API) {
+      const evidence = mockCandidateEvidences[evidenceId];
+
+      if (!evidence) {
+        throw new Error("Candidate evidence fixture not found");
+      }
+
+      return delay(evidence);
+    }
+
+    return request<CandidateEvidence>(`/api/v1/candidate-evidence/${evidenceId}`);
+  },
+
+  async listModelRuns(jobId: string): Promise<ModelRun[]> {
+    if (USE_MOCK_API) {
+      return delay(mockModelRuns.filter((run) => run.extraction_job_id === jobId));
+    }
+
+    const job = await request<ExtractionJobDetail>(`/api/v1/extraction-jobs/${jobId}`);
+    return job.model_runs;
   },
 };

@@ -14,7 +14,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Export FastAPI OpenAPI schema.")
     parser.add_argument(
         "--output",
-        default="../../docs/api/openapi-mvp1.json",
+        default="../../docs/api/openapi-mvp2-draft.json",
         help="Output path for the OpenAPI JSON file.",
     )
     args = parser.parse_args()

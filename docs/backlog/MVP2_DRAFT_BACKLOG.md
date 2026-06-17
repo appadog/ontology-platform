@@ -19,17 +19,17 @@ This backlog is now eligible for Wave 6 implementation kickoff. The contract is 
 
 | ID | Priority | Owner | Task | Dependencies | Acceptance |
 |---|---|---|---|---|---|
-| PM2-001 | P0 | PM | Extraction user flow | MVP1 acceptance | 데이터 소스 선택부터 후보 결과 확인까지 사용자 흐름이 정의됨 |
-| PM2-002 | P0 | PM | LLM output JSON schema | PM2-001 | candidate entity/relation/evidence JSON schema가 승인됨 |
-| PM2-003 | P0 | PM | Evidence policy | PM2-001 | 모든 후보가 SourceSegment 또는 SourceColumn/row/chunk evidence를 갖는 기준이 정의됨 |
-| PM2-004 | P1 | PM | Failure/retry policy | PM2-001 | ExtractionJob 실패/재시도/partial failure 정책이 정의됨 |
-| PM2-005 | P1 | PM | Mock provider acceptance | PM2-002 | deterministic fixture 기반 QA 기준이 정의됨 |
+| PM2-001 | P0 | PM | Extraction user flow | MVP1 acceptance | source 선택 → profile/parse → ontology/prompt 선택 → job 생성/실행 → monitor → candidate/evidence 확인 흐름이 `docs/pm/MVP2_PREP_BRIEF.md`에 정의됨 |
+| PM2-002 | P0 | PM | LLM output JSON schema | PM2-001 | candidate entity/relation/evidence JSON shape, evidence ids, validation status/code가 API draft에 정의됨 |
+| PM2-003 | P0 | PM | Evidence policy | PM2-001 | 정상 후보는 evidence 필수, evidence 없는 후보는 warning-only 저장 기준이 정의됨 |
+| PM2-004 | P1 | PM | Failure/retry policy | PM2-001 | `ExtractionJobStatus` lifecycle, partial failure, retry/idempotency 기준이 정의됨 |
+| PM2-005 | P1 | PM | Mock provider acceptance | PM2-002 | deterministic fixture, missing fixture failure, repeated run stability 기준이 정의됨 |
 
 ## Backend Backlog
 
 | ID | Priority | Owner | Task | Dependencies | Acceptance |
 |---|---|---|---|---|---|
-| BE2-001 | P0 | Backend | SourceSegment model | MVP1 SourceData | ROW, CELL, PAGE, PARAGRAPH, CHUNK segment가 저장됨 |
+| BE2-001 | P0 | Backend | SourceSegment model | MVP1 SourceData | `SourceSegmentType` 전체 값(`SHEET`, `ROW`, `CELL`, `PAGE`, `SECTION`, `PARAGRAPH`, `CHUNK`)이 저장됨 |
 | BE2-002 | P0 | Backend | CSV/Excel profiling | BE2-001 | columns, inferred type, null ratio, distinct count, sample values 반환 |
 | BE2-003 | P0 | Backend | TXT/PDF parsing and chunking | BE2-001 | TXT/PDF text chunks with metadata 생성 |
 | BE2-004 | P0 | Backend | PromptTemplate/PromptVersion | none | prompt version CRUD와 active version 조회 가능 |
@@ -67,11 +67,20 @@ This backlog is now eligible for Wave 6 implementation kickoff. The contract is 
 - 모든 후보는 source/evidence 참조를 가진다.
 - ExtractionJob 상태를 UI에서 확인할 수 있다.
 
-## Draft Risks To Resolve Before Implementation
+## Wave 6 Contract Decisions
 
-- `SourceSegment.segment_type` enum 범위를 확정해야 한다.
-- `SourceProfileColumn.inferred_type`이 MVP 1 `PropertyDataType`을 재사용하는지 별도 profiling enum을 두는지 결정해야 한다.
-- `ExtractionJob.status`, candidate validation/review/publish status enum source를 glossary/API contract에 고정해야 한다.
-- Evidence 없는 candidate 저장 허용 범위와 warning/error policy를 PM이 먼저 결정해야 한다.
-- `ModelRun.raw_request`/`raw_response` 저장 시 secret/PII masking 정책이 필요하다.
+- `SourceSegment.segment_type`은 `SourceSegmentType`을 사용한다: `SHEET`, `ROW`, `CELL`, `PAGE`, `SECTION`, `PARAGRAPH`, `CHUNK`.
+- `SourceProfileColumn.inferred_type`은 `ProfileInferredType`을 사용한다. `PropertyDataType`을 직접 재사용하지 않는다.
+- `ExtractionJob.status`는 `ExtractionJobStatus`, `ModelRun.status`는 `ModelRunStatus`를 사용한다.
+- Candidate `validation_status`, `review_status`, `publish_status`는 각각 `ValidationStatus`, `CandidateReviewStatus`, `PublishStatus`를 사용한다.
+- MVP 2에서는 `review_status=PENDING`, `publish_status=NOT_PUBLISHED`만 실제 workflow 값으로 사용한다.
+- Evidence 없는 candidate는 저장 가능하지만 정상 후보가 아니며 `validation_status=WARNING`, `validation_codes=["MISSING_EVIDENCE"]`가 필수다.
+- Evidence 참조가 깨진 candidate는 `validation_status=FAILED`, `validation_codes=["INVALID_EVIDENCE_REFERENCE"]`를 사용한다.
+- MockProvider는 deterministic fixture 기반이며 같은 input/fixture는 같은 candidate content와 evidence locator를 반환해야 한다.
+- `ModelRun.raw_request`/`raw_response`는 masked JSON만 저장한다. secret/API key/token/signed URL/raw full source text는 저장하지 않는다.
+
+## Remaining Draft Risks
+
 - Candidate 조회는 extraction-job 하위 endpoint만으로 충분한지, project/source/ontology_version filter가 필요한지 FE와 함께 확인해야 한다.
+- Candidate confidence scale과 threshold는 first thin slice QA 이후 조정할 수 있다.
+- PDF parsing library와 chunking default size/overlap은 thin slice 구현 결과를 보고 확정한다.

@@ -3,7 +3,14 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.enums import PropertyDataType, SourcePreviewStatus, SourceStatus, SourceType
+from app.core.enums import (
+    ProfileInferredType,
+    PropertyDataType,
+    SourcePreviewStatus,
+    SourceSegmentType,
+    SourceStatus,
+    SourceType,
+)
 
 
 class SourceUploadRequest(BaseModel):
@@ -77,6 +84,88 @@ class SourcePreview(BaseModel):
                 "row_count_sampled": 1,
                 "total_row_count": 20,
                 "sheet_name": None,
+                "warnings": [],
+            }
+        }
+    )
+
+
+class SourceProfileColumn(BaseModel):
+    name: str
+    inferred_type: ProfileInferredType
+    nullable: bool
+    null_ratio: float
+    distinct_count_sampled: int
+    sample_values: list[Any]
+    candidate_key_score: float = 0.0
+
+
+class SourceProfile(BaseModel):
+    id: str
+    source_id: str
+    columns: list[SourceProfileColumn]
+    row_count: int
+    sample_size: int
+    warnings: list[str] = Field(default_factory=list)
+    created_at: datetime
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "profile-demo",
+                "source_id": "source-demo-csv",
+                "columns": [
+                    {
+                        "name": "company_name",
+                        "inferred_type": "STRING",
+                        "nullable": False,
+                        "null_ratio": 0.0,
+                        "distinct_count_sampled": 2,
+                        "sample_values": ["Acme Corp", "Beta LLC"],
+                        "candidate_key_score": 1.0,
+                    }
+                ],
+                "row_count": 20,
+                "sample_size": 20,
+                "warnings": [],
+                "created_at": "2026-06-17T00:00:00Z",
+            }
+        }
+    )
+
+
+class SourceParseRequest(BaseModel):
+    chunk_size: int = Field(default=500, ge=100, le=5000)
+
+
+class SourceSegment(BaseModel):
+    id: str
+    source_id: str
+    segment_type: SourceSegmentType
+    sequence: int
+    row_index: int | None = None
+    column_name: str | None = None
+    page_number: int | None = None
+    section_title: str | None = None
+    paragraph_index: int | None = None
+    chunk_index: int | None = None
+    text: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime
+
+
+class SourceParseResponse(BaseModel):
+    source_id: str
+    segment_count: int
+    segment_types: list[SourceSegmentType]
+    warnings: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "source_id": "source-demo-csv",
+                "segment_count": 5,
+                "segment_types": ["SHEET", "ROW", "CELL"],
                 "warnings": [],
             }
         }
