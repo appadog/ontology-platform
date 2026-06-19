@@ -4,8 +4,8 @@
 
 ## Latest Wave
 
-- Current wave: `wave-012`
-- Overall status: `MVP 2 WAVE 11 CLOSEOUT PASS WITH EXCEPTION / FINALIZATION READY`
+- Current wave: `wave-013`
+- Overall status: `MVP 2 WAVE 13 UIUX PRODUCT POLISH IN PROGRESS`
 - 기준일: 2026-06-19
 
 ## Latest Decisions
@@ -38,6 +38,10 @@
 - Wave 11 subagent operating rhythm is accepted: PM subagent ran first, Backend/Frontend subagents ran in parallel, QA subagent ran last, and all role reports were produced in `docs/handoffs/wave-011/`.
 - Wave 11 QA verdict is `PASS WITH EXCEPTION`: `CO-01`~`CO-09` P0 closeout matrix, MVP 1 regression, Wave 7 contract sync, Wave 9 targeted hardening, Wave 10 local demo, and `INT2-001`~`INT2-004` are all PASS.
 - MVP 2 product closeout is approved with environment/tooling exceptions only: Docker Compose smoke remains `NOT RUNNABLE` without Docker CLI, and browser smoke harness can be further regularized after closeout.
+- Wave 12 is reopened by user request as Frontend Productization / UI-UX maturity work. This does not reopen MVP 2 API scope; it improves the actual product feel, navigation clarity, workflow comprehension, layout polish, and browser-verified UX quality on top of the closed MVP 2 contract.
+- Wave 12 Frontend Productization is accepted as PASS: `PX-01`~`PX-08` are all PASS after same-wave responsive containment fix/recheck, and MVP 2 closeout regression remains PASS.
+- Wave 13 is opened by commander/PM/UIUX expert review. Wave 12 UI/UX improved substantially, but Candidate/Evidence/Source/Job screens still need product polish around workflow stage clarity, mobile candidate review, evidence-first reading order, copy consistency, and visual hierarchy.
+- Wave 13 scope is Frontend-only unless a hard blocker is found. Backend/API contracts remain closed; no new endpoint/DTO/enum is requested.
 - MVP 1 and MVP 2 OpenAPI artifacts remain separate for now: `openapi-mvp1.json` and `openapi-mvp2-draft.json`. Do not replace them with a single latest artifact yet.
 - `/api/v1/dashboard` is not part of MVP 1 actual API contract. Frontend actual API mode must compute dashboard data from P0 APIs or keep dashboard mock-only/P1 boundary.
 - `docs/api/openapi-mvp1.json` is the MVP 1 canonical OpenAPI export artifact.
@@ -79,13 +83,15 @@
 | MVP 2 Closeout Prep | Closed in Wave 11. `CO-01`~`CO-09` PASS; MVP 2 product closeout approved as `PASS WITH EXCEPTION`. | PM2-001~PM2-005, BE2-001~BE2-009, FE2-001~FE2-006, INT2-001~INT2-004 |
 | Docker Compose Smoke | Remaining P1 environment follow-up. Docker CLI unavailable in current environment; Compose smoke is not a product closeout blocker. | BE-002, INT2-003 |
 | Browser Smoke Harness | Remaining P1 tooling follow-up. `npm run smoke:mvp2:actual` is reproducible, but can be formalized further as Playwright Test suite later. | FE2-006, INT2-003 |
+| Frontend Productization | Closed in Wave 12. `PX-01`~`PX-08` PASS; responsive document-level overflow fixed and rechecked at `390x900`. | FE2-001~FE2-006, FE-012, INT2-003 |
+| Wave 13 UIUX Product Polish | In progress. PM/UIUX expert review and `UX13-01`~`UX13-08` acceptance are ready; Frontend implementation and QA verification pending. | FE-012, FE2-001~FE2-006, INT2-003 |
 
 ## Next Gate
 
-1. Commander: Finalize MVP 2 closeout state, link reports/checklist, and separate P1 environment/tooling follow-ups from product acceptance.
-2. PM: No new product decision required unless user wants MVP 3 planning.
-3. Backend/Frontend: No product hardening required for MVP 2 closeout; only P1 Docker/browser harness follow-ups remain.
-4. QA: Re-run Compose smoke only when Docker CLI becomes available; otherwise maintain approved exception.
+1. Frontend: Implement Wave 13 `UX13-01`~`UX13-08` from `docs/pm/WAVE13_UIUX_REVIEW.md`.
+2. QA: Verify Wave 13 with actual API smoke, desktop/mobile screenshots, visible copy guard, and regression checks.
+3. Backend: Stay idle unless Frontend/QA reports a hard API blocker.
+4. Commander: After reports, update this file and decide whether Wave 13 is PASS or needs targeted follow-up.
 
 ## Latest Role Reports
 
@@ -131,6 +137,10 @@
 | Backend | wave-011 | `PASS / CLOSEOUT BACKEND READY` | Backend pytest, ruff, selected closeout smoke, OpenAPI freshness PASS; no schema changes |
 | Frontend | wave-011 | `PASS / CLOSEOUT FRONTEND READY` | Build/test/smoke PASS; `npm run smoke:mvp2:actual` and visible-copy guard added |
 | QA | wave-011 | `PASS WITH EXCEPTION / MVP2 CLOSEOUT APPROVED` | CO-01~CO-09 PASS; Docker Compose NOT RUNNABLE accepted as P1 environment exception |
+| PM | wave-012 | `PASS / PRODUCTIZATION ACCEPTANCE READY` | PX-01~PX-08 UX maturity overlay defined without reopening Backend/API scope |
+| Frontend | wave-012 | `PASS / PRODUCTIZED UX READY` | App shell, source-to-evidence workflow, candidate/evidence density, visible copy, responsive containment improved |
+| QA | wave-012 | `PASS / PRODUCTIZATION VERIFIED` | PX-01~PX-08 PASS after responsive recheck; actual API smoke/build/test PASS; no API blocker |
+| PM | wave-013 | `PASS / UIUX EXPERT REVIEW READY` | UX13-01~UX13-08 acceptance and Frontend orders ready; no Backend/API scope opened |
 
 ## Report Index
 
@@ -147,4 +157,5 @@
 | wave-009 | `wave-009/PM_REPORT.md` | `wave-009/BACKEND_REPORT.md` | `wave-009/FRONTEND_REPORT.md` | `wave-009/QA_REPORT.md` | `wave-009/NEXT_ORDERS.md` |
 | wave-010 | `wave-010/PM_REPORT.md` | `wave-010/BACKEND_REPORT.md` | `wave-010/FRONTEND_REPORT.md` | `wave-010/QA_REPORT.md` | `wave-010/NEXT_ORDERS.md` |
 | wave-011 | `wave-011/PM_REPORT.md` | `wave-011/BACKEND_REPORT.md` | `wave-011/FRONTEND_REPORT.md` | `wave-011/QA_REPORT.md` | `wave-011/NEXT_ORDERS.md` |
-| wave-012 | `wave-012/PM_REPORT.md` | `wave-012/BACKEND_REPORT.md` | `wave-012/FRONTEND_REPORT.md` | `wave-012/QA_REPORT.md` | pending |
+| wave-012 | `wave-012/PM_REPORT.md` | `wave-012/BACKEND_REPORT.md` | `wave-012/FRONTEND_REPORT.md` | `wave-012/QA_REPORT.md` | `wave-012/NEXT_ORDERS.md` |
+| wave-013 | `wave-013/PM_REPORT.md` | pending | pending | pending | pending |

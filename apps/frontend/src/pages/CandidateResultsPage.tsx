@@ -6,10 +6,9 @@ import { CandidateEntity, CandidateListFilters, CandidateRelation, CandidateVali
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaSelect, statusToTone } from "../shared/ui/hana";
-import { MetricCard } from "../shared/ui/platform/MetricCard";
 import { PageState } from "../shared/ui/platform/PageState";
 import { formatDateTime } from "../shared/lib/format";
-import { DataLink, Field, FormGrid, InlineList, KeyValueGrid, Mono, MutedText, TableWrap, formatPercent } from "./mvp2Shared";
+import { DataLink, Field, FormGrid, InlineList, KeyValueGrid, Mono, MutedText, TableWrap, WorkflowStage, formatPercent } from "./mvp2Shared";
 
 type EvidenceFilter = "ALL" | "WITH_EVIDENCE" | "MISSING_EVIDENCE";
 type ValidationFilter = "ALL" | ValidationStatus;
@@ -83,7 +82,7 @@ export function CandidateResultsPage() {
   }, [candidateRows, selectedCandidateKey]);
 
   if (jobQuery.isLoading || entitiesQuery.isLoading || relationsQuery.isLoading) {
-    return <PageState kind="loading" title="Candidate results를 불러오는 중" description="entity, relation candidate와 evidence reference를 조회하고 있습니다." />;
+    return <PageState kind="loading" title="Candidate results를 불러오는 중" description="엔티티와 관계 후보, Evidence 연결 상태를 조회하고 있습니다." />;
   }
 
   if (jobQuery.isError || entitiesQuery.isError || relationsQuery.isError || !jobQuery.data || !entitiesQuery.data || !relationsQuery.data) {
@@ -91,7 +90,7 @@ export function CandidateResultsPage() {
       <PageState
         kind="error"
         title="Candidate results를 불러오지 못했습니다"
-        description="job 상태를 확인한 뒤 후보 결과를 다시 불러오세요."
+        description="추출 작업 상태를 확인한 뒤 후보 결과를 다시 불러오세요."
         actionLabel="다시 시도"
         onAction={() => {
           void jobQuery.refetch();
@@ -117,27 +116,18 @@ export function CandidateResultsPage() {
           { label: "Candidates" },
         ]}
       />
-      <PageHeader title="Candidate Results" description="Entity, relation candidate와 evidence 상태를 확인합니다.">
+      <PageHeader title="Candidate Results" description="Candidate를 검토하고 Evidence로 판단 근거를 확인합니다.">
         <HanaBadge tone={statusToTone(jobQuery.data.status)}>{jobQuery.data.status}</HanaBadge>
+        <DataLink to={`/extraction-jobs/${jobQuery.data.id}`}>Job으로 돌아가기</DataLink>
       </PageHeader>
-      <MetricGrid>
-        <MetricCard label="Entities" value={filteredEntities.length}>
-          Candidate entity rows
-        </MetricCard>
-        <MetricCard label="Relations" value={filteredRelations.length}>
-          Candidate relation rows
-        </MetricCard>
-        <MetricCard label="Warnings / Failed" value={`${warningCount} / ${failedCount}`}>
-          Evidence and schema validation
-        </MetricCard>
-        <MetricCard label="Missing Evidence" value={missingEvidenceCount}>
-          Warning candidates without evidence
-        </MetricCard>
-        <MetricCard label="Retry Dedupe" value={jobQuery.data.retry_of_job_id ? "Retry" : "Root"}>
-          Retry results reuse duplicate candidates
-        </MetricCard>
-      </MetricGrid>
-      <HanaCard title="Filters" description="Kind, validation, evidence 기준으로 후보를 좁혀 봅니다.">
+      <WorkflowStage current="Candidates" action={<DataLink to={`/extraction-jobs/${jobQuery.data.id}`}>Extraction 상태 보기</DataLink>} />
+      <ReviewSummary aria-label="Candidate review summary">
+        <strong>{candidateRows.length}개 Candidate</strong>
+        <span>Entity {filteredEntities.length} · Relation {filteredRelations.length}</span>
+        <span>주의 {warningCount} · 실패 {failedCount} · Evidence 없음 {missingEvidenceCount}</span>
+        <span>{jobQuery.data.retry_of_job_id ? "Retry 결과" : "첫 실행 결과"}</span>
+      </ReviewSummary>
+      <HanaCard title="Filters" description="유형, 검증 상태, Evidence 유무를 기준으로 후보를 좁혀 봅니다.">
         <FormGrid>
           <Field>
             <span>Kind</span>
@@ -166,7 +156,7 @@ export function CandidateResultsPage() {
             </HanaSelect>
           </Field>
           <Field>
-            <span>Validation code</span>
+            <span>검증 코드</span>
             <HanaSelect value={validationCodeFilter} onChange={(event) => setValidationCodeFilter(event.target.value as ValidationCodeFilter)}>
               <option value="ALL">All</option>
               {validationCodeOptions.map((code) => (
@@ -179,11 +169,41 @@ export function CandidateResultsPage() {
         </FormGrid>
       </HanaCard>
       {candidates.length === 0 ? (
-        <PageState kind="empty" title="조건에 맞는 candidate가 없습니다" description="filter를 조정하거나 job monitor에서 실행 상태를 확인하세요." />
+        <PageState kind="empty" title="조건에 맞는 Candidate가 없습니다" description="filter를 조정하거나 추출 작업 모니터에서 실행 상태를 확인하세요." />
       ) : (
         <>
+          <CandidateCardList aria-label="Mobile candidate review list">
+            {candidateRows.map((row) => (
+              <CandidateCardItem key={row.key} data-selected={row.key === selectedCandidateRow?.key}>
+                <CandidateCardHeader>
+                  <div>
+                    <strong>{getCandidateTitle(row)}</strong>
+                    <span>{getCandidateSubtitle(row)}</span>
+                  </div>
+                  <HanaBadge tone="neutral">{row.kind}</HanaBadge>
+                </CandidateCardHeader>
+                <CardSignalRow>
+                  <HanaBadge tone={statusToTone(row.candidate.validation_status)}>{row.candidate.validation_status}</HanaBadge>
+                  {row.candidate.validation_codes.length === 0 ? <HanaBadge tone="success">NO_CODE</HanaBadge> : null}
+                  {row.candidate.validation_codes.map((code) => (
+                    <HanaBadge key={code} tone="warning">
+                      {code}
+                    </HanaBadge>
+                  ))}
+                  <strong>{formatPercent(row.candidate.confidence)}</strong>
+                </CardSignalRow>
+                {renderCandidateContext(row.candidate, jobQuery.data.id)}
+                <CardActionRow>
+                  {renderEvidenceLinks(row.candidate.evidence_ids, row.candidate, row.kind, jobQuery.data.id)}
+                  <HanaButton type="button" variant="ghost" onClick={() => setSelectedCandidateKey(row.key)}>
+                    Detail 보기
+                  </HanaButton>
+                </CardActionRow>
+              </CandidateCardItem>
+            ))}
+          </CandidateCardList>
           {candidateKindFilter !== "RELATION" && (
-          <HanaCard title="Entity candidates" description="Evidence 없는 entity는 warning 상태로 구분됩니다.">
+          <CandidateTableCard title="Entity candidates" description="Entity 후보의 class, 신뢰도, 검증 상태, Evidence 연결을 한 번에 비교합니다.">
             {filteredEntities.length === 0 ? (
               <PageState kind="empty" title="Entity candidate가 없습니다" description="현재 filter 조건에 맞는 entity candidate가 없습니다." />
             ) : (
@@ -196,8 +216,9 @@ export function CandidateResultsPage() {
                       <th>Confidence</th>
                       <th>Validation</th>
                       <th>Evidence</th>
+                      <th>Context</th>
                       <th>Created</th>
-                      <th>Detail</th>
+                      <th>검토</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -210,7 +231,7 @@ export function CandidateResultsPage() {
                           </CandidateName>
                         </td>
                         <td>
-                          <Mono>{formatNullable(candidate.class_id)}</Mono>
+                          <Mono>{shortId(formatNullable(candidate.class_id))}</Mono>
                         </td>
                         <td>{formatPercent(candidate.confidence)}</td>
                         <td>
@@ -225,10 +246,11 @@ export function CandidateResultsPage() {
                           </StatusStack>
                         </td>
                         <td>{renderEvidenceLinks(candidate.evidence_ids, candidate, "Entity", jobQuery.data.id)}</td>
+                        <td>{renderCandidateContext(candidate, jobQuery.data.id)}</td>
                         <td>{formatDateTime(candidate.created_at)}</td>
                         <td>
                           <HanaButton type="button" variant="ghost" onClick={() => setSelectedCandidateKey(`entity:${candidate.id}`)}>
-                            Details
+                            Detail 보기
                           </HanaButton>
                         </td>
                       </tr>
@@ -237,10 +259,10 @@ export function CandidateResultsPage() {
                 </table>
               </TableWrap>
             )}
-          </HanaCard>
+          </CandidateTableCard>
           )}
           {candidateKindFilter !== "ENTITY" && (
-          <HanaCard title="Relation candidates" description="Relation 후보는 entity 후보와 분리해서 확인합니다.">
+          <CandidateTableCard title="Relation candidates" description="Relation 후보의 양쪽 대상, 신뢰도, 검증 상태, Evidence 연결을 비교합니다.">
             {filteredRelations.length === 0 ? (
               <PageState kind="empty" title="Relation candidate가 없습니다" description="현재 filter 조건에 맞는 relation candidate가 없습니다." />
             ) : (
@@ -253,20 +275,24 @@ export function CandidateResultsPage() {
                       <th>Confidence</th>
                       <th>Validation</th>
                       <th>Evidence</th>
+                      <th>Context</th>
                       <th>Created</th>
-                      <th>Detail</th>
+                      <th>검토</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredRelations.map((candidate) => (
                       <tr key={candidate.id}>
                         <td>
-                          <Mono>{formatNullable(candidate.relation_id)}</Mono>
+                          <CandidateName>
+                            <strong>{formatRelationMembers(candidate)}</strong>
+                            <span>Relation {shortId(formatNullable(candidate.relation_id))}</span>
+                          </CandidateName>
                         </td>
                         <td>
                           <CandidateName>
-                            <strong>{formatNullable(candidate.source_candidate_entity_id)}</strong>
-                            <span>{formatNullable(candidate.target_candidate_entity_id)}</span>
+                            <strong>{shortId(formatNullable(candidate.source_candidate_entity_id))}</strong>
+                            <span>{shortId(formatNullable(candidate.target_candidate_entity_id))}</span>
                           </CandidateName>
                         </td>
                         <td>{formatPercent(candidate.confidence)}</td>
@@ -282,10 +308,11 @@ export function CandidateResultsPage() {
                           </StatusStack>
                         </td>
                         <td>{renderEvidenceLinks(candidate.evidence_ids, candidate, "Relation", jobQuery.data.id)}</td>
+                        <td>{renderCandidateContext(candidate, jobQuery.data.id)}</td>
                         <td>{formatDateTime(candidate.created_at)}</td>
                         <td>
                           <HanaButton type="button" variant="ghost" onClick={() => setSelectedCandidateKey(`relation:${candidate.id}`)}>
-                            Details
+                            Detail 보기
                           </HanaButton>
                         </td>
                       </tr>
@@ -294,31 +321,32 @@ export function CandidateResultsPage() {
                 </table>
               </TableWrap>
             )}
-          </HanaCard>
+          </CandidateTableCard>
           )}
           {selectedCandidateRow && (
-            <HanaCard title="Candidate detail" description="선택한 후보의 상태와 evidence를 확인합니다.">
+            <HanaCard title="Candidate detail" description="선택한 후보의 판단 정보와 Evidence 상태를 확인합니다.">
+              <SelectedSummary>
+                <div>
+                  <strong>{getCandidateTitle(selectedCandidateRow)}</strong>
+                  <span>{getCandidateSubtitle(selectedCandidateRow)}</span>
+                </div>
+                <StatusStack>
+                  <HanaBadge tone="neutral">{selectedCandidateRow.kind}</HanaBadge>
+                  <HanaBadge tone={statusToTone(selectedCandidateRow.candidate.validation_status)}>
+                    {selectedCandidateRow.candidate.validation_status}
+                  </HanaBadge>
+                  <HanaBadge tone="progress">{formatPercent(selectedCandidateRow.candidate.confidence)}</HanaBadge>
+                </StatusStack>
+              </SelectedSummary>
               <KeyValueGrid>
                 <dt>Type</dt>
                 <dd>{selectedCandidateRow.kind}</dd>
-                <dt>ID</dt>
-                <dd>
-                  <Mono>{selectedCandidateRow.candidate.id}</Mono>
-                </dd>
                 <dt>Source</dt>
                 <dd>
-                  <Mono>{selectedCandidateRow.candidate.source_id}</Mono>
+                  <Mono>{shortId(selectedCandidateRow.candidate.source_id)}</Mono>
                 </dd>
                 <dt>Source segment</dt>
-                <dd>{selectedCandidateRow.candidate.source_segment_id ?? "-"}</dd>
-                <dt>Ontology</dt>
-                <dd>
-                  <Mono>{selectedCandidateRow.candidate.ontology_version_id}</Mono>
-                </dd>
-                <dt>Prompt / Model run</dt>
-                <dd>
-                  <Mono>{selectedCandidateRow.candidate.prompt_version_id}</Mono> / <Mono>{selectedCandidateRow.candidate.model_run_id}</Mono>
-                </dd>
+                <dd>{selectedCandidateRow.candidate.source_segment_id ? shortId(selectedCandidateRow.candidate.source_segment_id) : "-"}</dd>
                 <dt>Confidence</dt>
                 <dd>{formatPercent(selectedCandidateRow.candidate.confidence)}</dd>
                 <dt>Validation</dt>
@@ -346,19 +374,30 @@ export function CandidateResultsPage() {
                   </StatusStack>
                 </dd>
                 <dt>Retry dedupe</dt>
-                <dd>{jobQuery.data.retry_of_job_id ? `Retry of ${jobQuery.data.retry_of_job_id}` : "Root chain result"}</dd>
+                <dd>{jobQuery.data.retry_of_job_id ? `Retry ${shortId(jobQuery.data.retry_of_job_id)}` : "첫 실행 결과"}</dd>
               </KeyValueGrid>
               {selectedCandidateRow.candidate.evidence_ids.length === 0 ? (
                 <EvidenceFallback>
                   <HanaBadge tone="warning">MISSING_EVIDENCE</HanaBadge>
-                  <span>No evidence reference is attached to this candidate.</span>
+                  <span>연결된 Evidence가 없습니다. Job 상태를 확인하거나 filter를 조정하세요.</span>
+                  <DataLink to={`/extraction-jobs/${jobQuery.data.id}`}>Job으로 돌아가기</DataLink>
                 </EvidenceFallback>
               ) : evidenceQuery.isLoading ? (
-                <PageState kind="loading" title="Evidence detail을 불러오는 중" description="첫 evidence locator를 확인하고 있습니다." />
+                <PageState kind="loading" title="Evidence detail을 불러오는 중" description="첫 Evidence 위치 정보를 확인하고 있습니다." />
               ) : evidenceQuery.isError || !evidenceQuery.data ? (
                 <EvidenceFallback>
                   <HanaBadge tone="danger">BROKEN_EVIDENCE</HanaBadge>
-                  <span>{selectedEvidenceId}</span>
+                  <span>Evidence reference cannot be opened.</span>
+                  <DataLink
+                    to={buildEvidencePath(
+                      selectedEvidenceId,
+                      selectedCandidateRow.candidate,
+                      selectedCandidateRow.kind,
+                      jobQuery.data.id,
+                    )}
+                  >
+                    복구 화면 열기
+                  </DataLink>
                 </EvidenceFallback>
               ) : (
                 <EvidenceSummary>
@@ -366,7 +405,7 @@ export function CandidateResultsPage() {
                   <span>
                     {formatEvidenceLocator(evidenceQuery.data.row_index, evidenceQuery.data.column_name, evidenceQuery.data.paragraph_id, evidenceQuery.data.chunk_id)}
                   </span>
-                  <MutedText>{evidenceQuery.data.evidence_text ?? "No evidence text available."}</MutedText>
+                  <MutedText>{evidenceQuery.data.evidence_text ?? "Evidence 본문이 없습니다."}</MutedText>
                   <DataLink
                     to={buildEvidencePath(
                       evidenceQuery.data.id,
@@ -375,17 +414,52 @@ export function CandidateResultsPage() {
                       jobQuery.data.id,
                     )}
                   >
-                    Open evidence viewer
+                    Evidence 보기
                   </DataLink>
                 </EvidenceSummary>
               )}
-              <RawPayload>{JSON.stringify(selectedCandidateRow.candidate.raw_payload, null, 2)}</RawPayload>
+              <TechnicalDetails>
+                <summary>Technical details</summary>
+                <KeyValueGrid>
+                  <dt>Candidate ID</dt>
+                  <dd><Mono>{selectedCandidateRow.candidate.id}</Mono></dd>
+                  <dt>Source ID</dt>
+                  <dd><Mono>{selectedCandidateRow.candidate.source_id}</Mono></dd>
+                  <dt>Ontology version</dt>
+                  <dd><Mono>{selectedCandidateRow.candidate.ontology_version_id}</Mono></dd>
+                  <dt>Prompt version</dt>
+                  <dd><Mono>{selectedCandidateRow.candidate.prompt_version_id}</Mono></dd>
+                  <dt>Model run</dt>
+                  <dd><Mono>{selectedCandidateRow.candidate.model_run_id}</Mono></dd>
+                </KeyValueGrid>
+                <RawPayload>{JSON.stringify(selectedCandidateRow.candidate.raw_payload, null, 2)}</RawPayload>
+              </TechnicalDetails>
             </HanaCard>
           )}
         </>
       )}
     </>
   );
+}
+
+function getCandidateTitle(row: CandidateRow) {
+  if (row.kind === "Entity") {
+    return row.candidate.entity_name;
+  }
+
+  return formatRelationMembers(row.candidate);
+}
+
+function getCandidateSubtitle(row: CandidateRow) {
+  if (row.kind === "Entity") {
+    return `Class ${shortId(formatNullable(row.candidate.class_id))}`;
+  }
+
+  return `Relation ${shortId(formatNullable(row.candidate.relation_id))}`;
+}
+
+function formatRelationMembers(candidate: CandidateRelation) {
+  return `${shortId(formatNullable(candidate.source_candidate_entity_id))} -> ${shortId(formatNullable(candidate.target_candidate_entity_id))}`;
 }
 
 function formatProperties(values: Record<string, unknown>) {
@@ -423,20 +497,35 @@ function renderEvidenceLinks(
     return (
       <InlineList>
         <HanaBadge tone="warning">MISSING_EVIDENCE</HanaBadge>
-        <MutedText>No evidence</MutedText>
+        <MutedText>Evidence 없음</MutedText>
       </InlineList>
     );
   }
 
   return (
     <InlineList>
-      {evidenceIds.map((evidenceId) => (
+      <HanaBadge tone="success">{evidenceIds.length} evidence</HanaBadge>
+      {evidenceIds.map((evidenceId, index) => (
         <DataLink key={evidenceId} to={buildEvidencePath(evidenceId, candidate, kind, jobId)}>
-          {evidenceId}
+          Evidence {index + 1}
         </DataLink>
       ))}
     </InlineList>
   );
+}
+
+function renderCandidateContext(candidate: CandidateEntity | CandidateRelation, jobId: string) {
+  return (
+    <ContextStack>
+      <span>Source <Mono>{shortId(candidate.source_id)}</Mono></span>
+      <span>Job <Mono>{shortId(jobId)}</Mono></span>
+      {candidate.source_segment_id ? <span>Segment <Mono>{shortId(candidate.source_segment_id)}</Mono></span> : null}
+    </ContextStack>
+  );
+}
+
+function shortId(value: string) {
+  return value.length > 12 ? `${value.slice(0, 8)}...${value.slice(-4)}` : value;
 }
 
 function buildEvidencePath(
@@ -469,20 +558,102 @@ function formatEvidenceLocator(rowIndex?: number | null, columnName?: string | n
     chunkId !== undefined && chunkId !== null ? `chunk=${chunkId}` : null,
   ].filter(Boolean);
 
-  return parts.length > 0 ? parts.join(" · ") : "locator unavailable";
+  return parts.length > 0 ? parts.join(" · ") : "위치 정보 없음";
 }
 
-const MetricGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: ${({ theme }) => theme.spacing.lg};
+const ReviewSummary = styled.section`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) => theme.spacing.lg};
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.color.surfaceRaised};
 
-  @media (max-width: 1100px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  strong {
+    color: ${({ theme }) => theme.color.text};
   }
 
-  @media (max-width: 680px) {
-    grid-template-columns: 1fr;
+  span {
+    color: ${({ theme }) => theme.color.textMuted};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  }
+`;
+
+const CandidateCardList = styled.section`
+  display: none;
+  gap: ${({ theme }) => theme.spacing.md};
+
+  @media (max-width: 760px) {
+    display: grid;
+  }
+`;
+
+const CandidateCardItem = styled.article`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.md};
+  min-width: 0;
+  padding: ${({ theme }) => theme.spacing.lg};
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.color.surfaceRaised};
+
+  &[data-selected="true"] {
+    border-color: ${({ theme }) => theme.color.primary};
+    background: ${({ theme }) => theme.color.primarySoft};
+  }
+`;
+
+const CandidateCardHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.spacing.md};
+  min-width: 0;
+
+  div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  strong,
+  span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  span {
+    color: ${({ theme }) => theme.color.textMuted};
+    font-size: ${({ theme }) => theme.typography.fontSize.sm};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  }
+`;
+
+const CardSignalRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+
+  strong {
+    color: ${({ theme }) => theme.color.text};
+  }
+`;
+
+const CardActionRow = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.sm};
+
+  button {
+    justify-self: start;
+  }
+`;
+
+const CandidateTableCard = styled(HanaCard)`
+  @media (max-width: 760px) {
+    display: none;
   }
 `;
 
@@ -508,10 +679,19 @@ const StatusStack = styled.div`
 
 const EvidenceFallback = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.sm};
   padding: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
   color: ${({ theme }) => theme.color.textMuted};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+`;
+
+const ContextStack = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.xs};
+  color: ${({ theme }) => theme.color.textMuted};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
 `;
 
@@ -527,8 +707,34 @@ const EvidenceSummary = styled.div`
   }
 `;
 
+const SelectedSummary = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg} 0;
+
+  div {
+    display: grid;
+    gap: ${({ theme }) => theme.spacing.xs};
+    min-width: 0;
+  }
+
+  strong,
+  span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  span {
+    color: ${({ theme }) => theme.color.textMuted};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  }
+`;
+
 const RawPayload = styled.pre`
-  margin: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+  margin: ${({ theme }) => theme.spacing.md} 0 0;
   padding: ${({ theme }) => theme.spacing.md};
   overflow: auto;
   border: 1px solid ${({ theme }) => theme.color.border};
@@ -537,4 +743,14 @@ const RawPayload = styled.pre`
   color: ${({ theme }) => theme.color.text};
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 12px;
+`;
+
+const TechnicalDetails = styled.details`
+  margin: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+  color: ${({ theme }) => theme.color.textMuted};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+
+  summary {
+    cursor: pointer;
+  }
 `;

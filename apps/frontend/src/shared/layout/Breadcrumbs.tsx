@@ -27,9 +27,17 @@ const Trail = styled.nav`
   flex-wrap: wrap;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.sm};
+  min-width: 0;
+  max-width: 100%;
   color: ${({ theme }) => theme.color.textMuted};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+
+  span {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
 
   span:not(:last-child)::after {
     content: "/";
@@ -39,9 +47,11 @@ const Trail = styled.nav`
 
   a {
     color: ${({ theme }) => theme.color.primary};
+    overflow-wrap: anywhere;
   }
 
   strong {
     color: ${({ theme }) => theme.color.text};
+    overflow-wrap: anywhere;
   }
 `;

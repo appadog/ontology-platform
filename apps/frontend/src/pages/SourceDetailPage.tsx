@@ -7,6 +7,7 @@ import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaCard, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
 import { formatBytes, formatDateTime } from "../shared/lib/format";
+import { WorkflowStage } from "./mvp2Shared";
 
 export function SourceDetailPage() {
   const { sourceId = "" } = useParams();
@@ -30,6 +31,13 @@ export function SourceDetailPage() {
     );
   }
 
+  const isTabularSource = source.source_type === "CSV" || source.source_type === "EXCEL";
+  const isExtractionReady = source.status === "EXTRACTION_READY";
+  const primaryReadinessPath = isTabularSource
+    ? `/projects/${source.project_id}/sources/${source.id}/profile`
+    : `/projects/${source.project_id}/sources/${source.id}/chunks`;
+  const primaryReadinessLabel = isTabularSource ? "컬럼 프로파일 보기" : "구간 보기";
+
   return (
     <>
       <Breadcrumbs
@@ -42,10 +50,39 @@ export function SourceDetailPage() {
       <PageHeader title={source.file_name} description="업로드 파일 상태를 확인하고 다음 extraction 준비 단계로 이동합니다.">
         <HanaBadge tone={statusToTone(source.status)}>{source.status}</HanaBadge>
         <HanaBadge tone={statusToTone(source.preview_status)}>{source.preview_status}</HanaBadge>
-        <HeaderLink to={`/projects/${source.project_id}/sources/${source.id}/profile`}>Profile</HeaderLink>
-        <HeaderLink to={`/projects/${source.project_id}/sources/${source.id}/chunks`}>Chunks</HeaderLink>
-        <HeaderLink to={`/projects/${source.project_id}/extraction/new`}>Create job</HeaderLink>
+        <HeaderLink to={`/projects/${source.project_id}/sources/${source.id}/profile`}>컬럼 프로파일</HeaderLink>
+        <HeaderLink to={`/projects/${source.project_id}/sources/${source.id}/chunks`}>구간 보기</HeaderLink>
       </PageHeader>
+      <WorkflowStage
+        current="Source"
+        action={<HeaderLink to={isExtractionReady ? `/projects/${source.project_id}/extraction/new` : primaryReadinessPath}>{isExtractionReady ? "추출 작업 만들기" : primaryReadinessLabel}</HeaderLink>}
+      />
+      <HanaCard title="준비 상태" description="Source 종류에 맞는 준비 상태와 다음 행동을 먼저 확인합니다.">
+        <ReadinessGrid>
+          <ReadinessItem data-priority="primary">
+            <strong>{isTabularSource ? "컬럼 프로파일 / 미리보기" : "구간 보기"}</strong>
+            <span>{isTabularSource ? "컬럼 구조와 샘플 행을 먼저 확인합니다." : "문서 구간과 Evidence 기준 위치를 먼저 확인합니다."}</span>
+            <HanaBadge tone={isTabularSource ? statusToTone(source.preview_status) : statusToTone(source.status)}>
+              {isTabularSource ? source.preview_status : source.status}
+            </HanaBadge>
+            <HeaderLink to={primaryReadinessPath}>{primaryReadinessLabel}</HeaderLink>
+          </ReadinessItem>
+          <ReadinessItem>
+            <strong>{isTabularSource ? "구간 보기" : "컬럼 프로파일 / 미리보기"}</strong>
+            <span>{isTabularSource ? "필요하면 행과 셀 기준 위치를 확인합니다." : "문서형 Source는 미리보기보다 구간 확인이 우선입니다."}</span>
+            <HanaBadge tone="neutral">{isTabularSource ? source.status : source.preview_status}</HanaBadge>
+            <HeaderLink to={isTabularSource ? `/projects/${source.project_id}/sources/${source.id}/chunks` : `/projects/${source.project_id}/sources/${source.id}/profile`}>
+              {isTabularSource ? "구간 보기" : "컬럼 프로파일 보기"}
+            </HeaderLink>
+          </ReadinessItem>
+          <ReadinessItem>
+            <strong>Extraction</strong>
+            <span>{isExtractionReady ? "Source 준비가 끝났습니다. Ontology와 프롬프트를 선택해 추출 작업을 만들 수 있습니다." : "컬럼 프로파일 또는 구간을 확인한 뒤 추출 작업을 만듭니다."}</span>
+            <HanaBadge tone={isExtractionReady ? "success" : "neutral"}>{isExtractionReady ? "READY" : "NEXT"}</HanaBadge>
+            <HeaderLink to={`/projects/${source.project_id}/extraction/new`}>추출 작업 만들기</HeaderLink>
+          </ReadinessItem>
+        </ReadinessGrid>
+      </HanaCard>
       <DetailGrid>
         <HanaCard title="Metadata">
           <MetaList>
@@ -76,28 +113,23 @@ export function SourceDetailPage() {
           </MetaList>
         </HanaCard>
       </DetailGrid>
-      <HanaCard title="Next steps" description="Source를 확인한 뒤 profile, chunk, extraction job으로 이어갑니다.">
+      <HanaCard title="다음 단계" description="Source를 확인한 뒤 컬럼 프로파일, 구간 확인, 추출 작업으로 이어갑니다.">
         <StepGrid>
-          <StepLink to={`/projects/${source.project_id}/sources/${source.id}/profile`}>
-            <BarChart3 aria-hidden="true" />
-            <strong>Profile</strong>
-            <span>컬럼 타입과 샘플 값을 확인합니다.</span>
-            <HanaBadge tone={source.status === "PROFILED" || source.status === "EXTRACTION_READY" ? "success" : "progress"}>
-              {source.status === "PROFILED" || source.status === "EXTRACTION_READY" ? "READY" : "RUN"}
-            </HanaBadge>
-          </StepLink>
-          <StepLink to={`/projects/${source.project_id}/sources/${source.id}/chunks`}>
-            <FileSearch aria-hidden="true" />
-            <strong>Chunks</strong>
-            <span>row, cell, paragraph, chunk evidence anchor를 확인합니다.</span>
-            <HanaBadge tone={source.status === "PARSED" || source.status === "EXTRACTION_READY" ? "success" : "progress"}>
-              {source.status === "PARSED" || source.status === "EXTRACTION_READY" ? "READY" : "PARSE"}
-            </HanaBadge>
-          </StepLink>
+          {isTabularSource ? (
+            <>
+              {renderProfileStep(source.project_id, source.id, source.status)}
+              {renderChunkStep(source.project_id, source.id, source.status)}
+            </>
+          ) : (
+            <>
+              {renderChunkStep(source.project_id, source.id, source.status)}
+              {renderProfileStep(source.project_id, source.id, source.status)}
+            </>
+          )}
           <StepLink to={`/projects/${source.project_id}/extraction/new`}>
             <Sparkles aria-hidden="true" />
-            <strong>Create job</strong>
-            <span>source와 ontology, prompt version을 묶어 candidate를 생성합니다.</span>
+            <strong>추출 작업 만들기</strong>
+            <span>Source와 Ontology, 프롬프트 버전을 묶어 Candidate를 생성합니다.</span>
             <HanaBadge tone={source.status === "EXTRACTION_READY" ? "success" : "neutral"}>
               {source.status === "EXTRACTION_READY" ? "READY" : "SELECT"}
             </HanaBadge>
@@ -108,8 +140,8 @@ export function SourceDetailPage() {
         <PreviewNotice>
           <FileText aria-hidden="true" />
           <div>
-            <strong>Preview not available</strong>
-            <span>문서형 source는 Chunks 화면에서 parse 결과를 확인합니다.</span>
+            <strong>Preview를 제공하지 않는 Source입니다</strong>
+            <span>문서형 Source는 구간 보기 화면에서 파싱 결과를 확인합니다.</span>
           </div>
         </PreviewNotice>
       ) : source.preview_status === "PENDING" ? (
@@ -117,7 +149,7 @@ export function SourceDetailPage() {
       ) : source.preview_status === "FAILED" ? (
         <PageState kind="error" title="Preview 생성 실패" description="파일 상태를 확인한 뒤 다시 업로드하거나 profile을 실행하세요." />
       ) : !preview || preview.rows.length === 0 ? (
-        <PageState kind="empty" title="Preview row가 없습니다" description="Profile 화면에서 컬럼 결과와 warning을 확인하세요." />
+        <PageState kind="empty" title="Preview row가 없습니다" description="컬럼 프로파일 화면에서 컬럼 결과와 warning을 확인하세요." />
       ) : (
         <HanaCard title="CSV/Excel sample rows" description="샘플 row로 파일 구조를 빠르게 확인합니다.">
           <ColumnList>
@@ -163,6 +195,32 @@ export function SourceDetailPage() {
   );
 }
 
+function renderProfileStep(projectId: string, sourceId: string, status: string) {
+  return (
+    <StepLink to={`/projects/${projectId}/sources/${sourceId}/profile`}>
+      <BarChart3 aria-hidden="true" />
+      <strong>컬럼 프로파일</strong>
+      <span>컬럼 타입과 샘플 값을 확인합니다.</span>
+      <HanaBadge tone={status === "PROFILED" || status === "EXTRACTION_READY" ? "success" : "progress"}>
+        {status === "PROFILED" || status === "EXTRACTION_READY" ? "READY" : "RUN"}
+      </HanaBadge>
+    </StepLink>
+  );
+}
+
+function renderChunkStep(projectId: string, sourceId: string, status: string) {
+  return (
+    <StepLink to={`/projects/${projectId}/sources/${sourceId}/chunks`}>
+      <FileSearch aria-hidden="true" />
+      <strong>구간 보기</strong>
+      <span>행, 셀, 문단, 구간 단위의 Evidence 기준 위치를 확인합니다.</span>
+      <HanaBadge tone={status === "PARSED" || status === "EXTRACTION_READY" ? "success" : "progress"}>
+        {status === "PARSED" || status === "EXTRACTION_READY" ? "READY" : "PARSE"}
+      </HanaBadge>
+    </StepLink>
+  );
+}
+
 const DetailGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -170,6 +228,47 @@ const DetailGrid = styled.div`
 
   @media (max-width: 880px) {
     grid-template-columns: 1fr;
+  }
+`;
+
+const ReadinessGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.lg};
+
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ReadinessItem = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.sm};
+  align-content: start;
+  min-width: 0;
+  padding: ${({ theme }) => theme.spacing.md};
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.sm};
+
+  &[data-priority="primary"] {
+    border-color: ${({ theme }) => theme.color.primary};
+    background: ${({ theme }) => theme.color.primarySoft};
+  }
+
+  strong,
+  span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  span {
+    color: ${({ theme }) => theme.color.textMuted};
+    line-height: ${({ theme }) => theme.typography.lineHeight.normal};
+  }
+
+  a {
+    justify-self: start;
   }
 `;
 

@@ -305,8 +305,8 @@ export function OntologyModelerPage() {
       <PageState
         kind="empty"
         title="Project context가 필요합니다"
-        description="Projects에서 작업할 project를 선택한 뒤 ontology draft를 구성하세요."
-        actionLabel="Go to projects"
+        description="Projects에서 작업할 Project를 선택한 뒤 Ontology 초안을 구성하세요."
+        actionLabel="Projects로 이동"
         onAction={() => {
           window.location.assign("/projects");
         }}

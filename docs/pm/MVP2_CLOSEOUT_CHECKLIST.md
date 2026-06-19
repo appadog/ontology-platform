@@ -1,8 +1,8 @@
 # MVP 2 Closeout Checklist
 
-Status: `WAVE 11 CLOSEOUT PREPARATION READY`
+Status: `WAVE 12 PRODUCTIZATION OVERLAY READY`
 
-This document is the shared Wave 11 closeout reference for PM, Backend, Frontend, and QA. It does not open new MVP 2 runtime scope. It freezes the local-demo acceptance criteria, regression matrix, demo script, release-note exclusions, and closeout exceptions needed to decide whether MVP 2 can close.
+This document is the shared closeout reference for PM, Backend, Frontend, and QA. Wave 11 froze the local-demo acceptance criteria, regression matrix, demo script, release-note exclusions, and closeout exceptions needed to decide whether MVP 2 can close. Wave 12 adds a Frontend productization overlay for browser-verifiable UI/UX maturity without reopening MVP 2 runtime scope.
 
 ## Closeout Decision Rule
 
@@ -47,6 +47,23 @@ Allowed closeout verdicts:
 | CO-07 | Candidate/evidence browsing | Candidate entity/relation results can be filtered or browsed by kind, validation status/code, and evidence presence; empty/error states recover to source/job/project context. | Candidate list filters remain in existing endpoints; no candidate detail endpoint required. | Candidate results view provides filters, row actions, evidence links, and stable empty states. | PASS when browsing works without new runtime contract. |
 | CO-08 | Evidence traceability/fallback | Normal evidence resolves to source/segment locator; missing evidence shows warning candidate state; broken evidence shows failed validation and available IDs/context; direct missing route does not crash. | `CandidateEvidence` detail and fixture metadata support normal/broken cases. | Evidence viewer preserves breadcrumbs/context and recovery actions. | `INT2-002` PASS when normal, missing, broken, and direct fallback paths are stable. |
 | CO-09 | Frontend navigation/browser smoke | Dashboard/project/source/extraction/candidate/evidence routes render in actual API mode; LNB contains only top-level work areas; ID-bound pages are reached through contextual links and breadcrumbs. | Backend actual API server available for smoke. | Build passes and browser smoke screenshots/logs cover source -> extraction -> candidate -> evidence. | `INT2-003` PASS when actual API browser smoke is reproducible or documented fallback is accepted. |
+
+## Wave 12 Productization Overlay
+
+Wave 12 does not change the Wave 11 closeout decision rule. It adds a UX maturity gate for the already passing MVP 2 flow. QA should report this overlay separately as `PASS`, `PARTIAL`, or `FAIL` while also confirming that `CO-01`~`CO-09` behavior remains intact.
+
+| ID | Scenario | Productization acceptance | QA browser evidence |
+|---|---|---|---|
+| PX-01 | App shell and navigation hierarchy | LNB shows top-level work areas only; ID-bound project/source/job/candidate/evidence detail routes are reached through parent rows, contextual actions, and breadcrumbs. | Desktop screenshot and route smoke showing LNB plus at least one source/job/evidence drilldown path. |
+| PX-02 | Project context and breadcrumbs | Project-scoped screens display current project context or a recoverable no/stale project state; evidence viewer preserves available project/source/job/candidate context. | Browser walkthrough from Projects to Evidence, including direct missing evidence fallback. |
+| PX-03 | Page primary action and next action | Each core page has a clear primary action and completion/empty/error states provide the next workflow action or recovery action. | Screenshots for project, source profile/parse, job create/monitor, candidates, evidence. |
+| PX-04 | Source-to-evidence workflow comprehension | A user can follow project selection -> ontology draft -> source profile/parse -> extraction job -> candidate/evidence without endpoint/debug instructions or long explanatory copy. | Click or manual browser evidence with route list and screenshot artifacts. |
+| PX-05 | Candidate/evidence inspection density | Candidate results expose kind, validation status/code, evidence presence, confidence, and context for comparison; evidence viewer shows locator, candidate summary, validation context, and recovery. | Candidate list/detail/evidence screenshots with normal, missing, and broken evidence paths. |
+| PX-06 | Responsive layout | Desktop and mobile-ish viewports do not show overlapping LNB, breadcrumbs, filters, tables, buttons, chips, detail panels, or evidence text. | At least one desktop and one mobile-ish screenshot for source/job/candidate/evidence surfaces. |
+| PX-07 | Visual style guardrail | Operational SaaS style is calm and information-dense; no landing/marketing hero, endpoint/debug main copy, card-in-card overuse, decorative gradient/orb background, or hero-scale type in compact work surfaces. | Visual inspection notes plus screenshots from browser QA. |
+| PX-08 | Regression preservation | Wave 11 `CO-01`~`CO-09` and `INT2-001`~`INT2-004` behavior remain passing. | Existing smoke plus any targeted reruns reported by Frontend/QA. |
+
+Wave 12 productization is `PASS` only when `PX-01`~`PX-08` all pass or have explicitly documented non-product exceptions. It is `PARTIAL` when runtime behavior remains correct but UX polish, responsive layout, copy, or navigation hierarchy has targeted gaps. It is `FAIL` when the source-to-evidence workflow is broken, context is lost without recovery, or the UI requires a new Backend/API contract to proceed.
 
 ## MVP 2 Demo Script
 

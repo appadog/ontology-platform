@@ -14,28 +14,28 @@ const fixtureOptions = [
     label: "Success",
     expectedStatus: "SUCCESS",
     tone: "success" as const,
-    summary: "normal candidate and evidence",
+    summary: "정상 Candidate와 Evidence",
   },
   {
     id: "partial_invalid",
     label: "Partial failure",
     expectedStatus: "PARTIAL_FAILED",
     tone: "warning" as const,
-    summary: "warning candidate without evidence",
+    summary: "Evidence가 없는 경고 Candidate",
   },
   {
     id: "invalid_evidence_reference",
     label: "Broken evidence",
     expectedStatus: "PARTIAL_FAILED",
     tone: "warning" as const,
-    summary: "candidate with unresolved evidence link",
+    summary: "해결되지 않은 Evidence 연결이 있는 Candidate",
   },
   {
     id: "missing",
     label: "Missing fixture",
     expectedStatus: "FAILED",
     tone: "danger" as const,
-    summary: "selected scenario cannot be loaded",
+    summary: "선택한 시나리오를 불러올 수 없음",
   },
 ] as const;
 
@@ -99,22 +99,22 @@ export function ExtractionJobCreatePage() {
       <PageState
         kind="empty"
         title="Project context가 필요합니다"
-        description="Projects에서 작업할 project를 선택한 뒤 extraction job을 생성하세요."
-        actionLabel="Go to projects"
+        description="Projects에서 작업할 Project를 선택한 뒤 추출 작업을 만드세요."
+        actionLabel="Projects로 이동"
         onAction={() => navigate("/projects")}
       />
     );
   }
 
   if (isLoading) {
-    return <PageState kind="loading" title="Extraction job 생성 폼을 불러오는 중" description="source, ontology, prompt 선택지를 준비하고 있습니다." />;
+    return <PageState kind="loading" title="추출 작업 생성 폼을 불러오는 중" description="Source, Ontology, 프롬프트 선택지를 준비하고 있습니다." />;
   }
 
   if (isError || !sources || !versions || !prompts || !promptVersions) {
     return (
       <PageState
         kind="error"
-        title="Extraction job 생성 준비에 실패했습니다"
+        title="추출 작업 생성 준비에 실패했습니다"
         description="필요한 선택지를 불러오지 못했습니다."
         actionLabel="다시 시도"
         onAction={() => {
@@ -131,9 +131,9 @@ export function ExtractionJobCreatePage() {
     return (
       <PageState
         kind="empty"
-        title="Job 생성에 필요한 입력이 부족합니다"
-        description="source, ontology version, prompt version이 모두 필요합니다."
-        actionLabel={sources.length === 0 ? "Go to sources" : "Go to ontology"}
+        title="추출 작업에 필요한 입력이 부족합니다"
+        description="Source, Ontology 버전, 프롬프트 버전이 모두 필요합니다."
+        actionLabel={sources.length === 0 ? "Sources로 이동" : "Ontology로 이동"}
         onAction={() => navigate(sources.length === 0 ? `/projects/${projectId}/sources` : `/projects/${projectId}/ontology`)}
       />
     );
@@ -165,13 +165,13 @@ export function ExtractionJobCreatePage() {
         items={[
           { label: "Projects", to: "/projects" },
           { label: "Extraction", to: `/projects/${projectId}/extraction-jobs` },
-          { label: "Create job" },
+          { label: "추출 작업 만들기" },
         ]}
       />
-      <PageHeader title="Create Extraction Job" description="MockProvider로 source, ontology version, prompt version을 묶어 candidate extraction job을 생성합니다.">
+      <PageHeader title="추출 작업 만들기" description="Source, Ontology 버전, 프롬프트 버전을 선택해 반복 가능한 Candidate 추출 작업을 만듭니다.">
         <HanaBadge tone="muted">MockProvider only</HanaBadge>
       </PageHeader>
-      <HanaCard title="Job inputs" description="Source, ontology, prompt, fixture를 선택한 뒤 job을 생성합니다.">
+      <HanaCard title="추출 입력" description="Source, Ontology, 프롬프트, 시나리오를 선택한 뒤 추출 작업을 만듭니다.">
         <FormGrid>
           <Field>
             <span>Source</span>
@@ -210,7 +210,7 @@ export function ExtractionJobCreatePage() {
             </HanaSelect>
           </Field>
           <Field>
-            <span>Prompt version</span>
+            <span>프롬프트 버전</span>
             <HanaSelect value={promptVersionId} onChange={(event) => setPromptVersionId(event.target.value)}>
               {promptVersions.map((version) => (
                 <option key={version.id} value={version.id}>
@@ -242,12 +242,12 @@ export function ExtractionJobCreatePage() {
           <ButtonSlot>
             <HanaButton variant="primary" type="button" disabled={!canCreate} onClick={handleCreate}>
               <Sparkles aria-hidden="true" />
-              {createJob.isPending ? "Creating" : "Create job"}
+              {createJob.isPending ? "생성 중" : "추출 작업 만들기"}
             </HanaButton>
           </ButtonSlot>
         </FormGrid>
       </HanaCard>
-      <HanaCard title="Selected context">
+      <HanaCard title="선택한 맥락">
         <KeyValueGrid>
           <dt>Source</dt>
           <dd>{selectedSource?.file_name ?? "-"}</dd>
@@ -255,7 +255,7 @@ export function ExtractionJobCreatePage() {
           <dd>{selectedVersion ? `v${selectedVersion.version} ${selectedVersion.status}` : "-"}</dd>
           <dt>Prompt</dt>
           <dd>{selectedPrompt?.name ?? "-"}</dd>
-          <dt>Prompt version</dt>
+          <dt>프롬프트 버전</dt>
           <dd>{selectedPromptVersion ? `v${selectedPromptVersion.version} ${selectedPromptVersion.is_active ? "ACTIVE" : "INACTIVE"}` : "-"}</dd>
           <dt>Fixture</dt>
           <dd>
@@ -267,15 +267,15 @@ export function ExtractionJobCreatePage() {
               </MutedText>
             </InlineList>
           </dd>
-          <dt>Prompt template</dt>
+          <dt>프롬프트 템플릿</dt>
           <dd>{selectedPromptVersion?.template ?? "-"}</dd>
-          <dt>Provider rule</dt>
+          <dt>Provider 규칙</dt>
           <dd>
-            <MutedText>Local demo runs use deterministic MockProvider results for repeatable candidate review.</MutedText>
+            <MutedText>반복 가능한 MockProvider 시나리오로 실행해 Candidate와 Evidence 확인 결과를 재현할 수 있게 합니다.</MutedText>
           </dd>
         </KeyValueGrid>
       </HanaCard>
-      {createJob.isError && <PageState kind="error" title="Job 생성 실패" description={(createJob.error as Error).message} />}
+      {createJob.isError && <PageState kind="error" title="추출 작업 생성 실패" description={(createJob.error as Error).message} />}
     </>
   );
 }

@@ -16,15 +16,15 @@ export function SourceProfilingPage() {
   const runProfile = useRunSourceProfile(sourceId);
 
   if (isSourceLoading || isLoading) {
-    return <PageState kind="loading" title="Source profile을 불러오는 중" description="컬럼 프로파일 결과를 준비하고 있습니다." />;
+    return <PageState kind="loading" title="Source 컬럼 프로파일을 불러오는 중" description="컬럼 프로파일 결과를 준비하고 있습니다." />;
   }
 
   if (isSourceError || !source || isError || !profile) {
     return (
       <PageState
         kind="error"
-        title="Source profile을 불러오지 못했습니다"
-        description="source detail에서 파일 상태를 확인한 뒤 다시 시도하세요."
+        title="Source 컬럼 프로파일을 불러오지 못했습니다"
+        description="Source 상세에서 파일 상태를 확인한 뒤 다시 시도하세요."
         actionLabel="다시 시도"
         onAction={() => {
           void refetchSource();
@@ -43,14 +43,14 @@ export function SourceProfilingPage() {
           { label: "Projects", to: "/projects" },
           { label: "Sources", to: `/projects/${source.project_id}/sources` },
           { label: source.file_name, to: `/projects/${source.project_id}/sources/${source.id}` },
-          { label: "Profile" },
+          { label: "컬럼 프로파일" },
         ]}
       />
-      <PageHeader title="Source Profiling" description="CSV/Excel source의 column type, null ratio, distinct count, sample values를 확인합니다.">
-        <HanaBadge tone="muted">Profile ready</HanaBadge>
+      <PageHeader title="Source 컬럼 프로파일" description="CSV/Excel Source의 컬럼 타입, 결측 비율, 고유값 수, 샘플 값을 확인합니다.">
+        <HanaBadge tone="muted">프로파일 준비 완료</HanaBadge>
         <HanaButton type="button" onClick={() => runProfile.mutate()} disabled={runProfile.isPending}>
           <Play aria-hidden="true" />
-          {runProfile.isPending ? "Profiling" : "Run profile"}
+          {runProfile.isPending ? "실행 중" : "프로파일 실행"}
         </HanaButton>
       </PageHeader>
       <PanelGrid>
@@ -58,13 +58,13 @@ export function SourceProfilingPage() {
           {source.file_name}
         </MetricCard>
         <MetricCard label="Sample Size" value={profile.sample_size}>
-          Sample rows used
+          사용한 샘플 행
         </MetricCard>
         <MetricCard label="Columns" value={profile.columns.length}>
-          Inferred profile result
+          추론된 프로파일 결과
         </MetricCard>
         <MetricCard label="Created" value={formatDateTime(profile.created_at)}>
-          Last profile result
+          마지막 프로파일 결과
         </MetricCard>
       </PanelGrid>
       {warnings.length > 0 && (
@@ -79,7 +79,7 @@ export function SourceProfilingPage() {
         </HanaCard>
       )}
       {profile.columns.length === 0 ? (
-        <PageState kind="empty" title="Profile column이 없습니다" description="empty 또는 no-column source는 warning과 함께 빈 profile로 표시됩니다." />
+        <PageState kind="empty" title="프로파일 컬럼이 없습니다" description="비어 있거나 컬럼이 없는 Source는 warning과 함께 빈 프로파일로 표시됩니다." />
       ) : (
         <HanaCard title="Column profile" description="컬럼 타입, null 비율, 샘플 값을 확인합니다.">
           <TableWrap>

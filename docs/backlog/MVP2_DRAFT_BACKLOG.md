@@ -1,8 +1,8 @@
 # MVP 2 Draft Backlog
 
-Status: `WAVE 11 CLOSEOUT PREPARATION READY / CONTRACT STILL DRAFT`
+Status: `WAVE 13 UIUX PRODUCT POLISH READY / CONTRACT STILL DRAFT`
 
-This backlog is now in MVP 2 closeout preparation. The contract is still draft, but Wave 11 uses `docs/pm/MVP2_CLOSEOUT_CHECKLIST.md` as the shared closeout checklist, regression matrix, demo script, release-note exclusions, and exception policy. Wave 11 must not expand runtime product scope unless a closeout blocker clearly requires it.
+This backlog is now in Wave 13 UI/UX product polish. The contract is still draft, but Wave 11 closed the MVP 2 local-demo product matrix as `PASS WITH EXCEPTION`, and Wave 12 Frontend productization passed after responsive recheck. Wave 13 must not expand runtime Backend/API scope unless a productization blocker clearly requires it; the focus is workflow stage clarity, candidate review readability, evidence-first inspection, copy consistency, and mobile product quality.
 
 ## MVP 2 Entry Gate
 
@@ -43,12 +43,12 @@ This backlog is now in MVP 2 closeout preparation. The contract is still draft, 
 
 | ID | Priority | Owner | Task | Dependencies | Acceptance |
 |---|---|---|---|---|---|
-| FE2-001 | P0 | Frontend | Source profiling screen | BE2-002 | 컬럼 프로파일과 sample values를 볼 수 있음 |
-| FE2-002 | P0 | Frontend | Document chunk viewer | BE2-003 | page/section/chunk 목록과 metadata를 볼 수 있음 |
-| FE2-003 | P0 | Frontend | Extraction job creation screen | BE2-004, BE2-005 | source, ontology version, prompt, model, scope 선택 후 job 생성 |
-| FE2-004 | P0 | Frontend | Extraction job monitor | BE2-005 | status, progress, failure reason 표시 |
-| FE2-005 | P0 | Frontend | Candidate result view | BE2-007 | candidate entity/relation list와 evidence 표시 |
-| FE2-006 | P1 | Frontend | Evidence viewer UI | BE2-007 | source text/table row/chunk evidence를 확인 가능 |
+| FE2-001 | P0 | Frontend | Source profiling screen | BE2-002 | 컬럼 프로파일과 sample values를 볼 수 있음. Wave 12에서는 source detail에서 profile primary action, warning/empty/error recovery, project/source breadcrumb, profile 완료 후 다음 action이 product tone으로 보여야 함 |
+| FE2-002 | P0 | Frontend | Document chunk viewer | BE2-003 | page/section/chunk 목록과 metadata를 볼 수 있음. Wave 12에서는 parse/chunk primary action, deterministic sequence, warning fallback, source/job/evidence 연결 문맥이 desktop/mobile에서 겹침 없이 보여야 함 |
+| FE2-003 | P0 | Frontend | Extraction job creation screen | BE2-004, BE2-005 | source, ontology version, prompt, model, scope 선택 후 job 생성. Wave 12에서는 source/ontology/prompt/provider `mock`/fixture 선택이 endpoint/debug 문구가 아닌 사용자 중심 label로 보이고, 생성 후 job monitor로 자연스럽게 이어져야 함 |
+| FE2-004 | P0 | Frontend | Extraction job monitor | BE2-005 | status, progress, failure reason 표시. Wave 12에서는 status/progress/retry/failure/model run summary, candidate navigation, recovery action이 한 화면 hierarchy 안에서 명확해야 함 |
+| FE2-005 | P0 | Frontend | Candidate result view | BE2-007 | candidate entity/relation list와 evidence 표시. Wave 12에서는 kind/status/code/evidence presence/confidence/source/job context를 밀도 있게 비교하고 row action/detail panel/evidence link로 drilldown할 수 있어야 함 |
+| FE2-006 | P1 | Frontend | Evidence viewer UI | BE2-007 | source text/table row/chunk evidence를 확인 가능. Wave 12에서는 normal/missing/broken/direct missing evidence가 project/source/job/candidate context, locator, recovery action을 유지하고 raw ids/error code는 보조 정보로 낮춰 보여야 함 |
 
 ## QA Backlog
 
@@ -79,6 +79,93 @@ Wave 11 is not a feature expansion wave. Closeout readiness is judged against `d
 - `INT2-001`~`INT2-004` are the QA-owned closeout regression gates for profile contract, chunk/evidence traceability, mock extraction flow, and failure/retry smoke.
 - Docker Compose smoke remains a P1 environment gate. If Docker CLI is absent, QA may close MVP 2 as `PASS WITH EXCEPTION` when product regression passes.
 - Browser smoke tooling may remain temporary for MVP 2 closeout if Frontend and QA report exact commands, routes, screenshots, and logs.
+
+## Wave 12 Frontend Productization Scope
+
+Wave 12는 FE-012와 `FE2-001`~`FE2-006`을 상품화 UX 기준으로 재검증한다. `INT2-003`은 Mock extraction flow가 동작하는지만 보는 것이 아니라, 사용자가 project에서 evidence까지 업무 흐름을 이해할 수 있는지 실제 브라우저로 확인하는 지원 gate다.
+
+### Productization Acceptance
+
+- App shell:
+  - LNB는 top-level 업무 영역만 유지한다.
+  - ID-bound detail route는 parent list row, contextual action, breadcrumb로 진입한다.
+  - Current project/source/job/evidence context가 page header, breadcrumb, compact path 중 최소 하나에 보인다.
+- Workflow:
+  - Project 선택, ontology draft 구성, source upload/profile/parse, extraction job 생성/실행, candidate/evidence 확인 흐름이 끊기지 않는다.
+  - 각 page는 하나의 primary action을 명확히 제공하고, 성공/empty/error 상태에서 다음 action 또는 recovery action을 제공한다.
+  - 사용자 흐름을 긴 설명문으로 대신하지 않는다.
+- Candidate/evidence density:
+  - Candidate results는 entity/relation kind, validation status/code, evidence presence, confidence, source/job context를 비교할 수 있어야 한다.
+  - Evidence viewer는 evidence locator와 candidate summary를 동시에 보여주고, missing/broken/direct fallback에서도 복구 action을 제공한다.
+- Responsive:
+  - Desktop과 mobile-ish viewport 모두에서 LNB, breadcrumbs, filters, tables, buttons, detail/evidence content가 겹치지 않는다.
+  - 좁은 viewport에서는 낮은 우선순위 metadata를 접거나 detail 영역으로 이동하되 primary status/action은 유지한다.
+- Visual/copy guardrail:
+  - Operational SaaS처럼 차분하고 정보 밀도가 있는 UI를 유지한다.
+  - Landing/marketing hero, endpoint/debug 중심 문구, 카드 남용, 카드 안 카드 구조를 피한다.
+  - Fixture id/error code/raw id는 QA/dev 상세 정보로 낮춰 배치한다.
+- Scope limits:
+  - 신규 Backend endpoint/DTO/enum을 요구하지 않는다.
+  - External LLM provider, review/publish workflow, RAG, advanced PDF parsing, production auth/RBAC, 신규 candidate detail endpoint는 열지 않는다.
+
+### QA Browser Checklist for `INT2-003`
+
+- Project list/detail에서 selected project가 명확하고 stale/no selected state가 복구된다.
+- Ontology draft 화면에서 editable/read-only 상태와 draft CTA가 구분된다.
+- Source profile/parse 화면에서 primary action, result, warning, empty/error recovery가 보인다.
+- Job create/monitor에서 provider `mock`, fixture, status/progress/failure/retry/model run summary가 사용자 중심 copy로 보인다.
+- Candidate results에서 filter/browse/detail/evidence drilldown이 가능하다.
+- Evidence viewer에서 normal, missing, broken, direct missing fallback이 crash 없이 context와 recovery action을 유지한다.
+- LNB에 ID-bound detail route가 평면 노출되지 않는다.
+- Desktop/mobile-ish screenshot 또는 browser smoke artifact에서 텍스트/버튼/테이블/칩 overlap이 없다.
+- Wave 11 `CO-01`~`CO-09` closeout behavior는 유지된다.
+
+## Wave 13 UI/UX Product Polish Scope
+
+Wave 13은 총괄/PM/UIUX expert review(`docs/pm/WAVE13_UIUX_REVIEW.md`)를 기준으로 Frontend product polish를 진행한다. Wave 12에서 기능적 흐름과 responsive containment는 PASS였지만, Wave 13은 사용자가 화면을 훑었을 때 현재 단계와 다음 행동을 더 적게 고민하게 만드는 것을 목표로 한다.
+
+### Wave 13 Acceptance IDs
+
+- `UX13-01` Workflow Stage Pattern:
+  - Dashboard, Project detail, Source detail, Job monitor, Candidate results 중 최소 4개 화면에 같은 구조의 compact workflow/stage pattern이 적용된다.
+  - 현재 단계, 완료/준비/다음 단계가 stage label, status chip, primary action으로 구분된다.
+- `UX13-02` Source Readiness and Next Action:
+  - Source detail에서 profile/chunks/extraction readiness와 다음 action이 명확하다.
+  - CSV/Excel은 profile/preview 우선, TXT/PDF는 chunks 우선으로 보인다.
+- `UX13-03` Candidate Review Workspace:
+  - Desktop은 table + selected detail panel 유지 가능.
+  - Mobile은 entity/relation 후보가 card/list 형태로 읽힌다.
+  - 후보명, kind, validation, confidence, evidence CTA, source/job/segment context가 핵심 정보로 보인다.
+- `UX13-04` Evidence Reading Priority:
+  - Evidence viewer는 candidate summary, validation, source, evidence text를 먼저 읽게 한다.
+  - locator metadata와 full IDs는 보조/technical detail로 낮춘다.
+  - normal/broken/direct missing recovery action은 유지한다.
+- `UX13-05` Copy and Terminology Cleanup:
+  - 도메인 명사(Project/Ontology/Source/Extraction/Candidate/Evidence)는 유지한다.
+  - 설명문과 CTA는 자연스러운 한국어로 정리한다.
+  - endpoint/debug/dev copy는 주 화면에서 제거된다.
+- `UX13-06` Visual Hierarchy and Rhythm:
+  - 숫자 card 반복을 줄이고 `summary -> primary action -> review content -> technical details` 흐름을 강화한다.
+  - 카드 안 카드, decorative hero/gradient/orb는 추가하지 않는다.
+- `UX13-07` Responsive Product Quality:
+  - `390x900` viewport에서 Candidates, Evidence, Source detail, Job monitor가 겹침 없이 보인다.
+  - Candidate/Evidence 핵심 판단 정보는 local table scroll 없이 읽힌다.
+- `UX13-08` Regression Preservation:
+  - 신규 Backend endpoint/DTO/enum 요구 없음.
+  - `npm run build`, `npm run test`, actual API smoke PASS.
+  - desktop/mobile screenshot 또는 DOM artifact가 보고된다.
+
+### QA Browser Checklist for Wave 13
+
+- Dashboard/Project에서 현재 단계와 다음 action을 이해할 수 있다.
+- Source detail에서 source readiness와 profile/chunks/create job 흐름이 명확하다.
+- Job monitor에서 status/progress/model run 이후 candidate로 이어지는 action이 분명하다.
+- Candidate results desktop/mobile에서 후보 판단 정보가 스캔 가능하다.
+- Evidence viewer에서 evidence text와 근거 위치가 raw ID보다 먼저 읽힌다.
+- Broken/direct missing evidence fallback에서 recovery action이 유지된다.
+- Main copy에 endpoint/debug/dev 중심 문구가 남지 않는다.
+- `390x900` viewport에서 document-level horizontal overflow가 없다.
+- Wave 11/12 closeout regression은 유지된다.
 
 ## Wave 6 Contract Decisions
 
@@ -374,6 +461,30 @@ Wave 11 MVP 2 closeout verdict는 `PASS WITH EXCEPTION`이다. Product P0 closeo
 - Approved exceptions:
   - Docker Compose smoke는 Docker CLI 부재로 `NOT RUNNABLE`. Product closeout blocker가 아닌 P1 environment follow-up으로 유지한다. Linked IDs: `BE-002`, `INT2-003`.
   - Browser smoke harness는 `npm run smoke:mvp2:actual`로 재현 가능하며 MVP 2 closeout blocker가 아니다. Playwright Test suite formalization은 P1 tooling follow-up이다. Linked IDs: `FE2-006`, `INT2-003`.
+
+### Wave 12 Frontend Productization Findings
+
+Wave 12 Frontend Productization verdict는 `PASS`다. MVP 2 API/Backend scope를 다시 열지 않고, 닫힌 MVP 2 contract 위에서 UI/UX maturity overlay를 통과했다.
+
+- `PX-01` App shell/navigation hierarchy: PASS.
+- `PX-02` Project context/breadcrumb: PASS.
+- `PX-03` Page primary action/next action: PASS.
+- `PX-04` Source-to-evidence workflow comprehension: PASS.
+- `PX-05` Candidate/evidence inspection density: PASS.
+- `PX-06` Responsive layout: PASS after same-wave fix/recheck.
+  - QA 최초 검증에서 candidate mobile-ish page가 `390x900` viewport에서 document-level horizontal overflow를 일으켰다.
+  - Frontend가 card/table/breadcrumb/header containment를 보강했다.
+  - QA 재검증에서 candidates/source/profile/chunks/job/evidence 모두 `scrollWidth=390`, `bodyScrollWidth=390`, `hasPageOverflow=false`로 확인했다.
+- `PX-07` Visual style guardrail: PASS.
+- `PX-08` Regression preservation: PASS.
+- Runtime regression:
+  - `npm run build`: PASS.
+  - `npm run test`: PASS.
+  - `npm run smoke:mvp2:actual`: PASS.
+  - `CO-01`~`CO-09` and `INT2-001`~`INT2-004`: PASS 유지.
+- 남은 항목:
+  - Docker Compose smoke는 기존 P1 environment follow-up 유지.
+  - Browser smoke harness formalization은 product blocker가 아닌 P1 tooling follow-up 유지.
 
 ## Wave 7 Contract Sync Decisions
 

@@ -10,6 +10,7 @@ import { PageState } from "../shared/ui/platform/PageState";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
 import { formatDateTime } from "../shared/lib/format";
 import { ProjectStatus } from "../shared/api/types";
+import { WorkflowStage, WorkSurface } from "./mvp2Shared";
 
 export function ProjectDetailPage() {
   const { projectId = "" } = useParams();
@@ -64,9 +65,19 @@ export function ProjectDetailPage() {
           DRAFT/PUBLISHED 버전 흐름
         </MetricCard>
         <MetricCard label="Updated" value={formatDateTime(project.updated_at)}>
-          마지막 mock 변경 시각
+          마지막 변경 시각
         </MetricCard>
       </MetricGrid>
+      <WorkSurface>
+        <WorkflowStage current="Project" action={<StageAction to={`/projects/${project.id}/ontology`}>Ontology 열기</StageAction>} />
+        <NextActionRow>
+          <span>Ontology 구조를 먼저 잡고 Source를 준비한 뒤 Extraction으로 Candidate를 생성합니다.</span>
+          <CardAction to={`/projects/${project.id}/ontology`}>
+            <Boxes aria-hidden="true" />
+            Ontology 열기
+          </CardAction>
+        </NextActionRow>
+      </WorkSurface>
       <QuickLinks>
         <HanaCard title="Ontology Modeler" description="클래스와 관계를 그래프에서 보고 초안 구조를 다듬습니다.">
           <CardAction to={`/projects/${project.id}/ontology`}>
@@ -80,19 +91,14 @@ export function ProjectDetailPage() {
             Manage sources
           </CardAction>
         </HanaCard>
-        <HanaCard title="Extraction" description="source와 ontology draft를 묶어 candidate extraction job을 실행합니다.">
+        <HanaCard title="Extraction" description="Source와 Ontology 초안을 묶어 후보 추출 작업을 실행합니다.">
           <CardAction to={`/projects/${project.id}/extraction-jobs`}>
             <Sparkles aria-hidden="true" />
-            Monitor jobs
+            추출 작업 보기
           </CardAction>
         </HanaCard>
       </QuickLinks>
-      <HanaCard title="Permission state" description="실사용 RBAC 전까지 dev mode notice로 권한 영역을 예약합니다.">
-        <PermissionBox>
-          <PageState kind="permission" title="Dev mode access" description="현재 사용자는 dev-admin으로 표시되며, 실제 SSO/RBAC는 MVP 1에서 구현하지 않습니다." />
-        </PermissionBox>
-      </HanaCard>
-      <HanaCard title="Project edit" description="ProjectUpdateRequest 경계를 검증하기 위한 MVP 1 최소 수정 폼입니다.">
+      <HanaCard title="Project edit" description="작업 공간 이름, 설명, 상태를 관리합니다.">
         <EditGrid>
           <Field>
             <span>Name</span>
@@ -168,8 +174,31 @@ const CardAction = styled(Link)`
   }
 `;
 
-const PermissionBox = styled.div`
-  padding: 18px;
+const StageAction = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 ${({ theme }) => theme.spacing.md};
+  border: 1px solid ${({ theme }) => theme.color.borderStrong};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  color: ${({ theme }) => theme.color.text};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+`;
+
+const NextActionRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.spacing.md};
+  color: ${({ theme }) => theme.color.textMuted};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+
+  ${CardAction} {
+    margin: 0;
+  }
 `;
 
 const EditGrid = styled.div`

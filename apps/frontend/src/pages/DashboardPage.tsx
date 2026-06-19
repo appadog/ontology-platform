@@ -4,13 +4,14 @@ import { useDashboardSummary } from "../shared/api/queries";
 import { PageState } from "../shared/ui/platform/PageState";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
 import { formatDateTime } from "../shared/lib/format";
-import { HanaBadge, HanaCard } from "../shared/ui/hana";
+import { HanaCard } from "../shared/ui/hana";
+import { ActionLink, SecondaryActionLink, WorkflowStage } from "./mvp2Shared";
 
 export function DashboardPage() {
   const { data, isLoading, isError, refetch } = useDashboardSummary();
 
   if (isLoading) {
-    return <PageState kind="loading" title="대시보드를 불러오는 중" description="MVP 1 P0 API 조합으로 요약 상태를 준비하고 있습니다." />;
+    return <PageState kind="loading" title="대시보드를 불러오는 중" description="프로젝트와 최근 작업 상태를 준비하고 있습니다." />;
   }
 
   if (isError || !data) {
@@ -18,7 +19,7 @@ export function DashboardPage() {
       <PageState
         kind="error"
         title="대시보드를 불러오지 못했습니다"
-        description="API 또는 mock boundary 상태를 확인한 뒤 다시 시도할 수 있습니다."
+        description="작업 현황을 다시 불러오거나 Projects에서 작업 공간을 선택하세요."
         actionLabel="다시 시도"
         onAction={() => void refetch()}
       />
@@ -27,25 +28,36 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="Dashboard" description="프로젝트, 원천 데이터, 온톨로지 draft 상태를 빠르게 확인합니다." />
+      <PageHeader title="Dashboard" description="프로젝트, 원천 데이터, 온톨로지 draft 상태를 빠르게 확인합니다.">
+        <ActionLink to="/projects">Projects 열기</ActionLink>
+      </PageHeader>
       <MetricGrid>
         <MetricCard label="Active Projects" value={data.active_project_count}>
-          ProjectStatus ACTIVE 기준
+          운영 중인 작업 공간
         </MetricCard>
         <MetricCard label="Sources" value={data.source_count}>
-          업로드된 SourceData
+          업로드된 원천 데이터
         </MetricCard>
         <MetricCard label="Ontology Classes" value={data.ontology_class_count}>
-          그래프 노드 후보
+          초안 class 정의
         </MetricCard>
         <MetricCard label="Relations" value={data.ontology_relation_count}>
-          방향 edge 정의
+          초안 relation 정의
         </MetricCard>
       </MetricGrid>
-      <HanaCard title="Recent activity" description="실제 audit log는 후속 MVP에서 연결하고, 현재는 fixture 이벤트로 표시합니다.">
+      <WorkflowStage current="Project" action={<SecondaryActionLink to="/projects">Project 선택</SecondaryActionLink>} />
+      <HanaCard title="Recent activity" description="최근 프로젝트와 원천 데이터 작업을 확인합니다.">
         <ActivityList>
           {data.recent_activity.length === 0 ? (
-            <PageState kind="empty" title="아직 활동이 없습니다" description="프로젝트와 source 작업이 시작되면 최근 이벤트가 표시됩니다." />
+            <PageState
+              kind="empty"
+              title="아직 활동이 없습니다"
+              description="프로젝트를 선택하고 source를 업로드하면 최근 작업이 표시됩니다."
+              actionLabel="Projects로 이동"
+              onAction={() => {
+                window.location.assign("/projects");
+              }}
+            />
           ) : (
             data.recent_activity.map((activity) => (
               <li key={activity.id}>
@@ -57,8 +69,8 @@ export function DashboardPage() {
         </ActivityList>
       </HanaCard>
       <Notice>
-        <HanaBadge tone="muted">DEV MODE</HanaBadge>
-        <span>Mock 또는 P0 API 조합으로 로컬 화면 상태를 확인합니다.</span>
+        <span>새 작업 공간이 필요하신가요?</span>
+        <SecondaryActionLink to="/projects">Project 만들기 또는 선택</SecondaryActionLink>
       </Notice>
     </>
   );
@@ -118,7 +130,9 @@ const ActivityList = styled.ul`
 
 const Notice = styled.aside`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   padding: 14px 16px;
   border: 1px solid ${({ theme }) => theme.color.border};

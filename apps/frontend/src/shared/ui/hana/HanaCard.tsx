@@ -22,6 +22,8 @@ export function HanaCard({ title, description, children, className }: HanaCardPr
 }
 
 const Card = styled.section`
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid ${({ theme }) => theme.color.border};
   border-radius: ${({ theme }) => theme.radius.md};
   background: ${({ theme }) => theme.color.surfaceRaised};
@@ -29,12 +31,14 @@ const Card = styled.section`
 `;
 
 const CardHeader = styled.div`
+  min-width: 0;
   padding: ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg} 0;
 
   h2 {
     margin: 0;
     font-size: ${({ theme }) => theme.typography.fontSize.lg};
     line-height: ${({ theme }) => theme.typography.lineHeight.tight};
+    overflow-wrap: anywhere;
   }
 
   p {
@@ -42,5 +46,6 @@ const CardHeader = styled.div`
     color: ${({ theme }) => theme.color.textMuted};
     font-size: ${({ theme }) => theme.typography.fontSize.md};
     line-height: ${({ theme }) => theme.typography.lineHeight.normal};
+    overflow-wrap: anywhere;
   }
 `;

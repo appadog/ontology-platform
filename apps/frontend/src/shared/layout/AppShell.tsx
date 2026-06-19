@@ -281,9 +281,11 @@ const SelectWrap = styled.div`
 
 const TopbarRight = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
+  min-width: 0;
 
   @media (max-width: 760px) {
     justify-content: flex-start;
@@ -294,6 +296,7 @@ const UserChip = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   color: ${({ theme }) => theme.color.textMuted};
   font-weight: 800;
 
@@ -307,6 +310,7 @@ const Content = styled.main`
   display: grid;
   gap: 22px;
   width: min(1440px, 100%);
+  min-width: 0;
   margin: 0 auto;
   padding: 28px;
 

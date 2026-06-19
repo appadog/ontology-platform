@@ -26,8 +26,8 @@ export function SourceManagerPage() {
       <PageState
         kind="empty"
         title="Project context가 필요합니다"
-        description="Projects에서 작업할 project를 선택한 뒤 source를 업로드하세요."
-        actionLabel="Go to projects"
+        description="Projects에서 작업할 Project를 선택한 뒤 Source를 업로드하세요."
+        actionLabel="Projects로 이동"
         onAction={() => navigate("/projects")}
       />
     );
@@ -74,13 +74,14 @@ export function SourceManagerPage() {
       <Breadcrumbs
         items={[
           { label: "Projects", to: "/projects" },
+          { label: "Project", to: `/projects/${projectId}` },
           { label: "Sources" },
         ]}
       />
-      <PageHeader title="Sources" description="업로드된 CSV, Excel, PDF, TXT 원천 데이터 상태와 preview 준비 상태를 확인합니다.">
+      <PageHeader title="Sources" description="프로젝트의 CSV, Excel, PDF, TXT 원천 데이터 상태와 다음 처리 단계를 확인합니다.">
         <HanaButton variant="primary" type="button" disabled={!canUpload} onClick={handleUpload}>
           <Upload aria-hidden="true" />
-          {uploadSource.isPending ? "Uploading" : "Upload Source"}
+          {uploadSource.isPending ? "업로드 중" : "Source 업로드"}
         </HanaButton>
       </PageHeader>
       <HanaCard title="Upload source" description="파일 유형과 표시 이름을 정한 뒤 원천 데이터를 업로드합니다.">
@@ -113,8 +114,8 @@ export function SourceManagerPage() {
         <PageState
           kind="empty"
           title="업로드된 원천 데이터가 없습니다"
-          description="파일을 업로드하면 detail, profile, chunks, extraction으로 이어집니다."
-          actionLabel="Choose file"
+          description="파일을 업로드하면 Source 상세에서 컬럼 프로파일 또는 구간 보기로 이어집니다."
+          actionLabel="파일 선택"
           onAction={() => document.querySelector<HTMLInputElement>("input[type='file']")?.click()}
         />
       ) : (
@@ -127,6 +128,7 @@ export function SourceManagerPage() {
                   <th>Type</th>
                   <th>Status</th>
                   <th>Preview</th>
+                  <th>Next</th>
                   <th>Size</th>
                   <th>Uploaded</th>
                 </tr>
@@ -148,6 +150,11 @@ export function SourceManagerPage() {
                     </td>
                     <td>
                       <HanaBadge tone={statusToTone(source.preview_status)}>{source.preview_status}</HanaBadge>
+                    </td>
+                    <td>
+                      <SourceLink to={`/projects/${projectId}/sources/${source.id}`}>
+                        <strong>{source.source_type === "CSV" || source.source_type === "EXCEL" ? "Profile" : "Chunks"}</strong>
+                      </SourceLink>
                     </td>
                     <td>{formatBytes(source.size_bytes)}</td>
                     <td>{formatDateTime(source.uploaded_at)}</td>

@@ -15,6 +15,7 @@ const result = {
   artifactDir,
   routes: [],
   screenshots: [],
+  mobileChecks: [],
   ids: {},
 };
 
@@ -176,6 +177,26 @@ async function screenshot(page, name) {
   result.screenshots.push(path);
 }
 
+async function mobileCheck(page, path, name) {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto(`${frontendBaseUrl}${path}`, { waitUntil: "networkidle" });
+  const overflow = await page.evaluate(() => {
+    return {
+      innerWidth: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      bodyScrollWidth: document.body.scrollWidth,
+    };
+  });
+  const hasDocumentOverflow = overflow.scrollWidth > overflow.innerWidth || overflow.bodyScrollWidth > overflow.innerWidth;
+
+  if (hasDocumentOverflow) {
+    throw new Error(`Mobile document overflow on ${name}: ${JSON.stringify(overflow)}`);
+  }
+
+  result.mobileChecks.push({ name, path, overflow });
+  await screenshot(page, `mobile-${name}`);
+}
+
 async function selectAvailableOption(page, value) {
   await page.waitForFunction((optionValue) => {
     return Array.from(document.querySelectorAll("select")).some((select) =>
@@ -231,9 +252,9 @@ async function runBrowserSmoke(seed) {
   }
 
   await page.goto(`${frontendBaseUrl}${sourcePath}`, { waitUntil: "networkidle" });
-  await page.getByRole("link", { name: "Profile" }).first().click();
+  await page.getByRole("link", { name: "컬럼 프로파일" }).first().click();
   await page.waitForURL(`**${profilePath}`);
-  await page.getByRole("button", { name: /Run profile|Profiling/ }).click();
+  await page.getByRole("button", { name: /프로파일 실행|실행 중/ }).click();
   await page.getByText("Column profile").waitFor();
   await screenshot(page, "source-profile");
 
@@ -243,22 +264,29 @@ async function runBrowserSmoke(seed) {
   await screenshot(page, "source-chunks");
 
   await page.goto(`${frontendBaseUrl}${jobPath}`, { waitUntil: "networkidle" });
-  await page.getByText("Job detail").waitFor();
+  await page.getByText("실행 맥락").waitFor();
   await screenshot(page, "job-monitor");
 
   await page.goto(`${frontendBaseUrl}${invalidCandidatePath}`, { waitUntil: "networkidle" });
   await selectAvailableOption(page, "FAILED");
   await selectAvailableOption(page, "INVALID_EVIDENCE_REFERENCE");
-  await page.locator('span[data-tone]', { hasText: "INVALID_EVIDENCE_REFERENCE" }).first().waitFor();
+  await page.locator('span[data-tone]:visible', { hasText: "INVALID_EVIDENCE_REFERENCE" }).first().waitFor();
   await screenshot(page, "candidate-filters");
 
   await page.goto(`${frontendBaseUrl}${normalEvidencePath}`, { waitUntil: "networkidle" });
-  await page.getByText("Evidence locator").waitFor();
+  await page.getByText("Evidence 위치").waitFor();
   await screenshot(page, "evidence-normal");
 
   await page.goto(`${frontendBaseUrl}${directMissingPath}`, { waitUntil: "networkidle" });
-  await page.getByText("Missing or broken evidence").waitFor();
+  await page.getByText("누락되었거나 끊어진 Evidence").waitFor();
   await screenshot(page, "evidence-direct-missing");
+
+  await mobileCheck(page, sourcePath, "source-detail");
+  await mobileCheck(page, jobPath, "job-monitor");
+  await mobileCheck(page, invalidCandidatePath, "candidate-review");
+  await page.locator('section[aria-label="Mobile candidate review list"]').waitFor({ state: "attached" });
+  await mobileCheck(page, normalEvidencePath, "evidence-reading");
+  await page.getByText("Evidence 읽기").waitFor();
 
   await browser.close();
 }
