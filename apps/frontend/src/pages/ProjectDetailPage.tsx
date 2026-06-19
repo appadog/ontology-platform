@@ -30,7 +30,7 @@ export function ProjectDetailPage() {
   }, [project]);
 
   if (isLoading) {
-    return <PageState kind="loading" title="프로젝트 상세를 불러오는 중" description="ProjectSummary DTO를 조회하고 있습니다." />;
+    return <PageState kind="loading" title="프로젝트 상세를 불러오는 중" description="작업 공간의 상태와 최근 리소스를 준비하고 있습니다." />;
   }
 
   if (isError || !project) {
@@ -38,7 +38,7 @@ export function ProjectDetailPage() {
       <PageState
         kind="error"
         title="프로젝트를 찾지 못했습니다"
-        description="선택한 프로젝트 ID가 mock fixture 또는 API 응답에 없습니다."
+        description="프로젝트 목록에서 다시 선택하거나 새 프로젝트를 생성하세요."
         actionLabel="다시 시도"
         onAction={() => void refetch()}
       />

@@ -38,7 +38,7 @@ export function ProjectListPage() {
   }
 
   if (isLoading) {
-    return <PageState kind="loading" title="프로젝트 목록을 불러오는 중" description="Project API 계약과 동일한 mock fixture를 조회하고 있습니다." />;
+    return <PageState kind="loading" title="프로젝트 목록을 불러오는 중" description="최근 작업 공간을 준비하고 있습니다." />;
   }
 
   if (isError || !projects) {
@@ -46,7 +46,7 @@ export function ProjectListPage() {
       <PageState
         kind="error"
         title="프로젝트 목록을 불러오지 못했습니다"
-        description="shared/api 경계에서 실패가 발생했습니다. mock 또는 API 서버 상태를 확인하세요."
+        description="프로젝트 목록을 다시 불러오거나 잠시 후 재시도하세요."
         actionLabel="다시 시도"
         onAction={() => void refetch()}
       />
@@ -62,7 +62,7 @@ export function ProjectListPage() {
         </HanaButton>
       </PageHeader>
       {showCreateForm && (
-        <HanaCard title="Create project" description="ProjectCreateRequest mock/API mutation 경계를 사용합니다.">
+        <HanaCard title="Create project" description="새 데이터 구축 작업 공간의 이름과 설명을 입력합니다.">
           <CreateGrid>
             <Field>
               <span>Name</span>

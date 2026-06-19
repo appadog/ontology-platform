@@ -54,7 +54,7 @@ export function SourceManagerPage() {
   }
 
   if (isLoading) {
-    return <PageState kind="loading" title="원천 데이터 목록을 불러오는 중" description="SourceData fixture와 upload 상태를 조회하고 있습니다." />;
+    return <PageState kind="loading" title="원천 데이터 목록을 불러오는 중" description="업로드된 파일과 처리 상태를 준비하고 있습니다." />;
   }
 
   if (isError || !sources) {
@@ -62,7 +62,7 @@ export function SourceManagerPage() {
       <PageState
         kind="error"
         title="원천 데이터 목록을 불러오지 못했습니다"
-        description="Source API boundary 또는 mock fixture 상태를 확인하세요."
+        description="파일 목록을 다시 불러오거나 잠시 후 재시도하세요."
         actionLabel="다시 시도"
         onAction={() => void refetch()}
       />
@@ -83,7 +83,7 @@ export function SourceManagerPage() {
           {uploadSource.isPending ? "Uploading" : "Upload Source"}
         </HanaButton>
       </PageHeader>
-      <HanaCard title="Upload source" description="SourceUploadRequest(file, source_type, display_name)를 multipart API로 보낼 준비가 된 입력 영역입니다.">
+      <HanaCard title="Upload source" description="파일 유형과 표시 이름을 정한 뒤 원천 데이터를 업로드합니다.">
         <UploadGrid>
           <Field>
             <span>File</span>
@@ -107,7 +107,7 @@ export function SourceManagerPage() {
             />
           </Field>
         </UploadGrid>
-        {uploadSource.isError && <InlineError>업로드 요청에 실패했습니다. mock/API boundary와 backend Source API 상태를 확인하세요.</InlineError>}
+        {uploadSource.isError && <InlineError>업로드에 실패했습니다. 파일 유형과 크기를 확인한 뒤 다시 시도하세요.</InlineError>}
       </HanaCard>
       {sources.length === 0 ? (
         <PageState

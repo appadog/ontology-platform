@@ -35,7 +35,7 @@ const fixtureOptions = [
     label: "Missing fixture",
     expectedStatus: "FAILED",
     tone: "danger" as const,
-    summary: "fixture-not-found failure path",
+    summary: "selected scenario cannot be loaded",
   },
 ] as const;
 
@@ -271,7 +271,7 @@ export function ExtractionJobCreatePage() {
           <dd>{selectedPromptVersion?.template ?? "-"}</dd>
           <dt>Provider rule</dt>
           <dd>
-            <MutedText>Provider 값은 고정되어 있고 job 결과는 선택한 fixture로 재현됩니다.</MutedText>
+            <MutedText>Local demo runs use deterministic MockProvider results for repeatable candidate review.</MutedText>
           </dd>
         </KeyValueGrid>
       </HanaCard>

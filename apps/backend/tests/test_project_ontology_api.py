@@ -590,7 +590,7 @@ def test_wave10_source_parse_edge_cases_are_repeatable() -> None:
     assert len(client.get(f"/api/v1/sources/{pdf_source_id}/segments").json()) == 1
 
 
-def test_mvp2_prompt_extraction_candidate_thin_flow() -> None:
+def test_wave11_mvp2_closeout_fixture_catalog_prompt_extraction_and_retry_flow() -> None:
     project_response = client.post(
         "/api/v1/projects",
         json={"name": "MVP2 Extraction Project", "description": "Extraction smoke flow"},
@@ -696,6 +696,7 @@ def test_mvp2_prompt_extraction_candidate_thin_flow() -> None:
     assert run["candidate_entity_count"] == 2
     assert run["candidate_relation_count"] == 1
     assert run["model_runs"][0]["status"] == "SUCCESS"
+    assert run["model_runs"][0]["masking_version"] == "v1"
     assert "Acme Corp" not in str(run["model_runs"][0]["raw_request"])
     assert "Acme Corp" not in str(run["model_runs"][0]["raw_response"])
     assert run["model_runs"][0]["redaction_summary"]["policy"] == "no_source_text_or_secrets"
@@ -760,6 +761,9 @@ def test_mvp2_prompt_extraction_candidate_thin_flow() -> None:
     assert failed_run["status"] == "FAILED"
     assert failed_run["error_code"] == "MOCK_FIXTURE_NOT_FOUND"
     assert failed_run["model_runs"][0]["status"] == "FAILED"
+    assert failed_run["model_runs"][0]["raw_response"] == {
+        "error_code": "MOCK_FIXTURE_NOT_FOUND"
+    }
     assert (
         client.get(
             f"/api/v1/extraction-jobs/{missing_fixture_response.json()['id']}"

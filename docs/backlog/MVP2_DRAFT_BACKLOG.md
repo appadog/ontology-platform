@@ -1,8 +1,8 @@
 # MVP 2 Draft Backlog
 
-Status: `READY FOR WAVE 6 IMPLEMENTATION KICKOFF / CONTRACT STILL DRAFT`
+Status: `WAVE 11 CLOSEOUT PREPARATION READY / CONTRACT STILL DRAFT`
 
-This backlog is now eligible for Wave 6 implementation kickoff. The contract is still draft, so Wave 6 must keep implementation thin and report any enum, DTO, job lifecycle, evidence, or privacy issue before expanding scope.
+This backlog is now in MVP 2 closeout preparation. The contract is still draft, but Wave 11 uses `docs/pm/MVP2_CLOSEOUT_CHECKLIST.md` as the shared closeout checklist, regression matrix, demo script, release-note exclusions, and exception policy. Wave 11 must not expand runtime product scope unless a closeout blocker clearly requires it.
 
 ## MVP 2 Entry Gate
 
@@ -66,6 +66,19 @@ This backlog is now eligible for Wave 6 implementation kickoff. The contract is 
 - Mock LLM으로 후보 엔티티/관계가 생성된다.
 - 모든 후보는 source/evidence 참조를 가진다.
 - ExtractionJob 상태를 UI에서 확인할 수 있다.
+
+## Wave 11 Closeout Preparation
+
+Wave 11 is not a feature expansion wave. Closeout readiness is judged against `docs/pm/MVP2_CLOSEOUT_CHECKLIST.md`.
+
+- `PM2-001` Extraction user flow closes when the demo script covers project/draft ontology, source profile/parse, prompt version selection, mock extraction, job monitor, candidate browsing, evidence viewer, retry, and contextual navigation.
+- `PM2-002` LLM output schema closes when fixture-backed candidate entity/relation/evidence output remains aligned with the API draft and OpenAPI artifact, with no external provider dependency.
+- `PM2-003` Evidence policy closes when normal, missing, broken, and direct missing evidence paths preserve available context and recovery actions.
+- `PM2-004` Failure/retry policy closes when `PARTIAL_FAILED`, `FAILED`, `MOCK_FIXTURE_NOT_FOUND`, retry-chain state, and dedupe behavior pass actual API and UI smoke.
+- `PM2-005` Mock provider acceptance closes when the four fixture catalog entries are reproducible: `default`, `partial_invalid`, `invalid_evidence_reference`, and `missing`.
+- `INT2-001`~`INT2-004` are the QA-owned closeout regression gates for profile contract, chunk/evidence traceability, mock extraction flow, and failure/retry smoke.
+- Docker Compose smoke remains a P1 environment gate. If Docker CLI is absent, QA may close MVP 2 as `PASS WITH EXCEPTION` when product regression passes.
+- Browser smoke tooling may remain temporary for MVP 2 closeout if Frontend and QA report exact commands, routes, screenshots, and logs.
 
 ## Wave 6 Contract Decisions
 
@@ -329,6 +342,38 @@ Wave 10은 MVP 2를 실제 로컬 데모 흐름으로 넓힌다. 목표는 sourc
   - 흐름은 CTA, status badge, breadcrumb/compact path, row action, empty/error state로 전달한다.
   - Fixture 선택은 QA 재현성을 위해 `default`, `partial_invalid`, `invalid_evidence_reference`, `missing` id를 드러낼 수 있지만, 사용자가 보는 primary label은 성공/부분 오류/broken evidence/missing fixture 같은 결과 중심이어야 한다.
   - Error code와 raw ids는 상세/개발 정보 영역에 낮춰 표시한다.
+
+### Wave 11 MVP 2 Closeout Findings
+
+Wave 11 MVP 2 closeout verdict는 `PASS WITH EXCEPTION`이다. Product P0 closeout matrix는 모두 PASS이며 남은 항목은 P1 environment/tooling follow-up이다.
+
+- Subagent 운영 리듬:
+  - PM subagent가 closeout checklist와 acceptance matrix를 먼저 확정했다.
+  - Backend/Frontend subagent가 병렬로 closeout 안정화를 수행했다.
+  - QA subagent가 마지막에 독립 closeout regression을 수행했다.
+- Closeout checklist:
+  - 기준 문서: `docs/pm/MVP2_CLOSEOUT_CHECKLIST.md`
+  - `CO-01` Source profile: PASS.
+  - `CO-02` Source parse/chunk: PASS.
+  - `CO-03` Prompt version selection: PASS.
+  - `CO-04` Extraction job lifecycle: PASS.
+  - `CO-05` Fixture catalog: PASS.
+  - `CO-06` Retry/dedupe: PASS.
+  - `CO-07` Candidate/evidence browsing: PASS.
+  - `CO-08` Evidence traceability/fallback: PASS.
+  - `CO-09` Frontend navigation/browser smoke: PASS.
+- Integration:
+  - `INT2-001`: PASS.
+  - `INT2-002`: PASS.
+  - `INT2-003`: PASS.
+  - `INT2-004`: PASS.
+- Runtime contract:
+  - 신규 endpoint, enum, DTO/schema 변경 없음.
+  - MVP 1 `openapi-mvp1.json`과 MVP 2 `openapi-mvp2-draft.json` 분리 유지.
+  - provider API literal은 계속 `mock`이다.
+- Approved exceptions:
+  - Docker Compose smoke는 Docker CLI 부재로 `NOT RUNNABLE`. Product closeout blocker가 아닌 P1 environment follow-up으로 유지한다. Linked IDs: `BE-002`, `INT2-003`.
+  - Browser smoke harness는 `npm run smoke:mvp2:actual`로 재현 가능하며 MVP 2 closeout blocker가 아니다. Playwright Test suite formalization은 P1 tooling follow-up이다. Linked IDs: `FE2-006`, `INT2-003`.
 
 ## Wave 7 Contract Sync Decisions
 

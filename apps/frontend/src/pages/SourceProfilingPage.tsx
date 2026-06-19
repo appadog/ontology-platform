@@ -47,7 +47,7 @@ export function SourceProfilingPage() {
         ]}
       />
       <PageHeader title="Source Profiling" description="CSV/Excel source의 column type, null ratio, distinct count, sample values를 확인합니다.">
-        <HanaBadge tone="muted">MVP2 THIN</HanaBadge>
+        <HanaBadge tone="muted">Profile ready</HanaBadge>
         <HanaButton type="button" onClick={() => runProfile.mutate()} disabled={runProfile.isPending}>
           <Play aria-hidden="true" />
           {runProfile.isPending ? "Profiling" : "Run profile"}

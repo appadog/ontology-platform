@@ -1,6 +1,6 @@
 # Frontend App
 
-MVP 1차 프론트엔드 앱입니다. Vite + React + TypeScript 기반으로 app shell, routing, mock-first API boundary, Project/Ontology/Source 화면 초안을 제공합니다.
+Ontology platform frontend app입니다. Vite + React + TypeScript 기반으로 app shell, routing, mock-first API boundary, Project/Ontology/Source 화면과 MVP 2 source profiling, chunk, extraction, candidate, evidence demo path를 제공합니다.
 
 ## Target Stack
 
@@ -43,6 +43,37 @@ mock API가 기본값입니다. 실제 backend API로 전환할 때는 `.env`에
 VITE_USE_MOCK_API=false
 VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
+
+## MVP 2 Actual API Smoke
+
+Backend와 frontend dev server를 각각 실행한 뒤 actual API browser smoke를 실행합니다. 이 smoke는 backend API에 demo data를 생성하고, 실제 frontend route를 headless browser로 열어 source profile, chunks, extraction monitor, candidate filters, normal evidence, direct missing evidence fallback을 확인합니다.
+
+```bash
+cd apps/frontend
+VITE_USE_MOCK_API=false \
+VITE_API_BASE_URL=http://127.0.0.1:8000 \
+npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
+```
+
+다른 터미널에서:
+
+```bash
+cd apps/frontend
+MVP2_API_BASE_URL=http://127.0.0.1:8000 \
+MVP2_FRONTEND_BASE_URL=http://127.0.0.1:5173 \
+MVP2_SMOKE_ARTIFACT_DIR=/tmp/ontology-mvp2-frontend-smoke \
+npm run smoke:mvp2:actual
+```
+
+산출물:
+
+- `/tmp/ontology-mvp2-frontend-smoke/mvp2-actual-api-smoke.json`
+- `/tmp/ontology-mvp2-frontend-smoke/source-profile.png`
+- `/tmp/ontology-mvp2-frontend-smoke/source-chunks.png`
+- `/tmp/ontology-mvp2-frontend-smoke/job-monitor.png`
+- `/tmp/ontology-mvp2-frontend-smoke/candidate-filters.png`
+- `/tmp/ontology-mvp2-frontend-smoke/evidence-normal.png`
+- `/tmp/ontology-mvp2-frontend-smoke/evidence-direct-missing.png`
 
 ## Planned Structure
 

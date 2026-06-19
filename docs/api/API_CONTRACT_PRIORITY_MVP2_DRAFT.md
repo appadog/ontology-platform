@@ -1,6 +1,6 @@
 # API Contract Priority MVP 2 Draft
 
-Status: `READY FOR WAVE 6 IMPLEMENTATION KICKOFF / CONTRACT STILL DRAFT`
+Status: `WAVE 11 CLOSEOUT PREPARATION READY / CONTRACT STILL DRAFT`
 
 This document is still a contract draft, but Wave 5 closed MVP 1 app acceptance with an accepted Docker environment exception. Wave 6 may implement thin slices from this contract while reporting any enum, DTO, status lifecycle, evidence, or privacy issue before expanding scope.
 
@@ -11,6 +11,8 @@ Wave 8 opens only focused UI/contract expansion: retry-chain dedupe, selected/re
 Wave 9 is targeted hardening. It closes ontology class delete orphan behavior, delete confirmation copy/counts, and evidence direct/broken route fallback. It does not add external LLM providers, review/publish workflow, RAG, advanced PDF parsing, a new candidate detail endpoint, or new evidence status enum.
 
 Wave 10 broadens the local MVP 2 demo around source profile/parse edge cases, prompt/job selection, deterministic MockProvider fixtures, retry/failure, and candidate/evidence browsing. It does not add external LLM providers, review/publish workflow, RAG, advanced PDF parsing, a new candidate detail endpoint, or active prompt-version mutation API.
+
+Wave 11 prepares closeout. It uses `docs/pm/MVP2_CLOSEOUT_CHECKLIST.md` as the shared checklist and regression matrix. It does not add runtime endpoints, enums, DTOs, external LLM providers, review/publish workflow, RAG, advanced PDF parsing, a new candidate detail endpoint, or active prompt-version mutation API unless QA identifies a clear closeout blocker.
 
 ## MVP 2 API Entry Gate
 
@@ -134,6 +136,15 @@ Wave 8 evidence highlight must use existing `CandidateEvidence` locators. Struct
   - TXT parsing must produce deterministic segment order and stable `sequence`;
   - PDF parsing remains best-effort local text extraction only. Scanned, encrypted, no-text, or unsupported PDFs return warnings with zero or partial segments rather than adding advanced PDF dependencies;
   - repeated profile/parse for the same source must not create duplicate visible profile/segment rows.
+
+### Wave 11 Closeout Contract Freeze
+
+- The MVP 2 closeout matrix is documented in `docs/pm/MVP2_CLOSEOUT_CHECKLIST.md`.
+- Closeout uses the existing MVP 2 endpoint draft and `docs/api/openapi-mvp2-draft.json`; Backend must keep the artifact fresh but should not introduce a new runtime contract for closeout polish.
+- Candidate browsing and candidate detail UI continue to use existing candidate list arrays, `GET /api/v1/extraction-jobs/{job_id}`, and `GET /api/v1/candidate-evidence/{evidence_id}`.
+- Evidence fallback uses existing `CandidateEvidence` fields, candidate validation status/codes, route state, query context, breadcrumbs, and recovery actions. No evidence reverse-lookup endpoint is required for MVP 2 closeout.
+- Docker Compose smoke is an environment gate, not an API contract gate. If Docker CLI is unavailable, closeout can proceed with the documented exception when Backend tests, OpenAPI freshness, actual API smoke, Frontend build, and browser smoke pass.
+- Browser smoke tooling is a QA harness concern, not an API contract. Temporary Playwright/headless smoke is acceptable when commands and artifacts are reported.
 
 ## Key DTO Draft
 

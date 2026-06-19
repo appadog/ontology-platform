@@ -159,6 +159,38 @@ The seed script creates the `기업 문서 온톨로지 Demo` project, draft ont
 poetry run pytest
 ```
 
+## MVP 2 Closeout Regression
+
+Wave 11 closeout uses the backend test suite as the reproducible local API regression
+for BE2-001 through BE2-009. The fixture catalog smoke is covered by:
+
+```bash
+cd apps/backend
+.venv/bin/pytest tests/test_project_ontology_api.py \
+  -k "wave11_mvp2_closeout_fixture_catalog or wave10_source_profile or wave10_source_parse"
+```
+
+Coverage map:
+
+- `default`: mock extraction reaches `SUCCESS`, persists passed entity/relation candidates, and resolves normal evidence.
+- `partial_invalid`: reaches `PARTIAL_FAILED` with `MISSING_EVIDENCE`, warning validation, and no evidence ids.
+- `invalid_evidence_reference`: reaches `PARTIAL_FAILED` with `INVALID_EVIDENCE_REFERENCE`, non-null broken refs, and evidence metadata for traceability fallback.
+- `missing`: reaches `FAILED` with `MOCK_FIXTURE_NOT_FOUND` and no candidate persistence.
+- Retry smoke: `POST /api/v1/extraction-jobs/{job_id}/retry` creates a linked job and retry-chain dedupe prevents duplicate visible candidates/evidence.
+- Masking smoke: `ModelRun.raw_request` and `raw_response` store IDs/counts/metadata only, with `masking_version` and `redaction_summary`.
+
+Full closeout backend verification:
+
+```bash
+cd apps/backend
+.venv/bin/ruff check app tests scripts
+.venv/bin/pytest
+.venv/bin/python scripts/export_openapi.py
+tmpfile=$(mktemp /tmp/openapi-mvp2-closeout.XXXXXX)
+.venv/bin/python scripts/export_openapi.py --output "$tmpfile"
+cmp -s "$tmpfile" ../../docs/api/openapi-mvp2-draft.json
+```
+
 ## Notes
 
 - Enum strings are copied from `docs/pm/GLOSSARY.md`.

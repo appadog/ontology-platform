@@ -323,7 +323,7 @@ export function OntologyModelerPage() {
       <PageState
         kind="error"
         title="온톨로지 버전을 불러오지 못했습니다"
-        description="Project ontology version endpoint boundary를 확인하세요."
+        description="프로젝트의 ontology draft 목록을 다시 열어 주세요."
       />
     );
   }
@@ -365,7 +365,7 @@ export function OntologyModelerPage() {
       <PageState
         kind="error"
         title="온톨로지 그래프를 불러오지 못했습니다"
-        description="OntologyVersion 또는 graph endpoint boundary를 확인하세요."
+        description="버전 상태를 확인한 뒤 그래프를 다시 불러오세요."
         actionLabel="Retry"
         onAction={() => void refetch()}
       />
