@@ -48,6 +48,52 @@ export type ValidationStatus = "NOT_VALIDATED" | "PASSED" | "WARNING" | "FAILED"
 
 export type PublishStatus = "NOT_PUBLISHED" | "PUBLISHED" | "ROLLED_BACK";
 
+export type CandidateKind = "ENTITY" | "RELATION" | "PROPERTY_VALUE";
+
+export type ValidationRuleCode =
+  | "CLASS_EXISTS"
+  | "RELATION_EXISTS"
+  | "RELATION_DOMAIN_RANGE"
+  | "RELATION_DIRECTION"
+  | "REQUIRED_PROPERTY"
+  | "DATATYPE"
+  | "CARDINALITY"
+  | "DUPLICATE_CANDIDATE"
+  | "ORPHAN_NODE"
+  | "EVIDENCE_MISSING"
+  | "ONTOLOGY_VERSION_MISMATCH"
+  | "LOW_CONFIDENCE";
+
+export type ValidationResultSeverity = "INFO" | "WARNING" | "FAILED";
+
+export type ReviewTaskStatus = "OPEN" | "ASSIGNED" | "IN_REVIEW" | "DECIDED" | "CANCELLED";
+
+export type ReviewDecisionType = "APPROVE" | "REJECT" | "REQUEST_CHANGES" | "MODIFY_AND_APPROVE";
+
+export type CorrectionStatus = "DRAFT" | "SUBMITTED" | "APPLIED" | "SUPERSEDED";
+
+export type PublishJobStatus = "PENDING" | "RUNNING" | "SUCCESS" | "PARTIAL_FAILED" | "FAILED";
+
+export type PublishEligibilityReasonCode =
+  | "ELIGIBLE"
+  | "NOT_APPROVED_OR_MODIFIED"
+  | "PENDING"
+  | "REJECTED"
+  | "NEEDS_DISCUSSION"
+  | "MISSING_EVIDENCE"
+  | "BROKEN_EVIDENCE"
+  | "FAILED_VALIDATION"
+  | "WARNING_REASON_REQUIRED"
+  | "ALREADY_PUBLISHED"
+  | "ONTOLOGY_VERSION_MISMATCH"
+  | "PUBLISH_PERMISSION_REQUIRED"
+  | "CORRECTION_DIFF_REQUIRED";
+
+export interface CandidateRef {
+  candidate_kind: CandidateKind;
+  candidate_id: string;
+}
+
 export type ExtractionJobStatus =
   | "PENDING"
   | "QUEUED"
@@ -466,6 +512,290 @@ export interface CandidateListFilters {
   ontology_version_id?: string;
   validation_status?: ValidationStatus;
   has_evidence?: boolean;
+}
+
+export interface ValidationResult {
+  id: string;
+  candidate_kind: CandidateKind;
+  candidate_id: string;
+  rule_code: ValidationRuleCode;
+  severity: ValidationResultSeverity;
+  message: string;
+  field_path: string;
+  blocking: boolean;
+  suggested_fix: string | null;
+  created_at: string;
+}
+
+export interface PublishEligibility {
+  candidate_kind: CandidateKind;
+  candidate_id: string;
+  eligible: boolean;
+  reasons: PublishEligibilityReasonCode[];
+  review_status: CandidateReviewStatus;
+  publish_status: PublishStatus;
+  validation_status: ValidationStatus;
+  has_evidence: boolean;
+  has_warning_reason: boolean;
+}
+
+export interface ReviewTaskListFilters {
+  assignment?: "assigned-to-me" | "unassigned" | "all";
+  status?: CandidateReviewStatus | "ALL";
+  validation_status?: ValidationStatus | "ALL";
+  confidence?: "low" | "medium" | "high" | "all";
+  source_id?: string;
+  extraction_job_id?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ReviewTask {
+  id: string;
+  project_id: string;
+  candidate_kind: CandidateKind;
+  candidate_id: string;
+  ontology_version_id: string;
+  source_id: string;
+  source_display_name: string;
+  source_context_label: string;
+  extraction_job_id: string;
+  job_display_label: string;
+  status: ReviewTaskStatus;
+  review_status: CandidateReviewStatus;
+  publish_status: PublishStatus;
+  assignee_id: string | null;
+  assignee_display_name: string | null;
+  is_assigned_to_me: boolean;
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  priority_reason: string;
+  validation_status: ValidationStatus;
+  validation_codes: ValidationRuleCode[];
+  top_validation: ValidationResult;
+  candidate_display_name: string;
+  candidate_summary: string;
+  confidence: number;
+  evidence_count: number;
+  evidence_state: "PRESENT" | "MISSING" | "BROKEN";
+  last_decision_summary: string | null;
+  created_at: string;
+  updated_at: string;
+  decided_at: string | null;
+}
+
+export interface ReviewTaskListResponse {
+  items: ReviewTask[];
+  total_count: number;
+  limit: number;
+  offset: number;
+}
+
+export interface CorrectionDiffItem {
+  field_path: string;
+  original_value: unknown;
+  corrected_value: unknown;
+}
+
+export interface CandidateCorrection {
+  id: string;
+  status: CorrectionStatus;
+  original_snapshot: Record<string, unknown> | null;
+  corrected_snapshot: Record<string, unknown>;
+  diff: CorrectionDiffItem[];
+  evidence_ids: string[];
+  reviewer_id: string;
+  reviewer_display_name: string;
+  updated_at: string;
+}
+
+export interface ReviewDecision {
+  id: string;
+  review_task_id: string;
+  decision: ReviewDecisionType;
+  resulting_review_status: CandidateReviewStatus;
+  reviewer_id: string;
+  reviewer_display_name: string;
+  reason: string | null;
+  correction_diff: CorrectionDiffItem[];
+  publish_eligibility: PublishEligibility;
+  created_at: string;
+}
+
+export interface ReviewTaskDetail extends ReviewTask {
+  original_snapshot: Record<string, unknown>;
+  corrected_snapshot: Record<string, unknown> | null;
+  correction: CandidateCorrection | null;
+  validation_results: ValidationResult[];
+  decision_history: ReviewDecision[];
+  publish_eligibility: PublishEligibility;
+  source_excerpt: string;
+  source_locator: string;
+  can_decide: boolean;
+  read_only_reason: string | null;
+}
+
+export type PublishCandidate = PublishEligibility;
+
+export interface PublishJob {
+  id: string;
+  project_id: string;
+  ontology_version_id: string;
+  status: PublishJobStatus;
+  requested_by: string | null;
+  candidate_refs: CandidateRef[];
+  eligible_count: number;
+  published_entity_count: number;
+  published_relation_count: number;
+  skipped_count: number;
+  skip_reasons: PublishEligibility[];
+  published_graph_version_id: string | null;
+  created_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  error_code: string | null;
+  error_message: string | null;
+}
+
+export interface PublishedGraphVersion {
+  id: string;
+  project_id: string;
+  version: number;
+  ontology_version_id: string;
+  publish_job_id: string;
+  is_current: boolean;
+  created_by: string | null;
+  created_at: string;
+  summary?: Record<string, unknown>;
+}
+
+export interface EvidenceRef {
+  evidence_id: string;
+  source_id: string;
+  source_display_name: string;
+  locator: string;
+}
+
+export interface PublishedLineage {
+  publish_job_id: string;
+  published_graph_version_id: string;
+  published_graph_version: number;
+  ontology_version_id: string;
+  candidate_kind: CandidateKind;
+  candidate_id: string;
+  original_snapshot: Record<string, unknown>;
+  original_snapshot_ref: string | null;
+  corrected_snapshot: Record<string, unknown> | null;
+  evidence_refs: EvidenceRef[];
+  reviewer_id: string;
+  reviewer_display_name: string | null;
+  review_decision_id: string;
+  review_decision_type: ReviewDecisionType;
+  reason: string | null;
+  reviewed_at: string;
+  published_at: string;
+}
+
+export interface PublishedEntity {
+  id: string;
+  project_id: string;
+  published_graph_version_id: string;
+  ontology_version_id: string;
+  class_id: string;
+  canonical_name: string;
+  properties: Record<string, unknown>;
+  source_candidate_entity_ids: string[];
+  original_snapshot: Record<string, unknown> | null;
+  corrected_snapshot: Record<string, unknown> | null;
+  lineage: PublishedLineage;
+  created_at: string;
+}
+
+export interface PublishedRelation {
+  id: string;
+  project_id: string;
+  published_graph_version_id: string;
+  ontology_version_id: string;
+  source_published_entity_id: string;
+  relation_id: string;
+  target_published_entity_id: string;
+  properties: Record<string, unknown>;
+  source_candidate_relation_ids: string[];
+  original_snapshot: Record<string, unknown> | null;
+  corrected_snapshot: Record<string, unknown> | null;
+  lineage: PublishedLineage;
+  created_at: string;
+}
+
+export interface PublishedGraphSnapshot {
+  version: PublishedGraphVersion;
+  entities: PublishedEntity[];
+  relations: PublishedRelation[];
+}
+
+export type QualityDrilldownTarget = "review_inbox" | "publish_jobs" | "published_graph";
+
+export interface QualityDrilldownHint {
+  target: QualityDrilldownTarget;
+  label: string;
+  params: Record<string, string>;
+}
+
+export interface QualityCountMetric {
+  value: number;
+  drilldown?: QualityDrilldownHint;
+}
+
+export interface QualityRateMetric {
+  numerator: number;
+  denominator: number;
+  rate: number;
+  drilldown?: QualityDrilldownHint;
+}
+
+export interface QualitySummary {
+  project_id: string;
+  ontology_version_id: string | null;
+  generated_at: string;
+  candidate_counts: {
+    total: QualityCountMetric;
+    entity: QualityCountMetric;
+    relation: QualityCountMetric;
+    property_value: QualityCountMetric;
+    missing_evidence: QualityCountMetric;
+  };
+  validation_counts: {
+    not_validated: QualityCountMetric;
+    passed: QualityCountMetric;
+    warning: QualityCountMetric;
+    failed: QualityCountMetric;
+    by_rule_code: Partial<Record<ValidationRuleCode, QualityCountMetric>> & Record<string, QualityCountMetric>;
+  };
+  review_counts: {
+    pending: QualityCountMetric;
+    approved: QualityCountMetric;
+    rejected: QualityCountMetric;
+    modified: QualityCountMetric;
+    needs_discussion: QualityCountMetric;
+  };
+  publish_counts: {
+    not_published: QualityCountMetric;
+    published: QualityCountMetric;
+    rolled_back: QualityCountMetric;
+    published_entities: QualityCountMetric;
+    published_relations: QualityCountMetric;
+    publish_success: QualityCountMetric;
+    publish_failed: QualityCountMetric;
+    current_version_id?: string | null;
+    current_version?: number | null;
+  };
+  rates: {
+    approval_rate: QualityRateMetric;
+    rejection_rate: QualityRateMetric;
+    modification_rate: QualityRateMetric;
+    validation_failure_rate: QualityRateMetric;
+    evidence_missing_rate: QualityRateMetric;
+    published_ratio: QualityRateMetric;
+  };
 }
 
 export interface DashboardSummary {

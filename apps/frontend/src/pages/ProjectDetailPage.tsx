@@ -1,7 +1,7 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
-import { Boxes, Database, Save, Sparkles } from "lucide-react";
+import { BarChart3, Boxes, Database, GitBranch, ListChecks, Rocket, Save, Sparkles } from "lucide-react";
 import { useProject, useUpdateProject } from "../shared/api/queries";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
@@ -95,6 +95,30 @@ export function ProjectDetailPage() {
           <CardAction to={`/projects/${project.id}/extraction-jobs`}>
             <Sparkles aria-hidden="true" />
             추출 작업 보기
+          </CardAction>
+        </HanaCard>
+        <HanaCard title="Review Inbox" description="검수 대상, validation, confidence, evidence 상태를 우선순위로 정렬합니다.">
+          <CardAction to={`/projects/${project.id}/review`}>
+            <ListChecks aria-hidden="true" />
+            Review inbox
+          </CardAction>
+        </HanaCard>
+        <HanaCard title="Publish Queue" description="승인된 후보의 eligibility reason과 publish job 결과를 확인합니다.">
+          <CardAction to={`/projects/${project.id}/publish`}>
+            <Rocket aria-hidden="true" />
+            Publish queue
+          </CardAction>
+        </HanaCard>
+        <HanaCard title="Published Graph" description="현재 게시 snapshot의 published facts와 lineage를 탐색합니다.">
+          <CardAction to={`/projects/${project.id}/published-graph`}>
+            <GitBranch aria-hidden="true" />
+            Published graph
+          </CardAction>
+        </HanaCard>
+        <HanaCard title="Quality Dashboard" description="Validation, review, publish metric을 action drilldown과 함께 봅니다.">
+          <CardAction to={`/projects/${project.id}/quality`}>
+            <BarChart3 aria-hidden="true" />
+            Quality dashboard
           </CardAction>
         </HanaCard>
       </QuickLinks>

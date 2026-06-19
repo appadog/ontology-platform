@@ -7,8 +7,13 @@ import { EvidenceViewerPage } from "../pages/EvidenceViewerPage";
 import { ExtractionJobCreatePage } from "../pages/ExtractionJobCreatePage";
 import { ExtractionJobMonitorPage } from "../pages/ExtractionJobMonitorPage";
 import { OntologyModelerPage } from "../pages/OntologyModelerPage";
+import { PublishedGraphExplorerPage } from "../pages/PublishedGraphExplorerPage";
+import { PublishQueuePage } from "../pages/PublishQueuePage";
 import { ProjectDetailPage } from "../pages/ProjectDetailPage";
 import { ProjectListPage } from "../pages/ProjectListPage";
+import { QualityDashboardPage } from "../pages/QualityDashboardPage";
+import { ReviewInboxPage } from "../pages/ReviewInboxPage";
+import { ReviewWorkbenchPage } from "../pages/ReviewWorkbenchPage";
 import { SourceDetailPage } from "../pages/SourceDetailPage";
 import { SourceManagerPage } from "../pages/SourceManagerPage";
 import { SourceProfilingPage } from "../pages/SourceProfilingPage";
@@ -60,6 +65,30 @@ export const router = createBrowserRouter([
       {
         path: "/projects/:projectId/extraction-jobs",
         element: <ExtractionJobMonitorPage />,
+      },
+      {
+        path: "/projects/:projectId/review",
+        element: <ReviewInboxPage />,
+      },
+      {
+        path: "/projects/:projectId/review/:reviewTaskId",
+        element: <ReviewWorkbenchPage />,
+      },
+      {
+        path: "/projects/:projectId/publish",
+        element: <PublishQueuePage />,
+      },
+      {
+        path: "/projects/:projectId/publish-jobs/:publishJobId",
+        element: <PublishQueuePage />,
+      },
+      {
+        path: "/projects/:projectId/published-graph",
+        element: <PublishedGraphExplorerPage />,
+      },
+      {
+        path: "/projects/:projectId/quality",
+        element: <QualityDashboardPage />,
       },
       {
         path: "/extraction-jobs/:jobId",

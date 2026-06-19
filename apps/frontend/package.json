@@ -9,7 +9,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "lint": "eslint .",
     "test": "vitest run",
-    "smoke:mvp2:actual": "node scripts/mvp2-actual-api-smoke.mjs"
+    "smoke:mvp2:actual": "node scripts/mvp2-actual-api-smoke.mjs",
+    "smoke:mvp3:actual": "node scripts/mvp3-actual-api-smoke.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.81.5",

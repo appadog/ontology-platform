@@ -1,8 +1,8 @@
 # MVP 2 Closeout Checklist
 
-Status: `WAVE 12 PRODUCTIZATION OVERLAY READY`
+Status: `MVP 2 CLOSED / PASS WITH P1 TOOLING AND ENVIRONMENT EXCEPTIONS`
 
-This document is the shared closeout reference for PM, Backend, Frontend, and QA. Wave 11 froze the local-demo acceptance criteria, regression matrix, demo script, release-note exclusions, and closeout exceptions needed to decide whether MVP 2 can close. Wave 12 adds a Frontend productization overlay for browser-verifiable UI/UX maturity without reopening MVP 2 runtime scope.
+This document is the shared closeout reference for PM, Backend, Frontend, and QA. Wave 11 froze the local-demo acceptance criteria, regression matrix, demo script, release-note exclusions, and closeout exceptions needed to decide whether MVP 2 can close. Wave 12 added a Frontend productization overlay for browser-verifiable UI/UX maturity without reopening MVP 2 runtime scope. Wave 13 closed the final UI/UX product polish gate. MVP 2 is closed for product scope; Docker Compose smoke and browser harness formalization remain P1 follow-ups.
 
 ## Closeout Decision Rule
 

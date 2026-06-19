@@ -12,6 +12,11 @@ const pageFiles = [
   "ExtractionJobCreatePage.tsx",
   "ExtractionJobMonitorPage.tsx",
   "CandidateResultsPage.tsx",
+  "ReviewInboxPage.tsx",
+  "ReviewWorkbenchPage.tsx",
+  "PublishQueuePage.tsx",
+  "PublishedGraphExplorerPage.tsx",
+  "QualityDashboardPage.tsx",
   "EvidenceViewerPage.tsx",
   "DashboardPage.tsx",
 ];

@@ -17,6 +17,14 @@ import {
   mockSourceSegments,
 } from "../mocks/mvp2Fixtures";
 import {
+  mockPublishedGraph,
+  mockPublishCandidates,
+  mockPublishJobs,
+  mockQualitySummary,
+  mockReviewTaskDetails,
+  mockReviewTasks,
+} from "../mocks/mvp3Fixtures";
+import {
   CandidateEntity,
   CandidateListFilters,
   CandidateEvidence,
@@ -42,6 +50,13 @@ import {
   ProjectDetail,
   ProjectSummary,
   ProjectUpdateRequest,
+  PublishedGraphSnapshot,
+  PublishCandidate,
+  PublishJob,
+  QualitySummary,
+  ReviewTaskDetail,
+  ReviewTaskListFilters,
+  ReviewTaskListResponse,
   PromptTemplate,
   PromptVersion,
   SourceData,
@@ -80,7 +95,7 @@ let mockCandidateRelationStore: CandidateRelation[] = [...mockCandidateRelations
 let mockCandidateEvidenceStore: Record<string, CandidateEvidence> = { ...mockCandidateEvidences };
 
 async function delay<T>(value: T): Promise<T> {
-  await new Promise((resolve) => window.setTimeout(resolve, 180));
+  await new Promise((resolve) => globalThis.setTimeout(resolve, 180));
   return value;
 }
 
@@ -271,6 +286,64 @@ function buildQueryString(filters: CandidateListFilters = {}): string {
 
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+function buildAnyQueryString(filters: Record<string, unknown> = {}): string {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "ALL" && value !== "all") {
+      params.set(key, String(value));
+    }
+  });
+
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+function filterReviewTasks(projectId: string, filters: ReviewTaskListFilters = {}): ReviewTaskListResponse {
+  const limit = filters.limit ?? 20;
+  const offset = filters.offset ?? 0;
+  const filtered = mockReviewTasks.filter((task) => {
+    if (task.project_id !== projectId) {
+      return false;
+    }
+    if (filters.assignment === "assigned-to-me" && !task.is_assigned_to_me) {
+      return false;
+    }
+    if (filters.assignment === "unassigned" && task.assignee_id) {
+      return false;
+    }
+    if (filters.status && filters.status !== "ALL" && task.review_status !== filters.status) {
+      return false;
+    }
+    if (filters.validation_status && filters.validation_status !== "ALL" && task.validation_status !== filters.validation_status) {
+      return false;
+    }
+    if (filters.confidence === "low" && task.confidence >= 0.7) {
+      return false;
+    }
+    if (filters.confidence === "medium" && (task.confidence < 0.7 || task.confidence >= 0.9)) {
+      return false;
+    }
+    if (filters.confidence === "high" && task.confidence < 0.9) {
+      return false;
+    }
+    if (filters.source_id && task.source_id !== filters.source_id) {
+      return false;
+    }
+    if (filters.extraction_job_id && task.extraction_job_id !== filters.extraction_job_id) {
+      return false;
+    }
+    return true;
+  });
+
+  return {
+    items: filtered.slice(offset, offset + limit),
+    total_count: filtered.length,
+    limit,
+    offset,
+  };
 }
 
 function filterCandidatesByJob<T extends CandidateEntity | CandidateRelation>(
@@ -1452,6 +1525,146 @@ export const apiClient = {
     }
 
     return request<CandidateEvidence>(`/api/v1/candidate-evidence/${evidenceId}`);
+  },
+
+  async listReviewTasks(projectId: string, filters: ReviewTaskListFilters = {}): Promise<ReviewTaskListResponse> {
+    if (USE_MOCK_API) {
+      return delay(filterReviewTasks(projectId, filters));
+    }
+
+    return request<ReviewTaskListResponse>(
+      `/api/v1/projects/${projectId}/review-tasks${buildAnyQueryString(filters as Record<string, unknown>)}`,
+    );
+  },
+
+  async getReviewTask(reviewTaskId: string): Promise<ReviewTaskDetail> {
+    if (USE_MOCK_API) {
+      const task = mockReviewTaskDetails[reviewTaskId];
+
+      if (!task) {
+        throw new Error("Review task fixture not found");
+      }
+
+      return delay(task);
+    }
+
+    return request<ReviewTaskDetail>(`/api/v1/review-tasks/${reviewTaskId}`);
+  },
+
+  async listPublishCandidates(projectId: string): Promise<PublishCandidate[]> {
+    if (USE_MOCK_API) {
+      return delay(projectId === "project-corp-knowledge" ? mockPublishCandidates : []);
+    }
+
+    return request<PublishCandidate[]>(`/api/v1/projects/${projectId}/publish-candidates`);
+  },
+
+  async listPublishJobs(projectId: string): Promise<PublishJob[]> {
+    if (USE_MOCK_API) {
+      return delay(mockPublishJobs.filter((job) => job.project_id === projectId));
+    }
+
+    return request<PublishJob[]>(`/api/v1/projects/${projectId}/publish-jobs`);
+  },
+
+  async createPublishJob(projectId: string, candidates: PublishCandidate[]): Promise<PublishJob> {
+    const selectedCandidates = candidates;
+    const candidateRefs = selectedCandidates.map((candidate) => ({
+      candidate_kind: candidate.candidate_kind,
+      candidate_id: candidate.candidate_id,
+    }));
+    const ontologyVersionId = mockPublishJobs.find((job) => job.project_id === projectId)?.ontology_version_id;
+
+    if (USE_MOCK_API) {
+      const eligible = selectedCandidates.filter((candidate) => candidate.eligible);
+      const job: PublishJob = {
+        ...mockPublishJobs[0],
+        id: `publish-job-${Date.now()}`,
+        project_id: projectId,
+        ontology_version_id: ontologyVersionId ?? mockPublishJobs[0].ontology_version_id,
+        status: "PENDING",
+        requested_by: mockPublishJobs[0].requested_by,
+        candidate_refs: candidateRefs,
+        eligible_count: eligible.length,
+        published_entity_count: 0,
+        published_relation_count: 0,
+        skipped_count: selectedCandidates.length - eligible.length,
+        skip_reasons: selectedCandidates.filter((candidate) => !candidate.eligible),
+        published_graph_version_id: null,
+        created_at: new Date().toISOString(),
+        started_at: null,
+        ended_at: null,
+        error_code: null,
+        error_message: null,
+      };
+
+      mockPublishJobs.unshift(job);
+      return delay(job);
+    }
+
+    if (!ontologyVersionId) {
+      throw new Error("Cannot create publish job without an ontology version id");
+    }
+
+    return jsonRequest<PublishJob>(`/api/v1/projects/${projectId}/publish-jobs`, {
+      method: "POST",
+      body: JSON.stringify({
+        ontology_version_id: ontologyVersionId,
+        candidate_refs: candidateRefs,
+      }),
+    });
+  },
+
+  async runPublishJob(publishJobId: string): Promise<PublishJob> {
+    if (USE_MOCK_API) {
+      const jobIndex = mockPublishJobs.findIndex((job) => job.id === publishJobId);
+
+      if (jobIndex === -1) {
+        throw new Error("Publish job fixture not found");
+      }
+
+      const updatedJob: PublishJob = {
+        ...mockPublishJobs[jobIndex],
+        status: "SUCCESS",
+        published_entity_count: 1,
+        published_relation_count: 1,
+        published_graph_version_id: mockPublishedGraph.version.id,
+        started_at: mockPublishJobs[jobIndex].started_at ?? new Date().toISOString(),
+        ended_at: new Date().toISOString(),
+      };
+
+      mockPublishJobs[jobIndex] = updatedJob;
+      return delay(updatedJob);
+    }
+
+    return jsonRequest<PublishJob>(`/api/v1/publish-jobs/${publishJobId}/run`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  },
+
+  async getCurrentPublishedGraph(projectId: string): Promise<PublishedGraphSnapshot> {
+    if (USE_MOCK_API) {
+      if (projectId !== mockPublishedGraph.version.project_id) {
+        throw new Error("Published graph fixture not found");
+      }
+
+      return delay(mockPublishedGraph);
+    }
+
+    return request<PublishedGraphSnapshot>(`/api/v1/projects/${projectId}/published-graph/current`);
+  },
+
+  async getQualitySummary(projectId: string): Promise<QualitySummary> {
+    if (USE_MOCK_API) {
+      if (projectId !== mockQualitySummary.project_id) {
+        throw new Error("Quality summary fixture not found");
+      }
+
+      return delay(mockQualitySummary);
+    }
+
+    return request<QualitySummary>(`/api/v1/projects/${projectId}/quality/summary`);
   },
 
   async listModelRuns(jobId: string): Promise<ModelRun[]> {

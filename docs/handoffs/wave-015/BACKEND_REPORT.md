@@ -1,0 +1,219 @@
+# Backend Report - Wave 15
+
+## 담당 범위
+- backlog ID: `BE3-001`, `BE3-002`, `BE3-003`, `BE3-004`, `BE3-005`, `BE3-006`, `BE3-007`, `BE3-008`, `BE3-010`
+- 작업 경로:
+  - `apps/backend/**`
+  - `docs/api/openapi-mvp3-draft.json`
+  - `docs/handoffs/wave-015/BACKEND_REPORT.md`
+
+## 완료한 작업
+- 필수 문서 확인 완료:
+  - `AGENTS.md`
+  - `.agents/skills/handoff-reporting/SKILL.md`
+  - `docs/handoffs/CURRENT_STATE.md`
+  - `docs/handoffs/wave-015/NEXT_ORDERS.md`
+  - `docs/handoffs/wave-015/PM_REPORT.md`
+  - `docs/handoffs/wave-014/BACKEND_REPORT.md`
+  - `docs/api/MVP3_API_CONTRACT_DRAFT.md`
+  - `docs/api/openapi-mvp3-draft.json`
+  - `docs/backlog/INT3_MVP3_ACCEPTANCE.md`
+  - `docs/backlog/MVP3_DRAFT_BACKLOG.md`
+  - `docs/adr/0006-mvp3-published-graph-boundary-and-versioning.md`
+  - `docs/pm/MVP3_PREP_BRIEF.md`
+  - `01_BACKEND_AGENT_SKILL.md`
+  - `apps/backend/README.md`
+  - `docs/handoffs/REPORT_TEMPLATE.md`
+- TDD red 확인:
+  - 새 MVP3 테스트 작성 후 `tests/test_mvp3_api.py`가 expected 404/schema-missing으로 실패하는 것을 확인했다.
+- MVP3 frozen enum을 `apps/backend/app/core/enums.py`에 추가했다.
+- SQLAlchemy 모델과 Alembic migration을 추가했다:
+  - validation jobs/results
+  - review tasks/decisions
+  - candidate corrections
+  - audit logs
+  - publish jobs
+  - published graph versions/entities/relations
+- Pydantic DTO와 FastAPI route를 추가했다:
+  - validation job/result API
+  - review inbox wrapped response `{ items, total_count, limit, offset }`
+  - review assignment/claim/detail/decision API
+  - candidate correction API
+  - audit log API
+  - publish eligibility/job/run API
+  - published graph version/current/entities/relations API
+  - typed quality summary v0.1 API
+- Publish eligibility service를 구현했다:
+  - `PENDING`, `REJECTED`, `NEEDS_DISCUSSION`
+  - `MISSING_EVIDENCE`, `BROKEN_EVIDENCE`
+  - `FAILED_VALIDATION`
+  - `WARNING_REASON_REQUIRED`
+  - `ALREADY_PUBLISHED`
+  - `ONTOLOGY_VERSION_MISMATCH`
+  - `PUBLISH_PERMISSION_REQUIRED`
+  - `CORRECTION_DIFF_REQUIRED`
+  - eligible rows return `ELIGIBLE`.
+- Positive publish fixtures/smoke를 테스트했다:
+  - clean approved entity
+  - modified approved relation using corrected payload
+  - warning-with-reason entity with evidence and no failed validation
+- Negative publish fixtures/smoke를 테스트했다:
+  - pending
+  - rejected
+  - needs-discussion
+  - failed validation
+  - missing evidence
+  - broken evidence
+  - warning without reason
+  - already published duplicate
+- Published graph P0는 Neo4j 없이 relational snapshot/current pointer 방식으로 구현했다.
+- Candidate raw payload는 수정하지 않고 correction/review/published lineage에 original/corrected snapshot을 분리했다.
+- `docs/api/openapi-mvp3-draft.json`을 FastAPI actual export로 갱신했다. MVP1/MVP2 OpenAPI artifact는 덮어쓰지 않았다.
+
+## 변경 파일
+- `apps/backend/app/api/router.py`
+- `apps/backend/app/core/enums.py`
+- `apps/backend/app/db/base.py`
+- `apps/backend/app/db/migrations/versions/20260619_0004_mvp3_review_publish.py`
+- `apps/backend/app/modules/candidate/service.py`
+- `apps/backend/app/modules/validation/__init__.py`
+- `apps/backend/app/modules/validation/models.py`
+- `apps/backend/app/modules/validation/schemas.py`
+- `apps/backend/app/modules/validation/router.py`
+- `apps/backend/app/modules/review/__init__.py`
+- `apps/backend/app/modules/review/models.py`
+- `apps/backend/app/modules/review/schemas.py`
+- `apps/backend/app/modules/review/router.py`
+- `apps/backend/app/modules/audit/__init__.py`
+- `apps/backend/app/modules/audit/models.py`
+- `apps/backend/app/modules/audit/schemas.py`
+- `apps/backend/app/modules/audit/service.py`
+- `apps/backend/app/modules/audit/router.py`
+- `apps/backend/app/modules/publish/__init__.py`
+- `apps/backend/app/modules/publish/models.py`
+- `apps/backend/app/modules/publish/schemas.py`
+- `apps/backend/app/modules/publish/service.py`
+- `apps/backend/app/modules/publish/router.py`
+- `apps/backend/app/modules/quality/__init__.py`
+- `apps/backend/app/modules/quality/schemas.py`
+- `apps/backend/app/modules/quality/router.py`
+- `apps/backend/tests/test_mvp3_api.py`
+- `docs/api/openapi-mvp3-draft.json`
+- `docs/handoffs/wave-015/BACKEND_REPORT.md`
+
+## 실행/검증
+- 실행한 명령:
+  - `.venv/bin/pytest tests/test_mvp3_api.py -q`
+  - `.venv/bin/ruff check app tests scripts`
+  - `.venv/bin/pytest`
+  - `.venv/bin/python scripts/export_openapi.py --output ../../docs/api/openapi-mvp3-draft.json`
+  - `node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync('docs/api/openapi-mvp3-draft.json','utf8')); const s=o.components.schemas; console.log(o.openapi, o.info.version); console.log(Object.keys(o.paths).length + ' paths'); console.log(Object.keys(s).length + ' schemas'); console.log(s.ValidationResultSeverity.enum.join(',')); console.log(s.ReviewDecisionType.enum.join(',')); console.log(s.PublishEligibilityReasonCode.enum.join(',')); console.log(Object.keys(s.ReviewTaskListResponse.properties).join(',')); console.log(Object.keys(s.QualitySummary.properties).join(','));"`
+  - `.venv/bin/python scripts/export_openapi.py --output /tmp/openapi-mvp3-verify.json`
+  - `cmp -s /tmp/openapi-mvp3-verify.json docs/api/openapi-mvp3-draft.json`
+  - `git diff --check -- apps/backend docs/api/openapi-mvp3-draft.json docs/handoffs/wave-015/BACKEND_REPORT.md`
+  - `DATABASE_URL=sqlite+pysqlite:////tmp/ontology-mvp3-alembic-smoke.db .venv/bin/alembic upgrade head`
+- 결과:
+  - Focused MVP3 tests PASS: `3 passed`.
+  - Ruff PASS: `All checks passed!`
+  - Full backend tests PASS: `14 passed`.
+  - OpenAPI actual export PASS.
+  - OpenAPI parse/frozen schema assertion PASS:
+    - `3.1.0 0.1.0`
+    - `51 paths`
+    - `108 schemas`
+    - `ValidationResultSeverity`: `INFO,WARNING,FAILED`
+    - `ReviewDecisionType`: `APPROVE,REJECT,REQUEST_CHANGES,MODIFY_AND_APPROVE`
+    - `PublishEligibilityReasonCode`: frozen Wave 15 list
+    - `ReviewTaskListResponse`: `items,total_count,limit,offset`
+    - `QualitySummary`: `project_id,ontology_version_id,generated_at,candidate_counts,validation_counts,review_counts,publish_counts,rates`
+  - Fresh OpenAPI export compare PASS: `cmp -s` exit `0`.
+  - `git diff --check` PASS.
+  - Alembic SQLite smoke PASS through `20260619_0004`.
+- 실행하지 못한 검증:
+  - Docker Compose/PostgreSQL migration smoke는 현재 환경의 Docker CLI 예외 때문에 실행하지 않았다.
+  - Frontend actual API smoke는 Backend ownership 밖이라 실행하지 않았다.
+
+## API/Enum/DTO 변경
+- 변경 여부: 있음.
+- 상세:
+  - New enums:
+    - `CandidateKind`
+    - `ValidationJobStatus`
+    - `ValidationRuleCode`
+    - `ValidationResultSeverity`
+    - `ReviewTaskStatus`
+    - `ReviewDecisionType`
+    - `CorrectionStatus`
+    - `AuditEventType`
+    - `PublishJobStatus`
+    - `PublishEligibilityReasonCode`
+    - `QualityDrilldownTarget`
+  - New DTO families:
+    - `ValidationJob`, `ValidationResult`, `ValidationSummary`
+    - `ReviewTask`, `ReviewTaskDetail`, `ReviewTaskListResponse`, `ReviewDecision`
+    - `CandidateCorrection`, `CorrectionDiffItem`
+    - `AuditLog`
+    - `PublishEligibility`, `PublishJob`
+    - `PublishedGraphVersion`, `PublishedEntity`, `PublishedRelation`, `PublishedGraphSnapshot`, `PublishedLineage`, `EvidenceRef`
+    - `QualitySummary` typed metric groups
+  - New endpoint families:
+    - `POST/GET /api/v1/projects/{project_id}/validation-jobs`
+    - `GET /api/v1/validation-jobs/{validation_job_id}`
+    - `GET /api/v1/validation-jobs/{validation_job_id}/results`
+    - `GET/POST /api/v1/projects/{project_id}/review-tasks`
+    - `GET /api/v1/review-tasks/{review_task_id}`
+    - `POST /api/v1/review-tasks/{review_task_id}/assign`
+    - `POST /api/v1/review-tasks/{review_task_id}/claim`
+    - `POST /api/v1/review-tasks/{review_task_id}/decisions`
+    - `GET/POST /api/v1/candidates/{candidate_kind}/{candidate_id}/corrections`
+    - `GET /api/v1/projects/{project_id}/audit-logs`
+    - `GET /api/v1/candidates/{candidate_kind}/{candidate_id}/audit-logs`
+    - `GET /api/v1/projects/{project_id}/publish-candidates`
+    - `GET/POST /api/v1/projects/{project_id}/publish-jobs`
+    - `GET /api/v1/publish-jobs/{publish_job_id}`
+    - `POST /api/v1/publish-jobs/{publish_job_id}/run`
+    - `GET /api/v1/projects/{project_id}/published-graph/versions`
+    - `GET /api/v1/projects/{project_id}/published-graph/current`
+    - `GET /api/v1/published-graph/versions/{version_id}`
+    - `GET /api/v1/published-graph/versions/{version_id}/entities`
+    - `GET /api/v1/published-graph/versions/{version_id}/relations`
+    - `GET /api/v1/projects/{project_id}/quality/summary`
+- 영향받는 역할:
+  - Frontend: consume actual OpenAPI artifact and use eligibility reason codes directly for disabled states.
+  - QA: can run `INT3-001`~`INT3-006` runtime checks against deterministic local APIs.
+  - PM: no new product decision required; implementation follows Wave 15 frozen literals.
+
+## Blocker
+- Product blocker 없음.
+- Environment blocker:
+  - Docker/PostgreSQL compose smoke remains not run in this environment; SQLite Alembic smoke passed.
+
+## 남은 TODO
+- `CandidateKind.PROPERTY_VALUE` is contract-forward-compatible but no runtime property-value candidate table exists in this thin slice. Requests for `PROPERTY_VALUE` return a supported error boundary instead of publishing.
+- Publish relation P0 currently expects relation endpoint candidate entities to be included and eligible in the same publish job. Broader cross-version/current-snapshot relation endpoint resolution can be hardened later.
+- Production RBAC is still out of MVP3 P0; `PUBLISH_PERMISSION_REQUIRED` is implemented as a reason-code path but the local dev user is publish-capable by default.
+- Neo4j adapter write remains P1/optional and was not implemented.
+
+## 다른 역할에 전달할 내용
+- PM:
+  - No new decision requested. Frozen Wave 15 enum/DTO policy was implemented as-is.
+- Backend:
+  - Keep `docs/api/openapi-mvp3-draft.json` as the MVP3 actual export target for this wave.
+  - Do not relax publish eligibility by checking scattered fields when `PublishEligibility.reasons[]` is available.
+  - Future property-value candidates need a real candidate table/service branch before enabling publish.
+- Frontend:
+  - Review inbox response is wrapped: `{ items, total_count, limit, offset }`.
+  - Publish queue can use `GET /api/v1/projects/{project_id}/publish-candidates` reason codes directly.
+  - Published graph explorer should call `/published-graph/current` or version-specific entity/relation endpoints; it should not read candidate APIs as published facts.
+  - Quality dashboard can rely on typed `candidate_counts`, `validation_counts`, `review_counts`, `publish_counts`, and `rates`.
+- QA:
+  - Focused test coverage exists in `apps/backend/tests/test_mvp3_api.py`.
+  - Positive publish cases covered: clean approved entity, modified relation, warning-with-reason entity.
+  - Negative publish cases covered: pending, rejected, needs-discussion, failed validation, missing evidence, broken evidence, warning without reason, already published duplicate.
+  - Audit and quality summary are queryable but intentionally thin deterministic implementations.
+
+## 총괄에게 요청하는 결정
+- 없음.
+
+## 현재 판정
+- PASS

@@ -1,8 +1,8 @@
 # MVP 2 Draft Backlog
 
-Status: `WAVE 13 UIUX PRODUCT POLISH READY / CONTRACT STILL DRAFT`
+Status: `WAVE 13 UIUX PRODUCT POLISH PASS / CONTRACT STILL DRAFT`
 
-This backlog is now in Wave 13 UI/UX product polish. The contract is still draft, but Wave 11 closed the MVP 2 local-demo product matrix as `PASS WITH EXCEPTION`, and Wave 12 Frontend productization passed after responsive recheck. Wave 13 must not expand runtime Backend/API scope unless a productization blocker clearly requires it; the focus is workflow stage clarity, candidate review readability, evidence-first inspection, copy consistency, and mobile product quality.
+This backlog is now past Wave 13 UI/UX product polish. The contract is still draft, but Wave 11 closed the MVP 2 local-demo product matrix as `PASS WITH EXCEPTION`, Wave 12 Frontend productization passed after responsive recheck, and Wave 13 product polish passed after copy follow-up. Wave 13 did not expand runtime Backend/API scope; it closed workflow stage clarity, candidate review readability, evidence-first inspection, copy consistency, and mobile product quality.
 
 ## MVP 2 Entry Gate
 
@@ -166,6 +166,24 @@ Wave 13은 총괄/PM/UIUX expert review(`docs/pm/WAVE13_UIUX_REVIEW.md`)를 기�
 - Main copy에 endpoint/debug/dev 중심 문구가 남지 않는다.
 - `390x900` viewport에서 document-level horizontal overflow가 없다.
 - Wave 11/12 closeout regression은 유지된다.
+
+### Wave 13 Result
+
+- Final status: `PASS`
+- QA report: `docs/handoffs/wave-013/QA_REPORT.md`
+- Frontend report: `docs/handoffs/wave-013/FRONTEND_REPORT.md`
+- `UX13-01` Workflow Stage Pattern: PASS
+- `UX13-02` Source Readiness and Next Action: PASS
+- `UX13-03` Candidate Review Workspace: PASS
+- `UX13-04` Evidence Reading Priority: PASS
+- `UX13-05` Copy and Terminology Cleanup: PASS after same-wave copy follow-up and QA recheck
+- `UX13-06` Visual Hierarchy and Rhythm: PASS
+- `UX13-07` Responsive Product Quality: PASS
+- `UX13-08` Regression Preservation: PASS
+- Fresh QA artifact: `/tmp/ontology-wave13-copy-qa-smoke`
+- Remaining P1 follow-up:
+  - Formalize browser smoke harness as Playwright Test suite.
+  - Re-run Docker Compose smoke when Docker CLI is available.
 
 ## Wave 6 Contract Decisions
 

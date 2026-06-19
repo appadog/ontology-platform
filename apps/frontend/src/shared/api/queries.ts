@@ -10,8 +10,10 @@ import {
   OntologyRelationCreateRequest,
   OntologyRelationUpdateRequest,
   OntologyVersionCreateRequest,
+  PublishCandidate,
   ProjectCreateRequest,
   ProjectUpdateRequest,
+  ReviewTaskListFilters,
   SourceUploadRequest,
 } from "./types";
 
@@ -386,5 +388,79 @@ export function useCandidateEvidence(evidenceId: string) {
     queryKey: ["candidate-evidence", evidenceId],
     queryFn: () => apiClient.getCandidateEvidence(evidenceId),
     enabled: Boolean(evidenceId),
+  });
+}
+
+export function useReviewTasks(projectId: string, filters: ReviewTaskListFilters = {}) {
+  return useQuery({
+    queryKey: ["projects", projectId, "review-tasks", filters],
+    queryFn: () => apiClient.listReviewTasks(projectId, filters),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useReviewTask(reviewTaskId: string) {
+  return useQuery({
+    queryKey: ["review-tasks", reviewTaskId],
+    queryFn: () => apiClient.getReviewTask(reviewTaskId),
+    enabled: Boolean(reviewTaskId),
+  });
+}
+
+export function usePublishCandidates(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "publish-candidates"],
+    queryFn: () => apiClient.listPublishCandidates(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function usePublishJobs(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "publish-jobs"],
+    queryFn: () => apiClient.listPublishJobs(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useCreatePublishJob(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (candidates: PublishCandidate[]) => apiClient.createPublishJob(projectId, candidates),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "publish-jobs"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "publish-candidates"] });
+    },
+  });
+}
+
+export function useRunPublishJob(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (publishJobId: string) => apiClient.runPublishJob(publishJobId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "publish-jobs"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "publish-candidates"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "published-graph", "current"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "quality-summary"] });
+    },
+  });
+}
+
+export function useCurrentPublishedGraph(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "published-graph", "current"],
+    queryFn: () => apiClient.getCurrentPublishedGraph(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useQualitySummary(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "quality-summary"],
+    queryFn: () => apiClient.getQualitySummary(projectId),
+    enabled: Boolean(projectId),
   });
 }

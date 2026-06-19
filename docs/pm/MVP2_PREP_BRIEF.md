@@ -2,9 +2,9 @@
 
 ## Status
 
-`WAVE 12 FRONTEND PRODUCTIZATION READY / CONTRACT STILL DRAFT`
+`MVP 2 CLOSED / MVP 3 ENTRY READY`
 
-MVP 2 설계 준비 문서다. Wave 5 기준으로 MVP 1 app acceptance는 통과했고 Docker Compose 검증은 환경 예외로 분리되었다. Wave 6~10에서 thin slice, contract sync, targeted hardening, broader local demo를 닫았다. Wave 11은 신규 기능 확장이 아니라 `docs/pm/MVP2_CLOSEOUT_CHECKLIST.md` 기준으로 MVP 2 closeout checklist, regression matrix, demo script, release-note exclusions, exception policy를 고정했다. Wave 12는 닫힌 MVP 2 API contract 위에서 Frontend productization/UI-UX maturity만 다룬다.
+MVP 2 설계 준비 문서다. Wave 5 기준으로 MVP 1 app acceptance는 통과했고 Docker Compose 검증은 환경 예외로 분리되었다. Wave 6~10에서 thin slice, contract sync, targeted hardening, broader local demo를 닫았다. Wave 11은 신규 기능 확장이 아니라 `docs/pm/MVP2_CLOSEOUT_CHECKLIST.md` 기준으로 MVP 2 closeout checklist, regression matrix, demo script, release-note exclusions, exception policy를 고정했다. Wave 12는 닫힌 MVP 2 API contract 위에서 Frontend productization/UI-UX maturity를 다뤘고, Wave 13은 UI/UX product polish를 PASS로 닫았다. MVP 2 product P0는 완료이며 MVP 3 entry 준비가 끝났다.
 
 ## MVP 2 Goal
 
