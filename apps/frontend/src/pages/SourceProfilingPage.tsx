@@ -16,7 +16,7 @@ export function SourceProfilingPage() {
   const runProfile = useRunSourceProfile(sourceId);
 
   if (isSourceLoading || isLoading) {
-    return <PageState kind="loading" title="Source profile을 불러오는 중" description="CSV/Excel column profile fixture 또는 API 응답을 준비하고 있습니다." />;
+    return <PageState kind="loading" title="Source profile을 불러오는 중" description="컬럼 프로파일 결과를 준비하고 있습니다." />;
   }
 
   if (isSourceError || !source || isError || !profile) {
@@ -24,7 +24,7 @@ export function SourceProfilingPage() {
       <PageState
         kind="error"
         title="Source profile을 불러오지 못했습니다"
-        description="MVP 2 profile endpoint 또는 deterministic fixture 상태를 확인하세요."
+        description="source detail에서 파일 상태를 확인한 뒤 다시 시도하세요."
         actionLabel="다시 시도"
         onAction={() => {
           void refetchSource();
@@ -58,10 +58,10 @@ export function SourceProfilingPage() {
           {source.file_name}
         </MetricCard>
         <MetricCard label="Sample Size" value={profile.sample_size}>
-          Profile fixture scope
+          Sample rows used
         </MetricCard>
         <MetricCard label="Columns" value={profile.columns.length}>
-          Inferred by `ProfileInferredType`
+          Inferred profile result
         </MetricCard>
         <MetricCard label="Created" value={formatDateTime(profile.created_at)}>
           Last profile result
@@ -79,9 +79,9 @@ export function SourceProfilingPage() {
         </HanaCard>
       )}
       {profile.columns.length === 0 ? (
-        <PageState kind="empty" title="Profile column이 없습니다" description="profile API가 column list를 반환하면 여기에 표시됩니다." />
+        <PageState kind="empty" title="Profile column이 없습니다" description="empty 또는 no-column source는 warning과 함께 빈 profile로 표시됩니다." />
       ) : (
-        <HanaCard title="Column profile" description="Backend actual API mode 전환 지점: GET/POST /api/v1/sources/{source_id}/profile">
+        <HanaCard title="Column profile" description="컬럼 타입, null 비율, 샘플 값을 확인합니다.">
           <TableWrap>
             <table>
               <thead>

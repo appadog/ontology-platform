@@ -10,6 +10,8 @@ Wave 8 opens only focused UI/contract expansion: retry-chain dedupe, selected/re
 
 Wave 9 is targeted hardening. It closes ontology class delete orphan behavior, delete confirmation copy/counts, and evidence direct/broken route fallback. It does not add external LLM providers, review/publish workflow, RAG, advanced PDF parsing, a new candidate detail endpoint, or new evidence status enum.
 
+Wave 10 broadens the local MVP 2 demo around source profile/parse edge cases, prompt/job selection, deterministic MockProvider fixtures, retry/failure, and candidate/evidence browsing. It does not add external LLM providers, review/publish workflow, RAG, advanced PDF parsing, a new candidate detail endpoint, or active prompt-version mutation API.
+
 ## MVP 2 API Entry Gate
 
 - MVP 1 `docs/api/openapi-mvp1.json` is fresh and remains the canonical MVP 1 artifact.
@@ -113,6 +115,25 @@ Wave 8 evidence highlight must use existing `CandidateEvidence` locators. Struct
 - Extraction input builders must use the same active-only invariant as graph reads. Deleted ontology classes/properties/relations and records connected to deleted classes must not be sent to candidate generation.
 - Delete confirmation counts are UI acceptance, not a new API response shape in Wave 9. Frontend may compute affected property count and inbound/outbound relation count from the pre-delete graph payload unless Backend already exposes equivalent data through an existing contract.
 - Evidence broken/direct route fallback uses existing `CandidateEvidence` fields and candidate `validation_codes[]`. Product-generated evidence links should preserve parent candidate/job context through route state, query, or contextual navigation. Arbitrary direct URLs without parent context must show a recovery action instead of requiring a reverse evidence lookup endpoint.
+
+### Wave 10 Local Demo Contract Notes
+
+- Fixture catalog is canonical for local demo and QA smoke:
+  - `default`: expected `ExtractionJob.status=SUCCESS`; generated entity/relation candidates must have `validation_status=PASSED` and at least one resolvable evidence reference.
+  - `partial_invalid`: expected `ExtractionJob.status=PARTIAL_FAILED`; output must include at least one valid candidate and at least one candidate with `validation_status=WARNING`, `validation_codes=["MISSING_EVIDENCE"]`, and `evidence_ids=[]`.
+  - `invalid_evidence_reference`: expected `ExtractionJob.status=PARTIAL_FAILED`; output must include at least one candidate with `validation_status=FAILED`, `validation_codes=["INVALID_EVIDENCE_REFERENCE"]`, and broken evidence/source segment reference.
+  - `missing`: expected `ExtractionJob.status=FAILED`, `error_code=MOCK_FIXTURE_NOT_FOUND`; candidate persistence is not required.
+- `invalid_evidence_reference` must include a broken reference with non-null `source_id` and non-null `source_segment_id` for deterministic traceability testing. The referenced segment may be missing, deleted, or source-mismatched. Frontend must still tolerate null/absent locators for legacy/direct-route fallback, but null-only broken fixture coverage is not sufficient for Wave 10 QA.
+- Prompt lifecycle remains selection-oriented. `PromptVersion.is_active` is displayed and may be used as a default selection hint, but Wave 10 does not add an active-version mutation endpoint or UI. Job creation continues to send explicit `prompt_version_id`.
+- Source profile edge cases:
+  - empty file/sheet returns `row_count=0`, `columns=[]`, and a warning;
+  - header-only sheet returns header columns with `ProfileInferredType.EMPTY`, `nullable=true`, `null_ratio=1`, `distinct_count_sampled=0`, and `sample_values=[]`;
+  - mixed-type columns use `ProfileInferredType.MIXED`;
+  - null/blank values affect `nullable` and `null_ratio`, while `sample_values[]` should prefer non-null examples.
+- Source parse/chunk edge cases:
+  - TXT parsing must produce deterministic segment order and stable `sequence`;
+  - PDF parsing remains best-effort local text extraction only. Scanned, encrypted, no-text, or unsupported PDFs return warnings with zero or partial segments rather than adding advanced PDF dependencies;
+  - repeated profile/parse for the same source must not create duplicate visible profile/segment rows.
 
 ## Key DTO Draft
 

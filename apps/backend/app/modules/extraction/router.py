@@ -12,6 +12,9 @@ from app.core.enums import (
     OntologyElementStatus,
     ProjectStatus,
     PublishStatus,
+    SourcePreviewStatus,
+    SourceSegmentType,
+    SourceStatus,
     ValidationStatus,
 )
 from app.core.errors import ApiErrorResponse, ApiException
@@ -567,6 +570,83 @@ def _reuse_or_create_evidence(
     return evidence
 
 
+def _create_invalid_reference_evidence(
+    db: Session,
+    *,
+    job: ExtractionJobModel,
+    source: SourceDataModel,
+    root_job_id: str,
+    client_evidence_id: str | None,
+    dedupe_result: dict,
+) -> CandidateEvidenceModel:
+    shadow_source = SourceDataModel(
+        project_id=source.project_id,
+        file_name=f"invalid-evidence-shadow-{job.id}.txt",
+        source_type=source.source_type,
+        mime_type=source.mime_type,
+        size_bytes=0,
+        status=SourceStatus.PARSED,
+        preview_status=SourcePreviewStatus.NOT_AVAILABLE,
+        storage_uri=f"local://invalid-evidence-reference/{job.id}",
+        created_by="mock-provider",
+        metadata_={"fixture_id": job.fixture_id, "hidden": True},
+        preview_columns=[],
+        preview_rows=[],
+        row_count_sampled=0,
+        total_row_count=0,
+        preview_warnings=[],
+        is_deleted=True,
+    )
+    db.add(shadow_source)
+    db.flush()
+    shadow_segment = SourceSegmentModel(
+        source_id=shadow_source.id,
+        segment_type=SourceSegmentType.CHUNK,
+        sequence=0,
+        text="Invalid evidence reference placeholder.",
+        metadata_={
+            "invalid_reference": "source_segment_source_mismatch",
+            "expected_source_id": source.id,
+        },
+    )
+    db.add(shadow_segment)
+    db.flush()
+    retry_chain_natural_key = _evidence_natural_key(
+        root_job_id,
+        job,
+        source,
+        shadow_segment,
+        client_evidence_id=client_evidence_id,
+    )
+    evidence = CandidateEvidenceModel(
+        source_id=source.id,
+        source_segment_id=shadow_segment.id,
+        source_type=source.source_type,
+        file_name=source.file_name,
+        sheet_name=source.sheet_name,
+        row_index=None,
+        column_name=None,
+        page_number=None,
+        section_title=None,
+        paragraph_id=None,
+        chunk_id=None,
+        evidence_text="Invalid evidence reference placeholder.",
+        start_offset=0,
+        end_offset=39,
+        metadata_={
+            "invalid_reference": "source_segment_source_mismatch",
+            "segment_source_id": shadow_source.id,
+            "expected_source_id": source.id,
+            "retry_chain_natural_key": retry_chain_natural_key,
+            "client_evidence_id": client_evidence_id,
+        },
+    )
+    db.add(evidence)
+    db.flush()
+    dedupe_result["created_evidence"] += 1
+    return evidence
+
+
 def _persist_candidates(
     db: Session,
     *,
@@ -611,7 +691,16 @@ def _persist_candidates(
         if payload.get("force_invalid_evidence_reference"):
             validation_status = ValidationStatus.FAILED
             validation_codes.append(CandidateValidationCode.INVALID_EVIDENCE_REFERENCE.value)
-            evidence_ids.append("invalid-evidence-reference")
+            evidence = _create_invalid_reference_evidence(
+                db,
+                job=job,
+                source=source,
+                root_job_id=dedupe_state["root_job_id"],
+                client_evidence_id=payload.get("client_evidence_id"),
+                dedupe_result=dedupe_result,
+            )
+            evidence_ids.append(evidence.id)
+            source_segment_id = evidence.source_segment_id
         elif payload.get("force_missing_evidence") or not text_segments:
             validation_status = ValidationStatus.WARNING
             validation_codes.append(CandidateValidationCode.MISSING_EVIDENCE.value)

@@ -68,7 +68,7 @@ export function EvidenceViewerPage() {
       <PageHeader title="Evidence Viewer" description="Candidate가 참조하는 원천 구간과 evidence text를 확인합니다.">
         <HanaBadge tone="neutral">{evidence.source_type}</HanaBadge>
       </PageHeader>
-      <HanaCard title="Evidence locator" description="Backend actual API mode 전환 지점: GET /api/v1/candidate-evidence/{evidence_id}">
+      <HanaCard title="Evidence locator" description="후보가 참조한 source 위치와 parent context입니다.">
         <KeyValueGrid>
           <dt>ID</dt>
           <dd>
@@ -117,10 +117,10 @@ export function EvidenceViewerPage() {
       <HanaCard title="Locator highlight" description="row/cell 또는 paragraph/chunk locator를 원천 근거 위치로 표시합니다.">
         {renderLocatorHighlight(evidence)}
       </HanaCard>
-      <HanaCard title="Evidence text" description="후속 화면은 이 text range를 candidate detail과 연결합니다.">
+      <HanaCard title="Evidence text" description="가능한 경우 참조 text range를 강조합니다.">
         <EvidenceText>{renderHighlightedText(evidence.evidence_text, evidence.start_offset, evidence.end_offset)}</EvidenceText>
       </HanaCard>
-      <HanaCard title="Metadata" description="Fixture와 actual API 모두 nullable locator field를 그대로 렌더링합니다.">
+      <HanaCard title="Metadata" description="추가 locator 정보가 있으면 함께 표시합니다.">
         {evidence.metadata ? <MetadataBlock>{JSON.stringify(evidence.metadata, null, 2)}</MetadataBlock> : <MutedText>No metadata</MutedText>}
       </HanaCard>
     </>

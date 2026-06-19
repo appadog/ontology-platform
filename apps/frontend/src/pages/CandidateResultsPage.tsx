@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { useParams } from "react-router-dom";
 import { useCandidateEntities, useCandidateEvidence, useCandidateRelations, useExtractionJob } from "../shared/api/queries";
-import { CandidateEntity, CandidateListFilters, CandidateRelation, ValidationStatus } from "../shared/api/types";
+import { CandidateEntity, CandidateListFilters, CandidateRelation, CandidateValidationCode, ValidationStatus } from "../shared/api/types";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaSelect, statusToTone } from "../shared/ui/hana";
@@ -13,14 +13,28 @@ import { DataLink, Field, FormGrid, InlineList, KeyValueGrid, Mono, MutedText, T
 
 type EvidenceFilter = "ALL" | "WITH_EVIDENCE" | "MISSING_EVIDENCE";
 type ValidationFilter = "ALL" | ValidationStatus;
+type CandidateKindFilter = "ALL" | "ENTITY" | "RELATION";
+type ValidationCodeFilter = "ALL" | CandidateValidationCode;
 type CandidateRow =
   | { key: string; kind: "Entity"; candidate: CandidateEntity }
   | { key: string; kind: "Relation"; candidate: CandidateRelation };
+
+const validationCodeOptions: CandidateValidationCode[] = [
+  "MISSING_EVIDENCE",
+  "INVALID_EVIDENCE_REFERENCE",
+  "SCHEMA_MISMATCH",
+  "ONTOLOGY_ELEMENT_NOT_FOUND",
+  "RELATION_ENDPOINT_MISSING",
+  "LOW_CONFIDENCE",
+  "PROVIDER_OUTPUT_INVALID",
+];
 
 export function CandidateResultsPage() {
   const { jobId = "" } = useParams();
   const [evidenceFilter, setEvidenceFilter] = useState<EvidenceFilter>("ALL");
   const [validationFilter, setValidationFilter] = useState<ValidationFilter>("ALL");
+  const [candidateKindFilter, setCandidateKindFilter] = useState<CandidateKindFilter>("ALL");
+  const [validationCodeFilter, setValidationCodeFilter] = useState<ValidationCodeFilter>("ALL");
   const [selectedCandidateKey, setSelectedCandidateKey] = useState("");
   const filters = useMemo<CandidateListFilters>(() => {
     return {
@@ -31,20 +45,28 @@ export function CandidateResultsPage() {
   const jobQuery = useExtractionJob(jobId);
   const entitiesQuery = useCandidateEntities(jobId, filters);
   const relationsQuery = useCandidateRelations(jobId, filters);
+  const filteredEntities = useMemo(
+    () => filterCandidatesByValidationCode(entitiesQuery.data ?? [], validationCodeFilter),
+    [entitiesQuery.data, validationCodeFilter],
+  );
+  const filteredRelations = useMemo(
+    () => filterCandidatesByValidationCode(relationsQuery.data ?? [], validationCodeFilter),
+    [relationsQuery.data, validationCodeFilter],
+  );
   const candidateRows = useMemo<CandidateRow[]>(() => {
-    const entityRows = (entitiesQuery.data ?? []).map((candidate) => ({
+    const entityRows = candidateKindFilter === "RELATION" ? [] : filteredEntities.map((candidate) => ({
       key: `entity:${candidate.id}`,
       kind: "Entity" as const,
       candidate,
     }));
-    const relationRows = (relationsQuery.data ?? []).map((candidate) => ({
+    const relationRows = candidateKindFilter === "ENTITY" ? [] : filteredRelations.map((candidate) => ({
       key: `relation:${candidate.id}`,
       kind: "Relation" as const,
       candidate,
     }));
 
     return [...entityRows, ...relationRows];
-  }, [entitiesQuery.data, relationsQuery.data]);
+  }, [candidateKindFilter, filteredEntities, filteredRelations]);
   const selectedCandidateRow = candidateRows.find((row) => row.key === selectedCandidateKey) ?? candidateRows[0];
   const selectedEvidenceId = selectedCandidateRow?.candidate.evidence_ids[0] ?? "";
   const evidenceQuery = useCandidateEvidence(selectedEvidenceId);
@@ -69,7 +91,7 @@ export function CandidateResultsPage() {
       <PageState
         kind="error"
         title="Candidate results를 불러오지 못했습니다"
-        description="MVP 2 candidate result endpoint 또는 deterministic fixture 상태를 확인하세요."
+        description="job 상태를 확인한 뒤 후보 결과를 다시 불러오세요."
         actionLabel="다시 시도"
         onAction={() => {
           void jobQuery.refetch();
@@ -80,7 +102,7 @@ export function CandidateResultsPage() {
     );
   }
 
-  const candidates = [...entitiesQuery.data, ...relationsQuery.data];
+  const candidates = candidateRows.map((row) => row.candidate);
   const warningCount = candidates.filter((candidate) => candidate.validation_status === "WARNING").length;
   const failedCount = candidates.filter((candidate) => candidate.validation_status === "FAILED").length;
   const missingEvidenceCount = candidates.filter((candidate) => candidate.evidence_ids.length === 0).length;
@@ -95,28 +117,36 @@ export function CandidateResultsPage() {
           { label: "Candidates" },
         ]}
       />
-      <PageHeader title="Candidate Results" description="MockProvider가 생성한 entity/relation candidate와 validation, evidence reference를 확인합니다.">
+      <PageHeader title="Candidate Results" description="Entity, relation candidate와 evidence 상태를 확인합니다.">
         <HanaBadge tone={statusToTone(jobQuery.data.status)}>{jobQuery.data.status}</HanaBadge>
       </PageHeader>
       <MetricGrid>
-        <MetricCard label="Entities" value={entitiesQuery.data.length}>
+        <MetricCard label="Entities" value={filteredEntities.length}>
           Candidate entity rows
         </MetricCard>
-        <MetricCard label="Relations" value={relationsQuery.data.length}>
+        <MetricCard label="Relations" value={filteredRelations.length}>
           Candidate relation rows
         </MetricCard>
         <MetricCard label="Warnings / Failed" value={`${warningCount} / ${failedCount}`}>
           Evidence and schema validation
         </MetricCard>
         <MetricCard label="Missing Evidence" value={missingEvidenceCount}>
-          Debug-only candidates stay NOT_PUBLISHED
+          Warning candidates without evidence
         </MetricCard>
         <MetricCard label="Retry Dedupe" value={jobQuery.data.retry_of_job_id ? "Retry" : "Root"}>
-          List rows are chain-deduped by backend natural key
+          Retry results reuse duplicate candidates
         </MetricCard>
       </MetricGrid>
-      <HanaCard title="Filters" description="Backend actual API mode 전환 지점: GET /api/v1/extraction-jobs/{job_id}/candidates/entities|relations query filters">
+      <HanaCard title="Filters" description="Kind, validation, evidence 기준으로 후보를 좁혀 봅니다.">
         <FormGrid>
+          <Field>
+            <span>Kind</span>
+            <HanaSelect value={candidateKindFilter} onChange={(event) => setCandidateKindFilter(event.target.value as CandidateKindFilter)}>
+              <option value="ALL">All</option>
+              <option value="ENTITY">Entities</option>
+              <option value="RELATION">Relations</option>
+            </HanaSelect>
+          </Field>
           <Field>
             <span>Evidence</span>
             <HanaSelect value={evidenceFilter} onChange={(event) => setEvidenceFilter(event.target.value as EvidenceFilter)}>
@@ -135,14 +165,26 @@ export function CandidateResultsPage() {
               <option value="FAILED">FAILED</option>
             </HanaSelect>
           </Field>
+          <Field>
+            <span>Validation code</span>
+            <HanaSelect value={validationCodeFilter} onChange={(event) => setValidationCodeFilter(event.target.value as ValidationCodeFilter)}>
+              <option value="ALL">All</option>
+              {validationCodeOptions.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </HanaSelect>
+          </Field>
         </FormGrid>
       </HanaCard>
       {candidates.length === 0 ? (
-        <PageState kind="empty" title="조건에 맞는 candidate가 없습니다" description="filter를 조정하거나 extraction job 실행 후 다시 확인하세요." />
+        <PageState kind="empty" title="조건에 맞는 candidate가 없습니다" description="filter를 조정하거나 job monitor에서 실행 상태를 확인하세요." />
       ) : (
         <>
-          <HanaCard title="Entity candidates" description="Evidence 없는 entity는 WARNING/MISSING_EVIDENCE 상태로만 노출합니다.">
-            {entitiesQuery.data.length === 0 ? (
+          {candidateKindFilter !== "RELATION" && (
+          <HanaCard title="Entity candidates" description="Evidence 없는 entity는 warning 상태로 구분됩니다.">
+            {filteredEntities.length === 0 ? (
               <PageState kind="empty" title="Entity candidate가 없습니다" description="현재 filter 조건에 맞는 entity candidate가 없습니다." />
             ) : (
               <TableWrap>
@@ -159,7 +201,7 @@ export function CandidateResultsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {entitiesQuery.data.map((candidate) => (
+                    {filteredEntities.map((candidate) => (
                       <tr key={candidate.id}>
                         <td>
                           <CandidateName>
@@ -196,8 +238,10 @@ export function CandidateResultsPage() {
               </TableWrap>
             )}
           </HanaCard>
-          <HanaCard title="Relation candidates" description="relation endpoint와 evidence reference는 publish graph와 분리된 candidate layer에서만 표시합니다.">
-            {relationsQuery.data.length === 0 ? (
+          )}
+          {candidateKindFilter !== "ENTITY" && (
+          <HanaCard title="Relation candidates" description="Relation 후보는 entity 후보와 분리해서 확인합니다.">
+            {filteredRelations.length === 0 ? (
               <PageState kind="empty" title="Relation candidate가 없습니다" description="현재 filter 조건에 맞는 relation candidate가 없습니다." />
             ) : (
               <TableWrap>
@@ -205,7 +249,7 @@ export function CandidateResultsPage() {
                   <thead>
                     <tr>
                       <th>Relation</th>
-                      <th>Endpoints</th>
+                      <th>Members</th>
                       <th>Confidence</th>
                       <th>Validation</th>
                       <th>Evidence</th>
@@ -214,7 +258,7 @@ export function CandidateResultsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {relationsQuery.data.map((candidate) => (
+                    {filteredRelations.map((candidate) => (
                       <tr key={candidate.id}>
                         <td>
                           <Mono>{formatNullable(candidate.relation_id)}</Mono>
@@ -251,8 +295,9 @@ export function CandidateResultsPage() {
               </TableWrap>
             )}
           </HanaCard>
+          )}
           {selectedCandidateRow && (
-            <HanaCard title="Candidate detail" description="Candidate row DTO와 첫 evidence detail을 조합해 표시합니다.">
+            <HanaCard title="Candidate detail" description="선택한 후보의 상태와 evidence를 확인합니다.">
               <KeyValueGrid>
                 <dt>Type</dt>
                 <dd>{selectedCandidateRow.kind}</dd>
@@ -353,6 +398,17 @@ function formatProperties(values: Record<string, unknown>) {
   return entries.map(([key, value]) => `${key}: ${value ?? "-"}`).join(" · ");
 }
 
+function filterCandidatesByValidationCode<T extends CandidateEntity | CandidateRelation>(
+  candidates: T[],
+  validationCodeFilter: ValidationCodeFilter,
+) {
+  if (validationCodeFilter === "ALL") {
+    return candidates;
+  }
+
+  return candidates.filter((candidate) => candidate.validation_codes.includes(validationCodeFilter));
+}
+
 function formatNullable(value: string | null) {
   return value ?? "-";
 }
@@ -367,7 +423,7 @@ function renderEvidenceLinks(
     return (
       <InlineList>
         <HanaBadge tone="warning">MISSING_EVIDENCE</HanaBadge>
-        <MutedText>debug-only</MutedText>
+        <MutedText>No evidence</MutedText>
       </InlineList>
     );
   }

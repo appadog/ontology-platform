@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { BarChart3, FileSearch, FileText, Sparkles } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
 import { useSource, useSourcePreview } from "../shared/api/queries";
@@ -15,7 +15,7 @@ export function SourceDetailPage() {
   const { data: preview, isLoading: isPreviewLoading, isError: isPreviewError } = useSourcePreview(sourceId, shouldLoadPreview);
 
   if (isLoading || (shouldLoadPreview && isPreviewLoading)) {
-    return <PageState kind="loading" title="Source preview를 불러오는 중" description="파일 메타데이터와 CSV/Excel sample row를 준비하고 있습니다." />;
+    return <PageState kind="loading" title="Source preview를 불러오는 중" description="파일 메타데이터와 샘플 row를 준비하고 있습니다." />;
   }
 
   if (isError || !source || (shouldLoadPreview && (isPreviewError || !preview))) {
@@ -23,7 +23,7 @@ export function SourceDetailPage() {
       <PageState
         kind="error"
         title="Source 상세를 불러오지 못했습니다"
-        description="source_id가 fixture에 없거나 preview endpoint boundary에서 실패했습니다."
+        description="source 정보를 다시 불러오거나 목록에서 source를 선택하세요."
         actionLabel="다시 시도"
         onAction={() => void refetch()}
       />
@@ -39,7 +39,7 @@ export function SourceDetailPage() {
           { label: source.file_name },
         ]}
       />
-      <PageHeader title={source.file_name} description="업로드 파일의 메타데이터와 샘플 preview를 확인합니다.">
+      <PageHeader title={source.file_name} description="업로드 파일 상태를 확인하고 다음 extraction 준비 단계로 이동합니다.">
         <HanaBadge tone={statusToTone(source.status)}>{source.status}</HanaBadge>
         <HanaBadge tone={statusToTone(source.preview_status)}>{source.preview_status}</HanaBadge>
         <HeaderLink to={`/projects/${source.project_id}/sources/${source.id}/profile`}>Profile</HeaderLink>
@@ -76,22 +76,50 @@ export function SourceDetailPage() {
           </MetaList>
         </HanaCard>
       </DetailGrid>
+      <HanaCard title="Next steps" description="Source를 확인한 뒤 profile, chunk, extraction job으로 이어갑니다.">
+        <StepGrid>
+          <StepLink to={`/projects/${source.project_id}/sources/${source.id}/profile`}>
+            <BarChart3 aria-hidden="true" />
+            <strong>Profile</strong>
+            <span>컬럼 타입과 샘플 값을 확인합니다.</span>
+            <HanaBadge tone={source.status === "PROFILED" || source.status === "EXTRACTION_READY" ? "success" : "progress"}>
+              {source.status === "PROFILED" || source.status === "EXTRACTION_READY" ? "READY" : "RUN"}
+            </HanaBadge>
+          </StepLink>
+          <StepLink to={`/projects/${source.project_id}/sources/${source.id}/chunks`}>
+            <FileSearch aria-hidden="true" />
+            <strong>Chunks</strong>
+            <span>row, cell, paragraph, chunk evidence anchor를 확인합니다.</span>
+            <HanaBadge tone={source.status === "PARSED" || source.status === "EXTRACTION_READY" ? "success" : "progress"}>
+              {source.status === "PARSED" || source.status === "EXTRACTION_READY" ? "READY" : "PARSE"}
+            </HanaBadge>
+          </StepLink>
+          <StepLink to={`/projects/${source.project_id}/extraction/new`}>
+            <Sparkles aria-hidden="true" />
+            <strong>Create job</strong>
+            <span>source와 ontology, prompt version을 묶어 candidate를 생성합니다.</span>
+            <HanaBadge tone={source.status === "EXTRACTION_READY" ? "success" : "neutral"}>
+              {source.status === "EXTRACTION_READY" ? "READY" : "SELECT"}
+            </HanaBadge>
+          </StepLink>
+        </StepGrid>
+      </HanaCard>
       {source.preview_status === "NOT_AVAILABLE" ? (
         <PreviewNotice>
           <FileText aria-hidden="true" />
           <div>
             <strong>Preview not available</strong>
-            <span>TXT/PDF source는 MVP 1에서 metadata만 제공하며 SourcePreviewStatus=NOT_AVAILABLE로 표시합니다.</span>
+            <span>문서형 source는 Chunks 화면에서 parse 결과를 확인합니다.</span>
           </div>
         </PreviewNotice>
       ) : source.preview_status === "PENDING" ? (
-        <PageState kind="empty" title="Preview 준비 중" description="CSV/Excel preview가 생성되면 SourcePreviewStatus=READY 상태로 table이 표시됩니다." />
+        <PageState kind="empty" title="Preview 준비 중" description="샘플 row가 준비되면 table이 표시됩니다." />
       ) : source.preview_status === "FAILED" ? (
-        <PageState kind="error" title="Preview 생성 실패" description="Backend preview job 또는 file parsing 상태를 확인하세요." />
+        <PageState kind="error" title="Preview 생성 실패" description="파일 상태를 확인한 뒤 다시 업로드하거나 profile을 실행하세요." />
       ) : !preview || preview.rows.length === 0 ? (
-        <PageState kind="empty" title="Preview row가 없습니다" description="CSV/Excel preview API가 sample rows를 반환하면 여기에 표시됩니다." />
+        <PageState kind="empty" title="Preview row가 없습니다" description="Profile 화면에서 컬럼 결과와 warning을 확인하세요." />
       ) : (
-        <HanaCard title="CSV/Excel sample rows" description="MVP 1에서는 sample preview만 표시하고 profiling 상세는 후속 작업으로 둡니다.">
+        <HanaCard title="CSV/Excel sample rows" description="샘플 row로 파일 구조를 빠르게 확인합니다.">
           <ColumnList>
             {preview.columns.map((column) => (
               <ColumnPill key={column.name}>
@@ -142,6 +170,48 @@ const DetailGrid = styled.div`
 
   @media (max-width: 880px) {
     grid-template-columns: 1fr;
+  }
+`;
+
+const StepGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.lg};
+
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StepLink = styled(Link)`
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  align-items: center;
+  min-height: 96px;
+  padding: ${({ theme }) => theme.spacing.md};
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  color: ${({ theme }) => theme.color.text};
+
+  svg {
+    width: 20px;
+    height: 20px;
+    color: ${({ theme }) => theme.color.primary};
+  }
+
+  strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  span:not([data-tone]) {
+    grid-column: 2 / -1;
+    color: ${({ theme }) => theme.color.textMuted};
+    font-size: ${({ theme }) => theme.typography.fontSize.sm};
+    line-height: ${({ theme }) => theme.typography.lineHeight.normal};
   }
 `;
 

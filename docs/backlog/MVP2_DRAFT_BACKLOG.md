@@ -290,6 +290,46 @@ Wave 10은 MVP 2를 실제 로컬 데모 흐름으로 넓힌다. 목표는 sourc
   - Wave 10은 targeted smoke가 아니라 broader MVP 2 local demo regression이다.
   - Wave 10 종료 시 다음 단계가 MVP 2 closeout인지, 추가 hardening인지 판정한다.
 
+### Wave 10 Local Demo Acceptance Decisions
+
+- End-to-end local demo path:
+  1. 사용자는 project와 draft ontology version을 선택한 뒤 source를 업로드한다.
+  2. CSV/Excel source는 profile을 실행하고 `SourceProfile.columns[]`, `inferred_type`, `nullable`, `null_ratio`, `distinct_count_sampled`, `sample_values[]`, `warnings[]`를 확인한다.
+  3. TXT/PDF source는 parse/chunk를 실행하고 `SourceParseResponse.segment_count`, `segment_types[]`, `warnings[]`와 `GET /api/v1/sources/{source_id}/segments` 결과를 확인한다.
+  4. 사용자는 prompt template과 prompt version을 선택한다. Active version은 기본 선택 또는 배지로 표시한다.
+  5. 사용자는 source, ontology version, prompt version, provider `mock`, fixture id로 extraction job을 생성하고 실행한다.
+  6. Job monitor는 `PENDING`, `QUEUED`, `RUNNING`, `SUCCESS`, `PARTIAL_FAILED`, `FAILED`, retry 상태, failure reason, masked model run metadata를 보여준다.
+  7. 사용자는 candidate entity/relation 결과를 validation status/code, evidence presence, entity/relation kind 기준으로 확인한다.
+  8. Normal/missing/broken evidence route와 fallback은 source/job/candidate context를 잃지 않아야 한다.
+- Fixture catalog:
+  - `default`: 정상 local demo path. Job은 `SUCCESS`, candidate entity/relation은 `validation_status=PASSED`, 정상 `CandidateEvidence`를 1개 이상 가진다.
+  - `partial_invalid`: partial failure path. Job은 `PARTIAL_FAILED`, 유효 candidate와 `validation_status=WARNING`, `validation_codes=["MISSING_EVIDENCE"]`, `evidence_ids=[]` candidate를 함께 생성한다.
+  - `invalid_evidence_reference`: broken evidence path. Job은 `PARTIAL_FAILED`, 최소 1개 candidate는 `validation_status=FAILED`, `validation_codes=["INVALID_EVIDENCE_REFERENCE"]`를 가진다.
+  - `missing`: missing fixture path. Job은 `FAILED`, `error_code=MOCK_FIXTURE_NOT_FOUND`를 가진다. Candidate 생성은 요구하지 않는다.
+- Broken evidence fixture decision:
+  - `invalid_evidence_reference` catalog fixture는 QA가 traceability fallback을 안정적으로 검증할 수 있도록 broken reference에 `source_id`와 `source_segment_id`를 non-null로 제공해야 한다.
+  - 해당 `source_segment_id`는 syntactically valid id이되, resolve되지 않거나 source와 mismatch되는 invalid reference여야 한다.
+  - UI placeholder fallback은 여전히 필수다. Legacy/direct route, absent evidence row, null locator를 만나도 화면은 crash하지 않고 context-unavailable recovery를 제공한다.
+- Prompt lifecycle:
+  - Wave 10은 active version 표시와 prompt version 선택까지만 연다.
+  - 별도 active version 변경 API/UI, prompt publish workflow, prompt approval workflow는 열지 않는다.
+  - Job creation은 명시적 `prompt_version_id`를 사용한다. Active version은 기본 선택값 또는 표시 상태이며 API DTO에 `active_version_id`를 추가하지 않는다.
+- Source profile acceptance:
+  - Empty file/sheet는 crash하지 않고 `row_count=0`, `columns=[]`, warning을 반환한다.
+  - Header-only sheet는 `row_count=0`, header 기반 columns를 반환하며 해당 columns는 `inferred_type=EMPTY`, `nullable=true`, `null_ratio=1`, `distinct_count_sampled=0`, `sample_values=[]`를 사용한다.
+  - Small table은 실제 row 수보다 큰 sample을 요구하지 않는다. `sample_size`와 `sample_values[]`는 사용 가능한 데이터 안에서 결정된다.
+  - Mixed type column은 `ProfileInferredType.MIXED`를 사용한다.
+  - Null/blank 값은 `nullable`과 `null_ratio`에 반영한다. `sample_values[]`는 non-null 예시를 우선 표시하고 null 자체의 존재는 null ratio/status로 보여준다.
+- Source parse/chunk acceptance:
+  - TXT parse는 deterministic segment order와 stable `sequence`를 유지한다.
+  - PDF parse는 local best-effort text extraction까지만 다룬다. Scanned/encrypted/no-text/unsupported PDF는 warning과 zero 또는 partial segment result로 처리하며 advanced PDF parsing dependency는 열지 않는다.
+  - Profile/parse 재실행은 visible result 기준으로 idempotent해야 한다. 같은 source를 반복 profile/parse해도 duplicate segment/list row가 보이면 FAIL이다.
+- Frontend visible copy:
+  - 사용자 화면에는 endpoint/debug 설명을 최소화한다.
+  - 흐름은 CTA, status badge, breadcrumb/compact path, row action, empty/error state로 전달한다.
+  - Fixture 선택은 QA 재현성을 위해 `default`, `partial_invalid`, `invalid_evidence_reference`, `missing` id를 드러낼 수 있지만, 사용자가 보는 primary label은 성공/부분 오류/broken evidence/missing fixture 같은 결과 중심이어야 한다.
+  - Error code와 raw ids는 상세/개발 정보 영역에 낮춰 표시한다.
+
 ## Wave 7 Contract Sync Decisions
 
 Wave 7은 기능 확장이 아니라 FE/OpenAPI contract sync closeout wave다. Candidate detail drawer, evidence highlight, 고급 PDF parsing, 외부 LLM provider, review/publish/RAG 범위는 열지 않는다.

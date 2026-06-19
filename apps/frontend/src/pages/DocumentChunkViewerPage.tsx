@@ -22,7 +22,7 @@ export function DocumentChunkViewerPage() {
   );
 
   if (isSourceLoading || isLoading) {
-    return <PageState kind="loading" title="Document chunks를 불러오는 중" description="parse/chunk endpoint boundary와 segment fixture를 조회하고 있습니다." />;
+    return <PageState kind="loading" title="Document chunks를 불러오는 중" description="source segment를 준비하고 있습니다." />;
   }
 
   if (isSourceError || !source || isError || !segments) {
@@ -30,7 +30,7 @@ export function DocumentChunkViewerPage() {
       <PageState
         kind="error"
         title="Document chunks를 불러오지 못했습니다"
-        description="MVP 2 parse/segments endpoint 또는 fixture 상태를 확인하세요."
+        description="source detail에서 파일 상태를 확인한 뒤 다시 시도하세요."
         actionLabel="다시 시도"
         onAction={() => {
           void refetchSource();
@@ -50,15 +50,15 @@ export function DocumentChunkViewerPage() {
           { label: "Chunks" },
         ]}
       />
-      <PageHeader title="Document Chunks" description="TXT/PDF parse 결과와 CSV/Excel row/cell segment를 source evidence anchor로 확인합니다.">
-        <HanaBadge tone="muted">MVP2 THIN</HanaBadge>
+      <PageHeader title="Document Chunks" description="Source에서 evidence가 연결될 row, cell, paragraph, chunk를 확인합니다.">
+        <HanaBadge tone="muted">Evidence anchors</HanaBadge>
         <HanaButton type="button" onClick={() => parseSource.mutate()} disabled={parseSource.isPending}>
           <Play aria-hidden="true" />
           {parseSource.isPending ? "Parsing" : "Parse source"}
         </HanaButton>
       </PageHeader>
       {parseSource.data && (
-        <HanaCard title="Parse summary" description="POST /api/v1/sources/{source_id}/parse returns SourceParseResponse. Segment rows come from GET /segments.">
+        <HanaCard title="Parse summary" description="마지막 parse 결과와 warning을 확인합니다.">
           <KeyValueGrid>
             <dt>Source</dt>
             <dd>
@@ -92,7 +92,7 @@ export function DocumentChunkViewerPage() {
               ))}
             </SegmentList>
           </HanaCard>
-          <HanaCard title="Selected segment" description="Backend actual API mode 전환 지점: GET/POST /api/v1/sources/{source_id}/segments">
+          <HanaCard title="Selected segment" description="선택한 source 구간의 locator와 text를 확인합니다.">
             {selectedSegment ? (
               <>
                 <KeyValueGrid>

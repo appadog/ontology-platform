@@ -74,6 +74,10 @@ const mockPreviewStore: Record<string, SourcePreview> = { ...mockSourcePreviews 
 const mockProfileStore: Record<string, SourceProfile> = { ...mockSourceProfiles };
 const mockSegmentStore: Record<string, SourceSegment[]> = { ...mockSourceSegments };
 let mockExtractionJobStore: ExtractionJob[] = [...mockExtractionJobs];
+let mockModelRunStore: ModelRun[] = [...mockModelRuns];
+let mockCandidateEntityStore: CandidateEntity[] = [...mockCandidateEntities];
+let mockCandidateRelationStore: CandidateRelation[] = [...mockCandidateRelations];
+let mockCandidateEvidenceStore: Record<string, CandidateEvidence> = { ...mockCandidateEvidences };
 
 async function delay<T>(value: T): Promise<T> {
   await new Promise((resolve) => window.setTimeout(resolve, 180));
@@ -303,7 +307,274 @@ function filterCandidatesByJob<T extends CandidateEntity | CandidateRelation>(
 function buildMockJobDetail(job: ExtractionJob): ExtractionJobDetail {
   return {
     ...job,
-    model_runs: mockModelRuns.filter((run) => run.extraction_job_id === job.id),
+    model_runs: mockModelRunStore.filter((run) => run.extraction_job_id === job.id),
+  };
+}
+
+function pickEvidenceSourceSegment(sourceId: string): SourceSegment | undefined {
+  return mockSegmentStore[sourceId]?.[0];
+}
+
+function findMockSource(sourceId: string): SourceData | undefined {
+  return mockSourceStore.find((source) => source.id === sourceId);
+}
+
+function getPrimaryClassId(versionId: string) {
+  const graph = mockOntologyGraphStore[versionId];
+  return graph?.classes?.[0]?.id ?? graph?.nodes[0]?.class_id ?? null;
+}
+
+function getSecondaryClassId(versionId: string) {
+  const graph = mockOntologyGraphStore[versionId];
+  return graph?.classes?.[1]?.id ?? graph?.nodes[1]?.class_id ?? getPrimaryClassId(versionId);
+}
+
+function getPrimaryRelationId(versionId: string) {
+  const graph = mockOntologyGraphStore[versionId];
+  return graph?.relations?.[0]?.id ?? graph?.edges[0]?.relation_id ?? null;
+}
+
+function buildMockEvidence(job: ExtractionJob, suffix: string, evidenceText: string, now: string): CandidateEvidence {
+  const source = findMockSource(job.source_id);
+  const segment = pickEvidenceSourceSegment(job.source_id);
+  const sourceType = source?.source_type ?? "CSV";
+  const isStructured = sourceType === "CSV" || sourceType === "EXCEL";
+
+  return {
+    id: `evidence-${job.id}-${suffix}`,
+    source_id: job.source_id,
+    source_segment_id: segment?.id ?? `segment-${job.source_id}-${suffix}`,
+    source_type: sourceType,
+    file_name: source?.file_name ?? "mock-source.csv",
+    sheet_name: isStructured ? "Sheet1" : null,
+    row_index: isStructured ? segment?.row_index ?? 1 : null,
+    column_name: isStructured ? segment?.column_name ?? "name" : null,
+    page_number: isStructured ? null : segment?.page_number ?? 1,
+    section_title: isStructured ? null : segment?.section_title ?? "Mock Section",
+    paragraph_id: isStructured ? null : segment?.paragraph_index ?? 1,
+    chunk_id: isStructured ? null : segment?.chunk_index ?? 1,
+    evidence_text: evidenceText,
+    start_offset: isStructured ? null : 0,
+    end_offset: isStructured ? null : evidenceText.length,
+    metadata: {
+      extraction_job_id: job.id,
+      fixture_id: job.fixture_id ?? "default",
+      locator: isStructured ? "Sheet1!A2" : "paragraph 1",
+      segment_type: segment?.segment_type ?? (isStructured ? "ROW" : "CHUNK"),
+    },
+    created_at: now,
+  };
+}
+
+function removeMockArtifactsForJob(jobId: string) {
+  mockModelRunStore = mockModelRunStore.filter((run) => run.extraction_job_id !== jobId);
+  mockCandidateEntityStore = mockCandidateEntityStore.filter((candidate) => candidate.extraction_job_id !== jobId);
+  mockCandidateRelationStore = mockCandidateRelationStore.filter((candidate) => candidate.extraction_job_id !== jobId);
+  mockCandidateEvidenceStore = Object.fromEntries(
+    Object.entries(mockCandidateEvidenceStore).filter(([, evidence]) => evidence.metadata?.extraction_job_id !== jobId),
+  );
+}
+
+function buildDedupeSummary(job: ExtractionJob, createdCandidateCount: number) {
+  if (!job.retry_of_job_id) {
+    return {
+      retry_of_job_id: null,
+      created_candidates: createdCandidateCount,
+      reused_candidates: 0,
+      skipped_duplicates: 0,
+    };
+  }
+
+  return {
+    retry_of_job_id: job.retry_of_job_id,
+    created_candidates: 0,
+    reused_candidates: createdCandidateCount,
+    skipped_duplicates: createdCandidateCount,
+  };
+}
+
+function createMockModelRun(
+  job: ExtractionJob,
+  now: string,
+  status: ModelRun["status"],
+  candidateCount: number,
+  errorCode: string | null,
+): ModelRun {
+  return {
+    id: `model-run-${job.id}`,
+    extraction_job_id: job.id,
+    provider: job.provider,
+    model_name: job.model_name,
+    prompt_version_id: job.prompt_version_id,
+    ontology_version_id: job.ontology_version_id,
+    input_token_count: status === "FAILED" ? 0 : 256,
+    output_token_count: status === "FAILED" ? 0 : 128,
+    cost_estimate: 0,
+    raw_request: {
+      source_id: job.source_id,
+      ontology_version_id: job.ontology_version_id,
+      prompt_version_id: job.prompt_version_id,
+      fixture_id: job.fixture_id ?? "default",
+      masking_version: "mock-v1",
+    },
+    raw_response: {
+      fixture_id: job.fixture_id ?? "default",
+      candidate_count: candidateCount,
+      error_code: errorCode,
+      dedupe: buildDedupeSummary(job, candidateCount),
+    },
+    masking_version: "mock-v1",
+    redaction_summary: { redacted_keys: [], truncated_fields: ["segments.text"] },
+    status,
+    started_at: now,
+    ended_at: now,
+  };
+}
+
+function buildMockRunArtifacts(job: ExtractionJob, now: string) {
+  const fixtureId = job.fixture_id ?? "default";
+  const primaryEvidence = buildMockEvidence(job, "primary", "정보보호 기본 정책", now);
+  const secondaryEvidence = buildMockEvidence(job, "secondary", "Security", now);
+  const modelRunId = `model-run-${job.id}`;
+  const primaryClassId = getPrimaryClassId(job.ontology_version_id);
+  const secondaryClassId = getSecondaryClassId(job.ontology_version_id);
+  const relationId = getPrimaryRelationId(job.ontology_version_id);
+  const baseEntity = {
+    extraction_job_id: job.id,
+    project_id: job.project_id,
+    source_id: job.source_id,
+    ontology_version_id: job.ontology_version_id,
+    model_run_id: modelRunId,
+    prompt_version_id: job.prompt_version_id,
+    review_status: "PENDING" as const,
+    publish_status: "NOT_PUBLISHED" as const,
+    created_at: now,
+  };
+
+  if (fixtureId === "missing") {
+    return {
+      status: "FAILED" as const,
+      progress: 100,
+      error_code: "MOCK_FIXTURE_NOT_FOUND",
+      error_message: "Selected fixture is not available.",
+      modelRun: createMockModelRun(job, now, "FAILED", 0, "MOCK_FIXTURE_NOT_FOUND"),
+      evidences: {},
+      entities: [],
+      relations: [],
+    };
+  }
+
+  const primaryEntity: CandidateEntity = {
+    ...baseEntity,
+    id: `candidate-entity-${job.id}-primary`,
+    source_segment_id: primaryEvidence.source_segment_id,
+    class_id: primaryClassId,
+    entity_name: "정보보호 기본 정책",
+    normalized_name: "information-security-policy",
+    property_values: { policyCode: "POL-001", sourceFixture: fixtureId },
+    confidence: 0.94,
+    evidence_ids: [primaryEvidence.id],
+    raw_payload: { client_candidate_id: `entity-primary-${fixtureId}` },
+    validation_status: "PASSED",
+    validation_codes: [],
+  };
+
+  const secondaryEntity: CandidateEntity = {
+    ...baseEntity,
+    id: `candidate-entity-${job.id}-secondary`,
+    source_segment_id: secondaryEvidence.source_segment_id,
+    class_id: secondaryClassId,
+    entity_name: "Security",
+    normalized_name: "security",
+    property_values: { ownerName: "Security" },
+    confidence: 0.91,
+    evidence_ids: [secondaryEvidence.id],
+    raw_payload: { client_candidate_id: `entity-secondary-${fixtureId}` },
+    validation_status: "PASSED",
+    validation_codes: [],
+  };
+
+  const relation: CandidateRelation = {
+    ...baseEntity,
+    id: `candidate-relation-${job.id}-owner`,
+    source_segment_id: primaryEvidence.source_segment_id,
+    source_candidate_entity_id: primaryEntity.id,
+    relation_id: relationId,
+    target_candidate_entity_id: secondaryEntity.id,
+    confidence: 0.88,
+    evidence_ids: [primaryEvidence.id, secondaryEvidence.id],
+    raw_payload: { client_candidate_id: `relation-owner-${fixtureId}` },
+    validation_status: "PASSED",
+    validation_codes: [],
+  };
+
+  if (fixtureId === "partial_invalid") {
+    const warningEntity: CandidateEntity = {
+      ...baseEntity,
+      id: `candidate-entity-${job.id}-missing-evidence`,
+      source_segment_id: null,
+      class_id: primaryClassId,
+      entity_name: "권한 정책",
+      normalized_name: "access-control-policy",
+      property_values: {},
+      confidence: 0.68,
+      evidence_ids: [],
+      raw_payload: { client_candidate_id: "entity-missing-evidence" },
+      validation_status: "WARNING",
+      validation_codes: ["MISSING_EVIDENCE"],
+    };
+
+    return {
+      status: "PARTIAL_FAILED" as const,
+      progress: 100,
+      error_code: "PARTIAL_INVALID_FIXTURE",
+      error_message: "Some candidates need evidence review.",
+      modelRun: createMockModelRun(job, now, "SUCCESS", 2, "PARTIAL_INVALID_FIXTURE"),
+      evidences: { [primaryEvidence.id]: primaryEvidence },
+      entities: [primaryEntity, warningEntity],
+      relations: [],
+    };
+  }
+
+  if (fixtureId === "invalid_evidence_reference") {
+    const brokenEvidenceId = `evidence-${job.id}-broken-reference`;
+    const brokenSegmentId = `segment-${job.source_id}-broken-reference`;
+    const brokenEntity: CandidateEntity = {
+      ...baseEntity,
+      id: `candidate-entity-${job.id}-broken-evidence`,
+      source_segment_id: brokenSegmentId,
+      class_id: primaryClassId,
+      entity_name: "깨진 근거 후보",
+      normalized_name: "broken-evidence-candidate",
+      property_values: {},
+      confidence: 0.51,
+      evidence_ids: [brokenEvidenceId],
+      raw_payload: { client_candidate_id: "entity-invalid-evidence-reference" },
+      validation_status: "FAILED",
+      validation_codes: ["INVALID_EVIDENCE_REFERENCE"],
+    };
+
+    return {
+      status: "PARTIAL_FAILED" as const,
+      progress: 100,
+      error_code: "INVALID_EVIDENCE_REFERENCE",
+      error_message: "An evidence reference could not be resolved.",
+      modelRun: createMockModelRun(job, now, "SUCCESS", 2, "INVALID_EVIDENCE_REFERENCE"),
+      evidences: { [primaryEvidence.id]: primaryEvidence },
+      entities: [primaryEntity, brokenEntity],
+      relations: [],
+    };
+  }
+
+  return {
+    status: "SUCCESS" as const,
+    progress: 100,
+    error_code: null,
+    error_message: null,
+    modelRun: createMockModelRun(job, now, "SUCCESS", 3, null),
+    evidences: { [primaryEvidence.id]: primaryEvidence, [secondaryEvidence.id]: secondaryEvidence },
+    entities: [primaryEntity, secondaryEntity],
+    relations: [relation],
   };
 }
 
@@ -1073,6 +1344,14 @@ export const apiClient = {
     if (USE_MOCK_API) {
       const now = new Date().toISOString();
       let updatedJob: ExtractionJob | undefined;
+      const originalJob = mockExtractionJobStore.find((job) => job.id === jobId);
+
+      if (!originalJob) {
+        throw new Error("Extraction job fixture not found");
+      }
+
+      removeMockArtifactsForJob(jobId);
+      const artifacts = buildMockRunArtifacts(originalJob, now);
 
       mockExtractionJobStore = mockExtractionJobStore.map((job) => {
         if (job.id !== jobId) {
@@ -1081,12 +1360,14 @@ export const apiClient = {
 
         updatedJob = {
           ...job,
-          status: "SUCCESS",
-          progress: 100,
+          status: artifacts.status,
+          progress: artifacts.progress,
           started_at: job.started_at ?? now,
           ended_at: now,
-          error_code: null,
-          error_message: null,
+          error_code: artifacts.error_code,
+          error_message: artifacts.error_message,
+          candidate_entity_count: artifacts.entities.length,
+          candidate_relation_count: artifacts.relations.length,
         };
 
         return updatedJob;
@@ -1095,6 +1376,11 @@ export const apiClient = {
       if (!updatedJob) {
         throw new Error("Extraction job fixture not found");
       }
+
+      mockModelRunStore = [artifacts.modelRun, ...mockModelRunStore];
+      mockCandidateEntityStore = [...artifacts.entities, ...mockCandidateEntityStore];
+      mockCandidateRelationStore = [...artifacts.relations, ...mockCandidateRelationStore];
+      mockCandidateEvidenceStore = { ...mockCandidateEvidenceStore, ...artifacts.evidences };
 
       return delay(buildMockJobDetail(updatedJob));
     }
@@ -1140,7 +1426,7 @@ export const apiClient = {
 
   async listCandidateEntities(jobId: string, filters: CandidateListFilters = {}): Promise<CandidateEntity[]> {
     if (USE_MOCK_API) {
-      return delay(filterCandidatesByJob(mockCandidateEntities, jobId, filters));
+      return delay(filterCandidatesByJob(mockCandidateEntityStore, jobId, filters));
     }
 
     return request<CandidateEntity[]>(`/api/v1/extraction-jobs/${jobId}/candidates/entities${buildQueryString(filters)}`);
@@ -1148,7 +1434,7 @@ export const apiClient = {
 
   async listCandidateRelations(jobId: string, filters: CandidateListFilters = {}): Promise<CandidateRelation[]> {
     if (USE_MOCK_API) {
-      return delay(filterCandidatesByJob(mockCandidateRelations, jobId, filters));
+      return delay(filterCandidatesByJob(mockCandidateRelationStore, jobId, filters));
     }
 
     return request<CandidateRelation[]>(`/api/v1/extraction-jobs/${jobId}/candidates/relations${buildQueryString(filters)}`);
@@ -1156,7 +1442,7 @@ export const apiClient = {
 
   async getCandidateEvidence(evidenceId: string): Promise<CandidateEvidence> {
     if (USE_MOCK_API) {
-      const evidence = mockCandidateEvidences[evidenceId];
+      const evidence = mockCandidateEvidenceStore[evidenceId];
 
       if (!evidence) {
         throw new Error("Candidate evidence fixture not found");
@@ -1170,7 +1456,7 @@ export const apiClient = {
 
   async listModelRuns(jobId: string): Promise<ModelRun[]> {
     if (USE_MOCK_API) {
-      return delay(mockModelRuns.filter((run) => run.extraction_job_id === jobId));
+      return delay(mockModelRunStore.filter((run) => run.extraction_job_id === jobId));
     }
 
     const job = await request<ExtractionJobDetail>(`/api/v1/extraction-jobs/${jobId}`);

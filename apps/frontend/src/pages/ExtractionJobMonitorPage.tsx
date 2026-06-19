@@ -2,6 +2,7 @@ import { Play, RotateCcw } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
 import { useExtractionJob, useExtractionJobs, useModelRuns, useRetryExtractionJob, useRunExtractionJob } from "../shared/api/queries";
+import type { ExtractionJobStatus } from "../shared/api/types";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, statusToTone } from "../shared/ui/hana";
@@ -29,7 +30,7 @@ export function ExtractionJobMonitorPage() {
         <PageState
           kind="error"
           title="Extraction job을 불러오지 못했습니다"
-          description="MVP 2 extraction job detail endpoint 또는 fixture 상태를 확인하세요."
+          description="job 목록에서 다시 선택하거나 새 job을 생성하세요."
           actionLabel="다시 시도"
           onAction={() => {
             void detailQuery.refetch();
@@ -38,6 +39,9 @@ export function ExtractionJobMonitorPage() {
         />
       );
     }
+
+    const canRunJob = activeJob.status === "PENDING" || activeJob.status === "QUEUED" || activeJob.status === "RETRYING";
+    const canRetryJob = activeJob.status === "FAILED" || activeJob.status === "PARTIAL_FAILED";
 
     return (
       <>
@@ -48,13 +52,13 @@ export function ExtractionJobMonitorPage() {
             { label: activeJob.id },
           ]}
         />
-        <PageHeader title="Extraction Job Monitor" description="MockProvider job lifecycle, progress, failure reason, masked model run metadata를 확인합니다.">
+        <PageHeader title="Extraction Job Monitor" description="Job 실행 상태와 candidate 결과로 이어지는 길을 확인합니다.">
           <HanaBadge tone={statusToTone(activeJob.status)}>{activeJob.status}</HanaBadge>
-          <HanaButton type="button" onClick={() => runJob.mutate()} disabled={runJob.isPending || activeJob.status === "SUCCESS"}>
+          <HanaButton type="button" onClick={() => runJob.mutate()} disabled={runJob.isPending || !canRunJob}>
             <Play aria-hidden="true" />
             {runJob.isPending ? "Running" : "Run"}
           </HanaButton>
-          <HanaButton type="button" onClick={() => retryJob.mutate()} disabled={retryJob.isPending}>
+          <HanaButton type="button" onClick={() => retryJob.mutate()} disabled={retryJob.isPending || !canRetryJob}>
             <RotateCcw aria-hidden="true" />
             {retryJob.isPending ? "Retrying" : "Retry"}
           </HanaButton>
@@ -62,11 +66,14 @@ export function ExtractionJobMonitorPage() {
         <MetricGrid>
           <MetricCard label="Progress" value={`${activeJob.progress}%`}>
             <ProgressTrack>
-              <span style={{ width: `${activeJob.progress}%` }} />
+              <ProgressFill style={{ width: `${activeJob.progress}%` }} />
             </ProgressTrack>
           </MetricCard>
-          <MetricCard label="Provider" value={activeJob.provider}>
+          <MetricCard label="Provider" value={formatProvider(activeJob.provider)}>
             {activeJob.model_name}
+          </MetricCard>
+          <MetricCard label="Fixture" value={activeJob.fixture_id ?? "default"}>
+            {formatFixtureSummary(activeJob.fixture_id)}
           </MetricCard>
           <MetricCard label="Created" value={formatDateTime(activeJob.created_at)}>
             Job lifecycle start
@@ -75,10 +82,10 @@ export function ExtractionJobMonitorPage() {
             Terminal status timestamp
           </MetricCard>
           <MetricCard label="Retry Chain" value={activeJob.retry_of_job_id ? "Retry" : "Root"}>
-            {activeJob.retry_of_job_id ? `Parent ${activeJob.retry_of_job_id}` : "Candidate/evidence duplicates are collapsed by chain key."}
+            {activeJob.retry_of_job_id ? `Parent ${activeJob.retry_of_job_id}` : "Retry results reuse matching duplicates."}
           </MetricCard>
         </MetricGrid>
-        <HanaCard title="Job detail" description="Backend actual API mode 전환 지점: GET/POST /api/v1/extraction-jobs/{job_id}">
+        <HanaCard title="Job detail" description={formatJobStatusSummary(activeJob.status)}>
           <KeyValueGrid>
             <dt>ID</dt>
             <dd>
@@ -96,19 +103,21 @@ export function ExtractionJobMonitorPage() {
             <dd>
               <Mono>{activeJob.prompt_version_id}</Mono>
             </dd>
+            <dt>Fixture</dt>
+            <dd>{activeJob.fixture_id ?? "default"}</dd>
             <dt>Error</dt>
             <dd>{activeJob.error_code ? `${activeJob.error_code}: ${activeJob.error_message ?? ""}` : "-"}</dd>
             <dt>Retry dedupe</dt>
-            <dd>{activeJob.retry_of_job_id ? `Retry of ${activeJob.retry_of_job_id}` : "Root job; repeated run results reuse retry-chain natural keys."}</dd>
+            <dd>{activeJob.retry_of_job_id ? `Retry of ${activeJob.retry_of_job_id}` : "Root job"}</dd>
             <dt>Candidates</dt>
             <dd>
               <DataLink to={`/extraction-jobs/${activeJob.id}/candidates`}>Open candidate results</DataLink>
             </dd>
           </KeyValueGrid>
         </HanaCard>
-        <HanaCard title="Model runs" description="Masked raw request/response metadata only. Full source text or credentials are not shown.">
+        <HanaCard title="Model runs" description="Masked run metadata and retry reuse summary.">
           {modelRunsQuery.data.length === 0 ? (
-            <PageState kind="empty" title="Model run이 없습니다" description="job 실행 후 model run metadata가 표시됩니다." />
+            <PageState kind="empty" title="Model run이 없습니다" description="Run을 실행하면 model run 기록이 표시됩니다." />
           ) : (
             <TableWrap>
               <table>
@@ -116,8 +125,9 @@ export function ExtractionJobMonitorPage() {
                   <tr>
                     <th>ID</th>
                     <th>Status</th>
+                    <th>Provider</th>
                     <th>Tokens</th>
-                    <th>Masking</th>
+                    <th>Dedupe</th>
                     <th>Started</th>
                   </tr>
                 </thead>
@@ -130,10 +140,11 @@ export function ExtractionJobMonitorPage() {
                       <td>
                         <HanaBadge tone={statusToTone(run.status)}>{run.status}</HanaBadge>
                       </td>
+                      <td>{formatProvider(run.provider)}</td>
                       <td>
                         {run.input_token_count} / {run.output_token_count}
                       </td>
-                      <td>{run.masking_version}</td>
+                      <td>{formatDedupeSummary(run.raw_response)}</td>
                       <td>{run.started_at ? formatDateTime(run.started_at) : "-"}</td>
                     </tr>
                   ))}
@@ -161,7 +172,7 @@ export function ExtractionJobMonitorPage() {
   }
 
   if (listQuery.isLoading) {
-    return <PageState kind="loading" title="Extraction jobs를 불러오는 중" description="project extraction job 목록을 조회하고 있습니다." />;
+    return <PageState kind="loading" title="Extraction jobs를 불러오는 중" description="project의 job 목록을 준비하고 있습니다." />;
   }
 
   if (listQuery.isError || !listQuery.data) {
@@ -169,7 +180,7 @@ export function ExtractionJobMonitorPage() {
       <PageState
         kind="error"
         title="Extraction jobs를 불러오지 못했습니다"
-        description="MVP 2 extraction job list endpoint 또는 fixture 상태를 확인하세요."
+        description="job 목록을 다시 불러오세요."
         actionLabel="다시 시도"
         onAction={() => void listQuery.refetch()}
       />
@@ -184,13 +195,13 @@ export function ExtractionJobMonitorPage() {
           { label: "Extraction" },
         ]}
       />
-      <PageHeader title="Extraction Jobs" description="MockProvider extraction job 상태와 candidate result 진입점을 확인합니다.">
+      <PageHeader title="Extraction Jobs" description="Job을 만들고 실행한 뒤 candidate 결과로 이동합니다.">
         <ActionLink to={`/projects/${projectId}/extraction/new`}>New job</ActionLink>
       </PageHeader>
       {listQuery.data.length === 0 ? (
         <PageState kind="empty" title="Extraction job이 없습니다" description="새 job을 생성하면 monitor 목록에 표시됩니다." />
       ) : (
-        <HanaCard title="Job monitor" description="Backend actual API mode 전환 지점: GET /api/v1/projects/{project_id}/extraction-jobs">
+        <HanaCard title="Job monitor">
           <TableWrap>
             <table>
               <thead>
@@ -201,6 +212,7 @@ export function ExtractionJobMonitorPage() {
                   <th>Progress</th>
                   <th>Error</th>
                   <th>Created</th>
+                  <th>Candidates</th>
                 </tr>
               </thead>
               <tbody>
@@ -216,6 +228,9 @@ export function ExtractionJobMonitorPage() {
                     <td>{job.progress}%</td>
                     <td>{job.error_code ?? "-"}</td>
                     <td>{formatDateTime(job.created_at)}</td>
+                    <td>
+                      <DataLink to={`/extraction-jobs/${job.id}/candidates`}>Open</DataLink>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -225,6 +240,56 @@ export function ExtractionJobMonitorPage() {
       )}
     </>
   );
+}
+
+function formatProvider(provider: string) {
+  return provider === "mock" ? "MockProvider" : provider;
+}
+
+function formatFixtureSummary(fixtureId?: string | null) {
+  switch (fixtureId ?? "default") {
+    case "partial_invalid":
+      return "Partial failure with missing evidence";
+    case "invalid_evidence_reference":
+      return "Broken evidence fallback";
+    case "missing":
+      return "Fixture-not-found failure";
+    default:
+      return "Success path";
+  }
+}
+
+function formatJobStatusSummary(status: ExtractionJobStatus) {
+  switch (status) {
+    case "SUCCESS":
+      return "Candidate results are ready.";
+    case "PARTIAL_FAILED":
+      return "Some candidates need evidence or validation attention.";
+    case "FAILED":
+      return "The run failed; retry is available when the fixture or input is corrected.";
+    case "RETRYING":
+      return "Retry job is ready to run.";
+    case "RUNNING":
+    case "QUEUED":
+      return "The job is in progress.";
+    default:
+      return "Run the job to generate candidates.";
+  }
+}
+
+function formatDedupeSummary(rawResponse: Record<string, unknown>) {
+  const dedupe = rawResponse.dedupe;
+
+  if (!dedupe || typeof dedupe !== "object") {
+    return "-";
+  }
+
+  const summary = dedupe as Record<string, unknown>;
+  const created = Number(summary.created_candidates ?? 0);
+  const reused = Number(summary.reused_candidates ?? summary.reused_evidence ?? 0);
+  const skipped = Number(summary.skipped_duplicates ?? summary.skipped_duplicate_candidates ?? 0);
+
+  return `created ${created} · reused ${reused} · skipped ${skipped}`;
 }
 
 const MetricGrid = styled.div`
@@ -241,18 +306,19 @@ const MetricGrid = styled.div`
   }
 `;
 
-const ProgressTrack = styled.div`
+const ProgressTrack = styled.span`
+  display: block;
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
   background: ${({ theme }) => theme.color.surfaceMuted};
+`;
 
-  span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: ${({ theme }) => theme.color.primary};
-  }
+const ProgressFill = styled.span`
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: ${({ theme }) => theme.color.primary};
 `;
 
 const ActionLink = styled(Link)`

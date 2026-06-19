@@ -444,6 +444,152 @@ def test_mvp2_source_profile_and_parse_flow() -> None:
     assert pdf_parse["warnings"]
 
 
+def test_wave10_source_profile_edge_cases_are_repeatable() -> None:
+    project_response = client.post(
+        "/api/v1/projects",
+        json={"name": "Wave10 Profile Project", "description": "Profile edge cases"},
+    )
+    assert project_response.status_code == 201
+    project_id = project_response.json()["id"]
+
+    empty_response = client.post(
+        f"/api/v1/projects/{project_id}/sources/upload",
+        data={"source_type": "CSV"},
+        files={"file": ("empty.csv", b"", "text/csv")},
+    )
+    assert empty_response.status_code == 201
+    empty_profile_response = client.post(f"/api/v1/sources/{empty_response.json()['id']}/profile")
+    assert empty_profile_response.status_code == 200
+    empty_profile = empty_profile_response.json()
+    assert empty_profile["row_count"] == 0
+    assert empty_profile["columns"] == []
+    assert empty_profile["warnings"]
+
+    header_only_response = client.post(
+        f"/api/v1/projects/{project_id}/sources/upload",
+        data={"source_type": "CSV"},
+        files={"file": ("header-only.csv", b"code,amount\n", "text/csv")},
+    )
+    assert header_only_response.status_code == 201
+    header_profile_response = client.post(
+        f"/api/v1/sources/{header_only_response.json()['id']}/profile"
+    )
+    assert header_profile_response.status_code == 200
+    header_profile = header_profile_response.json()
+    assert header_profile["row_count"] == 0
+    assert header_profile["sample_size"] == 0
+    assert [column["name"] for column in header_profile["columns"]] == ["code", "amount"]
+    assert {
+        (
+            column["inferred_type"],
+            column["nullable"],
+            column["null_ratio"],
+            column["distinct_count_sampled"],
+            tuple(column["sample_values"]),
+        )
+        for column in header_profile["columns"]
+    } == {("EMPTY", True, 1.0, 0, ())}
+
+    mixed_response = client.post(
+        f"/api/v1/projects/{project_id}/sources/upload",
+        data={"source_type": "CSV"},
+        files={
+            "file": (
+                "mixed.csv",
+                b"mixed_value,nullable_value\n42,\npending,\n13.5,value\n",
+                "text/csv",
+            )
+        },
+    )
+    assert mixed_response.status_code == 201
+    mixed_source_id = mixed_response.json()["id"]
+    mixed_profile_response = client.post(f"/api/v1/sources/{mixed_source_id}/profile")
+    assert mixed_profile_response.status_code == 200
+    mixed_profile = mixed_profile_response.json()
+    mixed_columns = {column["name"]: column for column in mixed_profile["columns"]}
+    assert mixed_profile["row_count"] == 3
+    assert mixed_profile["sample_size"] == 3
+    assert mixed_columns["mixed_value"]["inferred_type"] == "MIXED"
+    assert mixed_columns["mixed_value"]["sample_values"] == ["42", "pending", "13.5"]
+    assert mixed_columns["nullable_value"]["nullable"] is True
+    assert mixed_columns["nullable_value"]["null_ratio"] == 0.6667
+    assert mixed_columns["nullable_value"]["sample_values"] == ["value"]
+
+    repeated_mixed_profile = client.post(f"/api/v1/sources/{mixed_source_id}/profile").json()
+    assert repeated_mixed_profile["id"] == mixed_profile["id"]
+    assert repeated_mixed_profile["columns"] == mixed_profile["columns"]
+
+    excel_response = client.post(
+        f"/api/v1/projects/{project_id}/sources/upload",
+        data={"source_type": "EXCEL"},
+        files={
+            "file": (
+                "header-only.xlsx",
+                _xlsx_bytes_from_rows([["code", "amount"]]),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert excel_response.status_code == 201
+    excel_profile_response = client.post(f"/api/v1/sources/{excel_response.json()['id']}/profile")
+    assert excel_profile_response.status_code == 200
+    excel_profile = excel_profile_response.json()
+    assert excel_profile["row_count"] == 0
+    assert [column["inferred_type"] for column in excel_profile["columns"]] == ["EMPTY", "EMPTY"]
+
+
+def test_wave10_source_parse_edge_cases_are_repeatable() -> None:
+    project_response = client.post(
+        "/api/v1/projects",
+        json={"name": "Wave10 Parse Project", "description": "Parse edge cases"},
+    )
+    assert project_response.status_code == 201
+    project_id = project_response.json()["id"]
+
+    txt_response = client.post(
+        f"/api/v1/projects/{project_id}/sources/upload",
+        data={"source_type": "TXT"},
+        files={
+            "file": (
+                "notes.txt",
+                b"First paragraph.\n\nSecond paragraph with a little more text.",
+                "text/plain",
+            )
+        },
+    )
+    assert txt_response.status_code == 201
+    txt_source_id = txt_response.json()["id"]
+    first_txt_parse = client.post(
+        f"/api/v1/sources/{txt_source_id}/parse", json={"chunk_size": 100}
+    ).json()
+    second_txt_parse = client.post(
+        f"/api/v1/sources/{txt_source_id}/parse", json={"chunk_size": 100}
+    ).json()
+    assert second_txt_parse["segment_count"] == first_txt_parse["segment_count"]
+    assert second_txt_parse["segment_types"] == first_txt_parse["segment_types"]
+    txt_segments = client.get(f"/api/v1/sources/{txt_source_id}/segments").json()
+    assert [segment["sequence"] for segment in txt_segments] == list(range(len(txt_segments)))
+
+    pdf_response = client.post(
+        f"/api/v1/projects/{project_id}/sources/upload",
+        data={"source_type": "PDF"},
+        files={"file": ("empty.pdf", b"", "application/pdf")},
+    )
+    assert pdf_response.status_code == 201
+    pdf_source_id = pdf_response.json()["id"]
+    first_pdf_parse = client.post(
+        f"/api/v1/sources/{pdf_source_id}/parse", json={"chunk_size": 100}
+    ).json()
+    second_pdf_parse = client.post(
+        f"/api/v1/sources/{pdf_source_id}/parse", json={"chunk_size": 100}
+    ).json()
+    assert first_pdf_parse["warnings"]
+    assert first_pdf_parse["segment_count"] == 1
+    assert first_pdf_parse["segment_types"] == ["PAGE"]
+    assert second_pdf_parse["segment_count"] == first_pdf_parse["segment_count"]
+    assert len(client.get(f"/api/v1/sources/{pdf_source_id}/segments").json()) == 1
+
+
 def test_mvp2_prompt_extraction_candidate_thin_flow() -> None:
     project_response = client.post(
         "/api/v1/projects",
@@ -505,6 +651,31 @@ def test_mvp2_prompt_extraction_candidate_thin_flow() -> None:
     )
     assert prompt_version_response.status_code == 201
     prompt_version_id = prompt_version_response.json()["id"]
+    inactive_prompt_version_response = client.post(
+        f"/api/v1/prompts/{prompt_id}/versions",
+        json={
+            "template": "Inactive prompt candidate.",
+            "output_schema": {"type": "object"},
+            "is_active": False,
+        },
+    )
+    assert inactive_prompt_version_response.status_code == 201
+    active_prompt_version_response = client.post(
+        f"/api/v1/prompts/{prompt_id}/versions",
+        json={
+            "template": "Active prompt candidate.",
+            "output_schema": {"type": "object"},
+            "is_active": True,
+        },
+    )
+    assert active_prompt_version_response.status_code == 201
+    prompt_versions_response = client.get(f"/api/v1/prompts/{prompt_id}/versions")
+    assert prompt_versions_response.status_code == 200
+    prompt_versions = prompt_versions_response.json()
+    active_versions = [version for version in prompt_versions if version["is_active"]]
+    assert [version["id"] for version in active_versions] == [
+        active_prompt_version_response.json()["id"]
+    ]
 
     job_response = client.post(
         f"/api/v1/projects/{project_id}/extraction-jobs",
@@ -526,6 +697,7 @@ def test_mvp2_prompt_extraction_candidate_thin_flow() -> None:
     assert run["candidate_relation_count"] == 1
     assert run["model_runs"][0]["status"] == "SUCCESS"
     assert "Acme Corp" not in str(run["model_runs"][0]["raw_request"])
+    assert "Acme Corp" not in str(run["model_runs"][0]["raw_response"])
     assert run["model_runs"][0]["redaction_summary"]["policy"] == "no_source_text_or_secrets"
 
     entities_response = client.get(
@@ -537,10 +709,34 @@ def test_mvp2_prompt_extraction_candidate_thin_flow() -> None:
     assert entities[0]["review_status"] == "PENDING"
     assert entities[0]["publish_status"] == "NOT_PUBLISHED"
     assert entities[0]["validation_status"] == "PASSED"
+    assert (
+        len(
+            client.get(
+                f"/api/v1/extraction-jobs/{job_id}/candidates/entities"
+                f"?source_id={source_id}&ontology_version_id={version_id}"
+            ).json()
+        )
+        == 2
+    )
+    assert (
+        client.get(
+            f"/api/v1/extraction-jobs/{job_id}/candidates/entities?has_evidence=false"
+        ).json()
+        == []
+    )
 
     relations_response = client.get(f"/api/v1/extraction-jobs/{job_id}/candidates/relations")
     assert relations_response.status_code == 200
     assert len(relations_response.json()) == 1
+    assert (
+        len(
+            client.get(
+                f"/api/v1/extraction-jobs/{job_id}/candidates/relations"
+                f"?source_id={source_id}&ontology_version_id={version_id}&has_evidence=true"
+            ).json()
+        )
+        == 1
+    )
 
     evidence_response = client.get(f"/api/v1/candidate-evidence/{entities[0]['evidence_ids'][0]}")
     assert evidence_response.status_code == 200
@@ -564,6 +760,37 @@ def test_mvp2_prompt_extraction_candidate_thin_flow() -> None:
     assert failed_run["status"] == "FAILED"
     assert failed_run["error_code"] == "MOCK_FIXTURE_NOT_FOUND"
     assert failed_run["model_runs"][0]["status"] == "FAILED"
+    assert (
+        client.get(
+            f"/api/v1/extraction-jobs/{missing_fixture_response.json()['id']}"
+            "/candidates/entities"
+        ).json()
+        == []
+    )
+
+    partial_fixture_response = client.post(
+        f"/api/v1/projects/{project_id}/extraction-jobs",
+        json={
+            "source_id": source_id,
+            "ontology_version_id": version_id,
+            "prompt_version_id": prompt_version_id,
+            "fixture_id": "partial_invalid",
+        },
+    )
+    assert partial_fixture_response.status_code == 201
+    partial_run_response = client.post(
+        f"/api/v1/extraction-jobs/{partial_fixture_response.json()['id']}/run"
+    )
+    assert partial_run_response.status_code == 200
+    partial_run = partial_run_response.json()
+    assert partial_run["status"] == "PARTIAL_FAILED"
+    warning_entities = client.get(
+        f"/api/v1/extraction-jobs/{partial_run['id']}/candidates/entities"
+        "?validation_status=WARNING&has_evidence=false"
+    ).json()
+    assert len(warning_entities) == 1
+    assert warning_entities[0]["validation_codes"] == ["MISSING_EVIDENCE"]
+    assert warning_entities[0]["evidence_ids"] == []
 
     invalid_evidence_response = client.post(
         f"/api/v1/projects/{project_id}/extraction-jobs",
@@ -594,9 +821,17 @@ def test_mvp2_prompt_extraction_candidate_thin_flow() -> None:
     invalid_entities = invalid_entities_response.json()
     assert len(invalid_entities) == 1
     assert invalid_entities[0]["validation_codes"] == ["INVALID_EVIDENCE_REFERENCE"]
-    assert invalid_entities[0]["evidence_ids"] == ["invalid-evidence-reference"]
-    invalid_evidence_detail = client.get("/api/v1/candidate-evidence/invalid-evidence-reference")
-    assert invalid_evidence_detail.status_code == 404
+    assert invalid_entities[0]["source_id"] == source_id
+    assert invalid_entities[0]["source_segment_id"] is not None
+    assert len(invalid_entities[0]["evidence_ids"]) == 1
+    invalid_evidence_detail = client.get(
+        f"/api/v1/candidate-evidence/{invalid_entities[0]['evidence_ids'][0]}"
+    )
+    assert invalid_evidence_detail.status_code == 200
+    invalid_evidence = invalid_evidence_detail.json()
+    assert invalid_evidence["source_id"] == source_id
+    assert invalid_evidence["source_segment_id"] == invalid_entities[0]["source_segment_id"]
+    assert invalid_evidence["metadata"]["invalid_reference"] == "source_segment_source_mismatch"
 
     retry_response = client.post(f"/api/v1/extraction-jobs/{invalid_run['id']}/retry")
     assert retry_response.status_code == 201
@@ -645,6 +880,10 @@ def test_openapi_ontology_graph_compat_fields_are_optional_deprecated() -> None:
 
 
 def _minimal_xlsx_bytes() -> bytes:
+    return _xlsx_bytes_from_rows([["company_name", "employee_count"], ["Gamma Inc", "13"]])
+
+
+def _xlsx_bytes_from_rows(rows: list[list[str]]) -> bytes:
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w") as workbook:
         workbook.writestr(
@@ -681,18 +920,25 @@ def _minimal_xlsx_bytes() -> bytes:
         )
         workbook.writestr(
             "xl/worksheets/sheet1.xml",
-            """<?xml version="1.0" encoding="UTF-8"?>
+            f"""<?xml version="1.0" encoding="UTF-8"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
   <sheetData>
-    <row r="1">
-      <c r="A1" t="inlineStr"><is><t>company_name</t></is></c>
-      <c r="B1" t="inlineStr"><is><t>employee_count</t></is></c>
-    </row>
-    <row r="2">
-      <c r="A2" t="inlineStr"><is><t>Gamma Inc</t></is></c>
-      <c r="B2"><v>13</v></c>
-    </row>
+{_xlsx_sheet_rows(rows)}
   </sheetData>
 </worksheet>""",
         )
     return buffer.getvalue()
+
+
+def _xlsx_sheet_rows(rows: list[list[str]]) -> str:
+    output_rows = []
+    for row_number, row in enumerate(rows, start=1):
+        cells = []
+        for column_index, value in enumerate(row):
+            column_letter = chr(ord("A") + column_index)
+            cells.append(
+                f'      <c r="{column_letter}{row_number}" t="inlineStr">'
+                f"<is><t>{value}</t></is></c>"
+            )
+        output_rows.append(f'    <row r="{row_number}">\n' + "\n".join(cells) + "\n    </row>")
+    return "\n".join(output_rows)

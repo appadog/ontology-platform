@@ -6,7 +6,40 @@ import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, HanaSelect } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
-import { ButtonSlot, Field, FormGrid, KeyValueGrid, MutedText } from "./mvp2Shared";
+import { ButtonSlot, Field, FormGrid, InlineList, KeyValueGrid, Mono, MutedText } from "./mvp2Shared";
+
+const fixtureOptions = [
+  {
+    id: "default",
+    label: "Success",
+    expectedStatus: "SUCCESS",
+    tone: "success" as const,
+    summary: "normal candidate and evidence",
+  },
+  {
+    id: "partial_invalid",
+    label: "Partial failure",
+    expectedStatus: "PARTIAL_FAILED",
+    tone: "warning" as const,
+    summary: "warning candidate without evidence",
+  },
+  {
+    id: "invalid_evidence_reference",
+    label: "Broken evidence",
+    expectedStatus: "PARTIAL_FAILED",
+    tone: "warning" as const,
+    summary: "candidate with unresolved evidence link",
+  },
+  {
+    id: "missing",
+    label: "Missing fixture",
+    expectedStatus: "FAILED",
+    tone: "danger" as const,
+    summary: "fixture-not-found failure path",
+  },
+] as const;
+
+type FixtureId = (typeof fixtureOptions)[number]["id"];
 
 export function ExtractionJobCreatePage() {
   const { projectId = "" } = useParams();
@@ -16,6 +49,7 @@ export function ExtractionJobCreatePage() {
   const [promptId, setPromptId] = useState("");
   const [promptVersionId, setPromptVersionId] = useState("");
   const [modelName, setModelName] = useState("mock-deterministic");
+  const [fixtureId, setFixtureId] = useState<FixtureId>("default");
   const { data: sources, isLoading: isSourcesLoading, isError: isSourcesError, refetch: refetchSources } = useSources(projectId);
   const { data: versions, isLoading: isVersionsLoading, isError: isVersionsError, refetch: refetchVersions } = useOntologyVersions(projectId);
   const { data: prompts, isLoading: isPromptsLoading, isError: isPromptsError, refetch: refetchPrompts } = usePromptTemplates(projectId);
@@ -55,6 +89,7 @@ export function ExtractionJobCreatePage() {
     () => promptVersions?.find((version) => version.id === promptVersionId),
     [promptVersionId, promptVersions],
   );
+  const selectedFixture = fixtureOptions.find((fixture) => fixture.id === fixtureId) ?? fixtureOptions[0];
   const isLoading = isSourcesLoading || isVersionsLoading || isPromptsLoading || isPromptVersionsLoading;
   const isError = isSourcesError || isVersionsError || isPromptsError || isPromptVersionsError;
   const canCreate = Boolean(sourceId && ontologyVersionId && promptVersionId && modelName.trim()) && !createJob.isPending;
@@ -72,7 +107,7 @@ export function ExtractionJobCreatePage() {
   }
 
   if (isLoading) {
-    return <PageState kind="loading" title="Extraction job 생성 폼을 불러오는 중" description="source, ontology version, prompt version fixture를 조회하고 있습니다." />;
+    return <PageState kind="loading" title="Extraction job 생성 폼을 불러오는 중" description="source, ontology, prompt 선택지를 준비하고 있습니다." />;
   }
 
   if (isError || !sources || !versions || !prompts || !promptVersions) {
@@ -80,7 +115,7 @@ export function ExtractionJobCreatePage() {
       <PageState
         kind="error"
         title="Extraction job 생성 준비에 실패했습니다"
-        description="MVP 2 prompt/job endpoint 또는 fixture 상태를 확인하세요."
+        description="필요한 선택지를 불러오지 못했습니다."
         actionLabel="다시 시도"
         onAction={() => {
           void refetchSources();
@@ -116,7 +151,7 @@ export function ExtractionJobCreatePage() {
         prompt_version_id: promptVersionId,
         provider: "mock",
         model_name: modelName.trim(),
-        fixture_id: "default",
+        fixture_id: fixtureId,
       },
       {
         onSuccess: (job) => navigate(`/extraction-jobs/${job.id}`),
@@ -136,7 +171,7 @@ export function ExtractionJobCreatePage() {
       <PageHeader title="Create Extraction Job" description="MockProvider로 source, ontology version, prompt version을 묶어 candidate extraction job을 생성합니다.">
         <HanaBadge tone="muted">MockProvider only</HanaBadge>
       </PageHeader>
-      <HanaCard title="Job inputs" description="Backend actual API mode 전환 지점: POST /api/v1/projects/{project_id}/extraction-jobs">
+      <HanaCard title="Job inputs" description="Source, ontology, prompt, fixture를 선택한 뒤 job을 생성합니다.">
         <FormGrid>
           <Field>
             <span>Source</span>
@@ -194,6 +229,16 @@ export function ExtractionJobCreatePage() {
             <span>Model</span>
             <HanaInput value={modelName} onChange={(event) => setModelName(event.target.value)} />
           </Field>
+          <Field>
+            <span>Fixture</span>
+            <HanaSelect value={fixtureId} onChange={(event) => setFixtureId(event.target.value as FixtureId)}>
+              {fixtureOptions.map((fixture) => (
+                <option key={fixture.id} value={fixture.id}>
+                  {fixture.label}
+                </option>
+              ))}
+            </HanaSelect>
+          </Field>
           <ButtonSlot>
             <HanaButton variant="primary" type="button" disabled={!canCreate} onClick={handleCreate}>
               <Sparkles aria-hidden="true" />
@@ -212,11 +257,21 @@ export function ExtractionJobCreatePage() {
           <dd>{selectedPrompt?.name ?? "-"}</dd>
           <dt>Prompt version</dt>
           <dd>{selectedPromptVersion ? `v${selectedPromptVersion.version} ${selectedPromptVersion.is_active ? "ACTIVE" : "INACTIVE"}` : "-"}</dd>
+          <dt>Fixture</dt>
+          <dd>
+            <InlineList>
+              <HanaBadge tone={selectedFixture.tone}>{selectedFixture.label}</HanaBadge>
+              <HanaBadge tone={selectedFixture.tone}>{selectedFixture.expectedStatus}</HanaBadge>
+              <MutedText>
+                <Mono>{selectedFixture.id}</Mono> · {selectedFixture.summary}
+              </MutedText>
+            </InlineList>
+          </dd>
           <dt>Prompt template</dt>
           <dd>{selectedPromptVersion?.template ?? "-"}</dd>
           <dt>Provider rule</dt>
           <dd>
-            <MutedText>API payload는 provider=mock이고, 화면 label만 MockProvider를 사용합니다.</MutedText>
+            <MutedText>Provider 값은 고정되어 있고 job 결과는 선택한 fixture로 재현됩니다.</MutedText>
           </dd>
         </KeyValueGrid>
       </HanaCard>

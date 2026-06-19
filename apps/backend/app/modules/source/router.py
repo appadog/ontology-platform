@@ -188,7 +188,7 @@ def _profile_columns(source: SourceDataModel) -> list[dict]:
             if value not in distinct_values:
                 distinct_values.append(value)
         null_count = max(sample_size - len(non_empty_values), 0)
-        null_ratio = round(null_count / sample_size, 4) if sample_size else 0.0
+        null_ratio = round(null_count / sample_size, 4) if sample_size else 1.0
         distinct_count = len(distinct_values)
         candidate_key_score = 0.0
         if sample_size and null_count == 0:
@@ -196,21 +196,41 @@ def _profile_columns(source: SourceDataModel) -> list[dict]:
         columns.append(
             {
                 "name": name,
-                "inferred_type": _profile_type(column.get("data_type")).value,
-                "nullable": bool(column.get("nullable", False)),
+                "inferred_type": _infer_profile_type(non_empty_values).value,
+                "nullable": True if sample_size == 0 else null_count > 0,
                 "null_ratio": null_ratio,
                 "distinct_count_sampled": distinct_count,
-                "sample_values": column.get("sample_values", []),
+                "sample_values": distinct_values[:5],
                 "candidate_key_score": candidate_key_score,
             }
         )
     return columns
 
 
-def _profile_type(value: str | None) -> ProfileInferredType:
-    if value in ProfileInferredType.__members__:
-        return ProfileInferredType[value]
-    return ProfileInferredType.UNKNOWN
+def _infer_profile_type(values: list[object]) -> ProfileInferredType:
+    if not values:
+        return ProfileInferredType.EMPTY
+    value_types = {_profile_value_type(value) for value in values}
+    if value_types == {ProfileInferredType.INTEGER}:
+        return ProfileInferredType.INTEGER
+    if value_types <= {ProfileInferredType.INTEGER, ProfileInferredType.FLOAT}:
+        return ProfileInferredType.FLOAT
+    if len(value_types) == 1:
+        return next(iter(value_types))
+    return ProfileInferredType.MIXED
+
+
+def _profile_value_type(value: object) -> ProfileInferredType:
+    text = str(value).strip()
+    if text.lower() in {"true", "false", "yes", "no"}:
+        return ProfileInferredType.BOOLEAN
+    if re.fullmatch(r"[-+]?\d+", text):
+        return ProfileInferredType.INTEGER
+    if re.fullmatch(r"[-+]?\d+(\.\d+)?", text):
+        return ProfileInferredType.FLOAT
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        return ProfileInferredType.DATE
+    return ProfileInferredType.STRING
 
 
 def _row_text(row: dict) -> str:
