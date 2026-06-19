@@ -247,3 +247,87 @@ class QualityDrilldownTarget(str, Enum):
     REVIEW_INBOX = "review_inbox"
     PUBLISH_JOBS = "publish_jobs"
     PUBLISHED_GRAPH = "published_graph"
+
+
+class EvaluationDatasetStatus(str, Enum):
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+
+
+class GoldenSetItemKind(str, Enum):
+    ENTITY = "ENTITY"
+    RELATION = "RELATION"
+    PROPERTY_VALUE = "PROPERTY_VALUE"
+    EVIDENCE_LINK = "EVIDENCE_LINK"
+
+
+class PromptExperimentStatus(str, Enum):
+    DRAFT = "DRAFT"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+class QualityMetricGroup(str, Enum):
+    COMPLETENESS = "COMPLETENESS"
+    CONSISTENCY = "CONSISTENCY"
+    TRACEABILITY = "TRACEABILITY"
+    VALIDATION = "VALIDATION"
+    REVIEW = "REVIEW"
+    DUPLICATE = "DUPLICATE"
+    RELATION_DENSITY = "RELATION_DENSITY"
+
+
+class QualityMetricUnit(str, Enum):
+    COUNT = "COUNT"
+    RATE = "RATE"
+    RATIO = "RATIO"
+    PERCENT = "PERCENT"
+
+
+class SearchResultKind(str, Enum):
+    PUBLISHED_ENTITY = "PUBLISHED_ENTITY"
+    PUBLISHED_RELATION = "PUBLISHED_RELATION"
+    SOURCE = "SOURCE"
+    SOURCE_CHUNK = "SOURCE_CHUNK"
+    EVIDENCE = "EVIDENCE"
+    LINEAGE = "LINEAGE"
+
+
+class VectorAdapterStatus(str, Enum):
+    AVAILABLE = "AVAILABLE"
+    FALLBACK_KEYWORD = "FALLBACK_KEYWORD"
+    UNAVAILABLE = "UNAVAILABLE"
+    NOT_CONFIGURED = "NOT_CONFIGURED"
+
+
+class VectorFallbackReason(str, Enum):
+    VECTOR_DB_NOT_CONFIGURED = "VECTOR_DB_NOT_CONFIGURED"
+    INDEX_NOT_READY = "INDEX_NOT_READY"
+    ADAPTER_ERROR = "ADAPTER_ERROR"
+    KEYWORD_FALLBACK_USED = "KEYWORD_FALLBACK_USED"
+
+
+class RagAnswerState(str, Enum):
+    ANSWERED = "ANSWERED"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    ERROR = "ERROR"
+
+
+class RagCitationKind(str, Enum):
+    EVIDENCE_CHUNK = "EVIDENCE_CHUNK"
+    SOURCE_CHUNK = "SOURCE_CHUNK"
+    PUBLISHED_ENTITY = "PUBLISHED_ENTITY"
+    PUBLISHED_RELATION = "PUBLISHED_RELATION"
+
+
+class GraphExploreState(str, Enum):
+    READY = "READY"
+    SAFE_TOO_LARGE = "SAFE_TOO_LARGE"
+    EMPTY = "EMPTY"
+    ERROR = "ERROR"
+
+
+class ExternalApiAuthMode(str, Enum):
+    DEV_AUTH = "DEV_AUTH"

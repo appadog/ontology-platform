@@ -191,6 +191,29 @@ tmpfile=$(mktemp /tmp/openapi-mvp2-closeout.XXXXXX)
 cmp -s "$tmpfile" ../../docs/api/openapi-mvp2-draft.json
 ```
 
+## MVP 3 Seed and Closeout Smoke
+
+MVP 3 deterministic seed support creates the fixed project
+`project-corp-knowledge` with review tasks, publish eligibility states,
+published graph facts, and quality metrics for actual API smoke.
+
+```bash
+cd apps/backend
+rm -f /tmp/ontology-mvp3-seed.db /tmp/ontology-mvp3-seed.json
+DATABASE_URL=sqlite+pysqlite:////tmp/ontology-mvp3-seed.db .venv/bin/alembic upgrade head
+DATABASE_URL=sqlite+pysqlite:////tmp/ontology-mvp3-seed.db .venv/bin/python scripts/seed_mvp3.py --output /tmp/ontology-mvp3-seed.json
+```
+
+Focused MVP 3 backend regression and OpenAPI freshness checks:
+
+```bash
+cd apps/backend
+.venv/bin/pytest tests/test_mvp3_api.py -q
+.venv/bin/ruff check app tests scripts
+.venv/bin/python scripts/export_openapi.py --output /tmp/openapi-mvp3.json
+cmp -s /tmp/openapi-mvp3.json ../../docs/api/openapi-mvp3-draft.json
+```
+
 ## Notes
 
 - Enum strings are copied from `docs/pm/GLOSSARY.md`.

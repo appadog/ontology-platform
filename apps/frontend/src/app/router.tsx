@@ -3,15 +3,20 @@ import { App } from "./App";
 import { CandidateResultsPage } from "../pages/CandidateResultsPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DocumentChunkViewerPage } from "../pages/DocumentChunkViewerPage";
+import { EvaluationDatasetsPage } from "../pages/EvaluationDatasetsPage";
 import { EvidenceViewerPage } from "../pages/EvidenceViewerPage";
+import { ExternalApiDocsPage } from "../pages/ExternalApiDocsPage";
 import { ExtractionJobCreatePage } from "../pages/ExtractionJobCreatePage";
 import { ExtractionJobMonitorPage } from "../pages/ExtractionJobMonitorPage";
+import { IntegratedSearchPage } from "../pages/IntegratedSearchPage";
 import { OntologyModelerPage } from "../pages/OntologyModelerPage";
+import { PromptPerformancePage } from "../pages/PromptPerformancePage";
 import { PublishedGraphExplorerPage } from "../pages/PublishedGraphExplorerPage";
 import { PublishQueuePage } from "../pages/PublishQueuePage";
 import { ProjectDetailPage } from "../pages/ProjectDetailPage";
 import { ProjectListPage } from "../pages/ProjectListPage";
 import { QualityDashboardPage } from "../pages/QualityDashboardPage";
+import { RagAnswerWorkspacePage } from "../pages/RagAnswerWorkspacePage";
 import { ReviewInboxPage } from "../pages/ReviewInboxPage";
 import { ReviewWorkbenchPage } from "../pages/ReviewWorkbenchPage";
 import { SourceDetailPage } from "../pages/SourceDetailPage";
@@ -89,6 +94,34 @@ export const router = createBrowserRouter([
       {
         path: "/projects/:projectId/quality",
         element: <QualityDashboardPage />,
+      },
+      {
+        path: "/projects/:projectId/search",
+        element: <IntegratedSearchPage />,
+      },
+      {
+        path: "/projects/:projectId/rag",
+        element: <RagAnswerWorkspacePage />,
+      },
+      {
+        path: "/projects/:projectId/evaluation-datasets",
+        element: <EvaluationDatasetsPage />,
+      },
+      {
+        path: "/projects/:projectId/evaluation-datasets/:datasetId",
+        element: <EvaluationDatasetsPage />,
+      },
+      {
+        path: "/projects/:projectId/evaluation-dataset-versions/:datasetVersionId",
+        element: <EvaluationDatasetsPage />,
+      },
+      {
+        path: "/projects/:projectId/prompt-performance",
+        element: <PromptPerformancePage />,
+      },
+      {
+        path: "/projects/:projectId/external-api",
+        element: <ExternalApiDocsPage />,
       },
       {
         path: "/extraction-jobs/:jobId",

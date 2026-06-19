@@ -1,41 +1,40 @@
+import { useState } from "react";
 import styled from "styled-components";
 import { useParams } from "react-router-dom";
-import { useCurrentPublishedGraph, useProject } from "../shared/api/queries";
+import { GitBranch, SlidersHorizontal } from "lucide-react";
+import { useProject, usePublishedGraphExplore } from "../shared/api/queries";
+import { GraphExploreState } from "../shared/api/types";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
-import { HanaBadge, HanaCard } from "../shared/ui/hana";
+import { HanaBadge, HanaButton, HanaCard } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
-import { formatDateTime } from "../shared/lib/format";
-import { CardBody, KeyValue, Mvp3ActionLink, Mvp3Workflow, Muted, ScreenGrid, Stack, toPublishedGraphView } from "./mvp3Shared";
+import { CardBody, KeyValue, Mvp3ActionLink, Muted, Mvp3Workflow, Stack } from "./mvp3Shared";
+import { InlineList, Mvp4Panel, Mvp4TwoColumn, PageActions, StateBadge, Toolbar, versionLabel } from "./mvp4Shared";
 
 export function PublishedGraphExplorerPage() {
   const { projectId = "" } = useParams();
+  const [state, setState] = useState<GraphExploreState>("READY");
+  const [maxHops, setMaxHops] = useState(2);
   const projectQuery = useProject(projectId);
-  const graphQuery = useCurrentPublishedGraph(projectId);
+  const graphQuery = usePublishedGraphExplore(projectId, { state, max_hops: maxHops });
 
   if (projectQuery.isLoading || graphQuery.isLoading) {
-    return <PageState kind="loading" title="Published graph를 불러오는 중" description="Current snapshot의 published facts를 조회하고 있습니다." />;
+    return <PageState kind="loading" title="Published graph is loading" description="Explorer filters and published facts are being prepared." />;
   }
 
   if (projectQuery.isError || graphQuery.isError || !projectQuery.data || !graphQuery.data) {
     return (
       <PageState
         kind="error"
-        title="Published graph를 불러오지 못했습니다"
-        description="Publish queue에서 최근 job 상태를 확인한 뒤 다시 조회하세요."
-        actionLabel="다시 시도"
-        onAction={() => {
-          void projectQuery.refetch();
-          void graphQuery.refetch();
-        }}
+        title="Published graph could not load"
+        description="Reset filters or retry the selected project graph."
+        actionLabel="Retry"
+        onAction={() => void graphQuery.refetch()}
       />
     );
   }
 
   const graph = graphQuery.data;
-  const graphView = toPublishedGraphView(graph);
-  const firstEntity = graph.entities[0];
-  const firstRelation = graph.relations[0];
 
   return (
     <>
@@ -43,107 +42,132 @@ export function PublishedGraphExplorerPage() {
         items={[
           { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Publish queue", to: `/projects/${projectId}/publish` },
           { label: "Published graph" },
         ]}
       />
-      <PageHeader title="Published Graph" description={`Current snapshot v${graph.version.version} · published facts only`}>
-        <HanaBadge tone="success">PUBLISHED FACTS</HanaBadge>
-        <Mvp3ActionLink to={`/projects/${projectId}/quality`}>Quality dashboard</Mvp3ActionLink>
+      <PageHeader title="Published Graph Explorer" description={`${versionLabel(graph.published_graph_version_ref)} · published facts only`}>
+        <PageActions>
+          <StateBadge state={graph.state} />
+          <HanaBadge tone="success">PUBLISHED ONLY</HanaBadge>
+          <HanaBadge tone="success">PUBLISHED FACTS</HanaBadge>
+          <Mvp3ActionLink to={`/projects/${projectId}/quality`}>Quality dashboard</Mvp3ActionLink>
+        </PageActions>
       </PageHeader>
-      <Mvp3Workflow current="Published graph" action={<Mvp3ActionLink to={`/projects/${projectId}/publish`}>Publish queue</Mvp3ActionLink>} />
-      {graph.entities.length === 0 && graph.relations.length === 0 ? (
-        <PageState kind="empty" title="No published snapshot facts" description="Run a publish job before exploring the published graph." />
+
+      <Mvp3Workflow current="Published graph" />
+
+      <HanaCard title="Explorer controls" description="Default is 2 hops. Maximum supported hop depth is 3.">
+        <Toolbar>
+          <SlidersHorizontal aria-hidden="true" size={18} />
+          <MarkerText>Published-only graph state. SAFE TOO LARGE is handled without rendering unsafe partial graphs.</MarkerText>
+          {(["READY", "SAFE_TOO_LARGE", "EMPTY", "ERROR"] as GraphExploreState[]).map((nextState) => (
+            <HanaButton key={nextState} type="button" variant={state === nextState ? "primary" : "secondary"} onClick={() => setState(nextState)}>
+              {nextState}
+            </HanaButton>
+          ))}
+          {[1, 2, 3, 4].map((hop) => (
+            <HanaButton key={hop} type="button" variant={maxHops === hop ? "primary" : "secondary"} disabled={hop > 3} onClick={() => setMaxHops(hop)}>
+              {hop} hop
+            </HanaButton>
+          ))}
+        </Toolbar>
+      </HanaCard>
+
+      {graph.state === "SAFE_TOO_LARGE" ? (
+        <HanaCard title="Safe too large" description="The explorer does not render unsafe partial graphs.">
+          <CardBody>
+            <KeyValue>
+              <dt>Estimated nodes</dt>
+              <dd>{graph.too_large?.estimated_nodes}</dd>
+              <dt>Estimated edges</dt>
+              <dd>{graph.too_large?.estimated_edges}</dd>
+              <dt>Node budget</dt>
+              <dd>{graph.too_large?.node_budget}</dd>
+              <dt>Edge budget</dt>
+              <dd>{graph.too_large?.edge_budget}</dd>
+            </KeyValue>
+            <Muted>{graph.too_large?.message}</Muted>
+            <InlineList>
+              {(graph.too_large?.suggested_filters ?? []).map((filter) => (
+                <Mvp4Panel key={filter}>
+                  <strong>{filter}</strong>
+                  <span>Apply this filter before rendering the graph.</span>
+                </Mvp4Panel>
+              ))}
+            </InlineList>
+          </CardBody>
+        </HanaCard>
+      ) : graph.state === "EMPTY" ? (
+        <PageState kind="empty" title="No graph facts for this filter" description="Choose another root entity, version, or filter set." />
+      ) : graph.state === "ERROR" ? (
+        <PageState kind="error" title="Graph explorer state returned error" description="Retry after resetting filters." actionLabel="Show READY" onAction={() => setState("READY")} />
       ) : (
-        <ScreenGrid>
+        <Mvp4TwoColumn>
           <Stack>
-            <HanaCard title="Current snapshot" description="Pending, rejected, discussion, and unpublished candidates are not rendered here.">
-              <PublishedCanvas>
-                {graphView.entities.map((entity) => (
-                  <PublishedNode key={entity.id}>
-                    <strong>{entity.label}</strong>
-                    <span>{entity.classLabel}</span>
-                  </PublishedNode>
+            <HanaCard title="Current snapshot" description="Published entities and relations are shown from the selected published graph version.">
+              <GraphCanvas>
+                {graph.nodes.map((node) => (
+                  <GraphNode key={node.id}>
+                    <strong>{node.label}</strong>
+                    <span>{node.class_id} · hop {node.hop}</span>
+                    <small>{node.source_count ?? 0} sources · {node.evidence_count ?? 0} evidence refs</small>
+                  </GraphNode>
                 ))}
-                {graphView.relations.map((relation) => (
-                  <PublishedEdge key={relation.id}>
-                    <span>{relation.sourceLabel}</span>
-                    <strong>{relation.label}</strong>
-                    <span>{relation.targetLabel}</span>
-                  </PublishedEdge>
+                {graph.edges.map((edge) => (
+                  <GraphEdge key={edge.id}>
+                    <GitBranch aria-hidden="true" size={18} />
+                    <strong>{edge.label}</strong>
+                    <span>{edge.source_node_id} to {edge.target_node_id}</span>
+                    <small>{edge.evidence_count ?? 0} evidence refs</small>
+                  </GraphEdge>
                 ))}
-              </PublishedCanvas>
+              </GraphCanvas>
             </HanaCard>
-            <HanaCard title="Published entities and relations">
+            <HanaCard title="Overlays">
               <CardBody>
-                <FactList>
-                  {graphView.entities.map((entity) => (
-                    <li key={entity.id}>
-                      <strong>{entity.label}</strong>
-                      <span>{entity.classLabel}</span>
-                      <span>Candidate {entity.sourceCandidateIds.join(", ")}</span>
-                    </li>
-                  ))}
-                  {graphView.relations.map((relation) => (
-                    <li key={relation.id}>
-                      <strong>
-                        {relation.sourceLabel} - {relation.label} - {relation.targetLabel}
-                      </strong>
-                      <span>Relation</span>
-                      <span>Candidate {relation.sourceCandidateIds.join(", ")}</span>
-                    </li>
-                  ))}
-                </FactList>
+                <Muted>{graph.quality_overlays?.length ?? 0} quality overlays · {graph.source_overlays?.length ?? 0} source/evidence overlays</Muted>
               </CardBody>
             </HanaCard>
           </Stack>
           <Stack>
-            <HanaCard title="Version metadata">
+            <HanaCard title="Lineage panel">
               <CardBody>
-                <KeyValue>
-                  <dt>Version</dt>
-                  <dd>v{graph.version.version}</dd>
-                  <dt>Publish job</dt>
-                  <dd>{graph.version.publish_job_id}</dd>
-                  <dt>Ontology version</dt>
-                  <dd>{graph.version.ontology_version_id}</dd>
-                  <dt>Current pointer</dt>
-                  <dd>{graph.version.is_current ? "Current" : "Historical"}</dd>
-                  <dt>Published</dt>
-                  <dd>{formatDateTime(graph.version.created_at)}</dd>
-                </KeyValue>
-              </CardBody>
-            </HanaCard>
-            <HanaCard title="Lineage detail">
-              <CardBody>
-                {firstRelation || firstEntity ? (
+                {graph.lineage_panel ? (
                   <KeyValue>
-                    <dt>Candidate</dt>
-                    <dd>{(firstRelation ?? firstEntity).lineage.candidate_id}</dd>
-                    <dt>Decision</dt>
-                    <dd>{(firstRelation ?? firstEntity).lineage.review_decision_type}</dd>
-                    <dt>Reviewer</dt>
-                    <dd>{(firstRelation ?? firstEntity).lineage.reviewer_display_name}</dd>
-                    <dt>Reason</dt>
-                    <dd>{(firstRelation ?? firstEntity).lineage.reason ?? "No reason stored"}</dd>
+                    <dt>Fact</dt>
+                    <dd>{graph.lineage_panel.fact_ref.label}</dd>
+                    <dt>Version</dt>
+                    <dd>{versionLabel(graph.lineage_panel.published_graph_version_ref)}</dd>
+                    <dt>Publish job</dt>
+                    <dd>{graph.lineage_panel.publish_job_id ?? "Unavailable"}</dd>
+                    <dt>Review decision</dt>
+                    <dd>{graph.lineage_panel.review_decision_ref?.review_decision_type ?? "Unavailable"}</dd>
+                    <dt>Candidate context</dt>
+                    <dd>{graph.lineage_panel.candidate_ref?.candidate_id ?? "Unavailable"} as provenance only</dd>
                     <dt>Evidence</dt>
-                    <dd>{(firstRelation ?? firstEntity).lineage.evidence_refs.map((ref) => ref.locator).join(", ")}</dd>
+                    <dd>{graph.lineage_panel.evidence_refs.map((ref) => ref.locator).join(", ")}</dd>
+                    <dt>Ontology</dt>
+                    <dd>{graph.lineage_panel.ontology_version_id ?? "Unavailable"}</dd>
+                    <dt>Model run</dt>
+                    <dd>{graph.lineage_panel.model_run_id ?? "Unavailable"}</dd>
+                    <dt>Prompt ref</dt>
+                    <dd>{graph.lineage_panel.prompt_version_id ?? "Unavailable"}</dd>
                   </KeyValue>
                 ) : (
-                  <Muted>No lineage row selected.</Muted>
+                  <Muted>Select a fact with lineage available.</Muted>
                 )}
               </CardBody>
             </HanaCard>
           </Stack>
-        </ScreenGrid>
+        </Mvp4TwoColumn>
       )}
     </>
   );
 }
 
-const PublishedCanvas = styled.div`
+const GraphCanvas = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
   gap: ${({ theme }) => theme.spacing.md};
   padding: ${({ theme }) => theme.spacing.lg};
   background:
@@ -151,56 +175,48 @@ const PublishedCanvas = styled.div`
     linear-gradient(${({ theme }) => theme.color.surfaceMuted} 1px, transparent 1px);
   background-size: 28px 28px;
 
-  @media (max-width: 780px) {
+  @media (max-width: 760px) {
     grid-template-columns: 1fr;
   }
 `;
 
-const PublishedNode = styled.div`
+const MarkerText = styled.span`
+  color: ${({ theme }) => theme.color.textMuted};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+`;
+
+const GraphNode = styled.div`
   display: grid;
   gap: ${({ theme }) => theme.spacing.xs};
-  min-height: 96px;
+  min-height: 112px;
   padding: ${({ theme }) => theme.spacing.lg};
   border: 2px solid ${({ theme }) => theme.color.positive};
   border-radius: ${({ theme }) => theme.radius.sm};
   background: ${({ theme }) => theme.color.surfaceRaised};
 
-  span {
+  span,
+  small {
     color: ${({ theme }) => theme.color.textMuted};
   }
 `;
 
-const PublishedEdge = styled.div`
+const GraphEdge = styled.div`
   display: grid;
   gap: ${({ theme }) => theme.spacing.xs};
-  min-height: 96px;
+  min-height: 112px;
   padding: ${({ theme }) => theme.spacing.lg};
   border: 1px solid ${({ theme }) => theme.color.borderStrong};
   border-radius: ${({ theme }) => theme.radius.sm};
   background: ${({ theme }) => theme.color.surface};
   text-align: center;
 
-  strong {
+  svg {
+    justify-self: center;
     color: ${({ theme }) => theme.color.primary};
   }
-`;
 
-const FactList = styled.ul`
-  display: grid;
-  gap: ${({ theme }) => theme.spacing.sm};
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  li {
-    display: grid;
-    gap: ${({ theme }) => theme.spacing.xs};
-    padding: ${({ theme }) => theme.spacing.md};
-    border: 1px solid ${({ theme }) => theme.color.border};
-    border-radius: ${({ theme }) => theme.radius.sm};
-  }
-
-  span {
+  span,
+  small {
     color: ${({ theme }) => theme.color.textMuted};
   }
 `;

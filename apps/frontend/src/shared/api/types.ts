@@ -798,6 +798,477 @@ export interface QualitySummary {
   };
 }
 
+export interface PublishedGraphVersionRef {
+  published_graph_version_id: string;
+  published_graph_version: number;
+  ontology_version_id: string;
+  is_current: boolean;
+  created_at?: string;
+}
+
+export interface SourceRef {
+  source_id: string;
+  source_segment_id?: string | null;
+  locator?: string | null;
+  label?: string | null;
+}
+
+export interface ReviewDecisionRef {
+  review_decision_id?: string;
+  review_decision_type?: ReviewDecisionType;
+  reviewer_id?: string | null;
+  reviewed_at?: string | null;
+}
+
+export type QualityMetricGroup =
+  | "COMPLETENESS"
+  | "CONSISTENCY"
+  | "TRACEABILITY"
+  | "VALIDATION"
+  | "REVIEW"
+  | "DUPLICATE"
+  | "RELATION_DENSITY";
+
+export type QualityMetricUnit = "COUNT" | "RATE" | "RATIO" | "PERCENT";
+
+export interface AdvancedQualityDrilldownHint {
+  target: string;
+  label?: string | null;
+  query: Record<string, unknown>;
+}
+
+export interface QualityFormulaMetadata {
+  formula_id: string;
+  numerator: string;
+  denominator: string;
+  scope: string;
+  time_window: string;
+  breakdown_dimension: string;
+  drilldown_target: string;
+  description?: string | null;
+  unit?: QualityMetricUnit;
+  notes?: string | null;
+}
+
+export interface QualityMetricBreakdown {
+  dimension: string;
+  key?: string;
+  label: string;
+  value: number;
+  rate?: number | null;
+  drilldown?: AdvancedQualityDrilldownHint;
+}
+
+export interface QualityMetric {
+  metric_id: string;
+  group: QualityMetricGroup;
+  label: string;
+  description?: string | null;
+  unit: QualityMetricUnit;
+  value?: number | null;
+  rate?: number | null;
+  trend?: number | null;
+  formula: QualityFormulaMetadata;
+  drilldown?: AdvancedQualityDrilldownHint;
+  evidence_refs?: EvidenceRef[];
+  published_graph_version_ref?: PublishedGraphVersionRef;
+  breakdowns?: QualityMetricBreakdown[];
+}
+
+export interface QualityMetricGroupResult {
+  group: QualityMetricGroup;
+  label: string;
+  description?: string | null;
+  metrics: QualityMetric[];
+}
+
+export interface QualityMetricsResponse {
+  project_id: string;
+  published_graph_version_ref?: PublishedGraphVersionRef;
+  generated_at: string;
+  filters?: Record<string, unknown>;
+  metric_groups: QualityMetricGroupResult[];
+}
+
+export interface QualityMetricDetail {
+  project_id: string;
+  metric: QualityMetric;
+  breakdown_rows?: QualityMetricBreakdown[];
+}
+
+export type EvaluationDatasetStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
+
+export type GoldenSetItemKind = "ENTITY" | "RELATION" | "PROPERTY_VALUE" | "EVIDENCE_LINK";
+
+export interface EvaluationDataset {
+  id: string;
+  project_id: string;
+  name: string;
+  description?: string | null;
+  status: EvaluationDatasetStatus;
+  owner_id?: string | null;
+  active_version_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  notes?: string | null;
+}
+
+export interface EvaluationDatasetVersion {
+  id: string;
+  dataset_id: string;
+  project_id: string;
+  version: number;
+  status: EvaluationDatasetStatus;
+  source_refs?: SourceRef[];
+  source_segment_refs?: SourceRef[];
+  candidate_refs?: CandidateRef[];
+  evidence_refs?: EvidenceRef[];
+  golden_item_count: number;
+  created_by?: string | null;
+  created_at: string;
+  notes?: string | null;
+}
+
+export interface GoldenSetItem {
+  id: string;
+  dataset_version_id: string;
+  project_id: string;
+  kind: GoldenSetItemKind;
+  expected_payload: Record<string, unknown>;
+  source_refs?: SourceRef[];
+  evidence_refs?: EvidenceRef[];
+  review_decision_ref?: ReviewDecisionRef;
+  published_graph_version_ref?: PublishedGraphVersionRef;
+  reviewer_id?: string | null;
+  created_at: string;
+  notes?: string | null;
+}
+
+export interface EvaluationDimensions {
+  prompt_version_id?: string | null;
+  model_run_id?: string | null;
+  source_type?: string | null;
+  class_type?: string | null;
+  relation_type?: string | null;
+  validation_outcome?: string | null;
+  review_decision?: string | null;
+  correction_pattern?: string | null;
+}
+
+export interface PromptPerformanceRow {
+  dimensions: EvaluationDimensions;
+  approval_rate: number;
+  rejection_rate: number;
+  modification_rate: number;
+  failed_validation_rate: number;
+  missing_evidence_rate: number;
+  latency_ms?: number | null;
+  token_count?: number | null;
+  cost?: number | null;
+  drilldown?: AdvancedQualityDrilldownHint;
+}
+
+export interface PromptPerformanceSummary {
+  project_id: string;
+  generated_at: string;
+  filters?: Record<string, unknown>;
+  comparison_dimensions: string[];
+  rows: PromptPerformanceRow[];
+}
+
+export type PromptExperimentStatus = "DRAFT" | "RUNNING" | "COMPLETED" | "CANCELLED";
+
+export interface PromptExperiment {
+  id: string;
+  project_id: string;
+  name: string;
+  hypothesis?: string | null;
+  status: PromptExperimentStatus;
+  dataset_id: string;
+  dataset_version_id: string;
+  control_prompt_version_id: string;
+  treatment_prompt_version_id: string;
+  model_provider?: string | null;
+  model_name?: string | null;
+  run_window?: {
+    started_at?: string | null;
+    ended_at?: string | null;
+  };
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  notes?: string | null;
+}
+
+export interface EvaluationRunMetrics {
+  approval_rate?: number | null;
+  rejection_rate?: number | null;
+  modification_rate?: number | null;
+  failed_validation_rate?: number | null;
+  missing_evidence_rate?: number | null;
+  correction_pattern_counts?: Record<string, number>;
+}
+
+export type EvaluationRunStatus = "PENDING" | "RUNNING" | "SUCCESS" | "FAILED";
+
+export interface EvaluationRun {
+  id: string;
+  project_id: string;
+  dataset_version_id: string;
+  experiment_id?: string | null;
+  prompt_version_id?: string | null;
+  model_run_id?: string | null;
+  model_provider?: string | null;
+  model_name?: string | null;
+  status: EvaluationRunStatus;
+  started_at?: string | null;
+  ended_at?: string | null;
+  requested_by?: string | null;
+  metrics: EvaluationRunMetrics;
+  dimensions: EvaluationDimensions;
+  error_code?: string | null;
+  error_message?: string | null;
+}
+
+export type SearchResultKind =
+  | "PUBLISHED_ENTITY"
+  | "PUBLISHED_RELATION"
+  | "SOURCE"
+  | "SOURCE_CHUNK"
+  | "EVIDENCE"
+  | "LINEAGE";
+
+export type SearchIndexState = "READY" | "PARTIAL" | "STALE";
+
+export interface SearchResultItem {
+  id: string;
+  kind: SearchResultKind;
+  title: string;
+  snippet: string;
+  score: number;
+  published_graph_version_ref?: PublishedGraphVersionRef;
+  source_ref?: SourceRef;
+  evidence_refs?: EvidenceRef[];
+  lineage_ref?: PublishedFactRef;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SearchResultGroup {
+  kind: SearchResultKind;
+  total_count: number;
+  items: SearchResultItem[];
+}
+
+export interface SearchResponse {
+  project_id: string;
+  query: string;
+  published_graph_version_ref?: PublishedGraphVersionRef;
+  groups: SearchResultGroup[];
+  total_count: number;
+  limit: number;
+  offset: number;
+  index_state: SearchIndexState;
+}
+
+export interface SearchRequest {
+  query?: string;
+  kind?: SearchResultKind | "ALL";
+  index_state?: SearchIndexState;
+  limit?: number;
+  offset?: number;
+}
+
+export type VectorAdapterStatus = "AVAILABLE" | "FALLBACK_KEYWORD" | "UNAVAILABLE" | "NOT_CONFIGURED";
+
+export type VectorFallbackReason =
+  | "VECTOR_DB_NOT_CONFIGURED"
+  | "INDEX_NOT_READY"
+  | "ADAPTER_ERROR"
+  | "KEYWORD_FALLBACK_USED";
+
+export interface VectorAdapterState {
+  project_id: string;
+  status: VectorAdapterStatus;
+  embedding_target: string;
+  index_name?: string | null;
+  indexed_chunk_count?: number | null;
+  last_indexed_at?: string | null;
+  fallback_reason?: VectorFallbackReason | null;
+  message?: string | null;
+}
+
+export type PublishedFactType = "ENTITY" | "RELATION";
+
+export interface PublishedFactRef {
+  fact_type: PublishedFactType;
+  fact_id: string;
+  published_graph_version_id: string;
+  label: string;
+}
+
+export interface SimilarEvidenceRequest {
+  query?: string | null;
+  source_segment_id?: string | null;
+  evidence_id?: string | null;
+  published_fact_id?: string | null;
+  published_fact_type?: PublishedFactType | null;
+  published_graph_version_id?: string | null;
+  limit?: number;
+}
+
+export interface SimilarEvidenceItem {
+  evidence_ref: EvidenceRef;
+  source_ref?: SourceRef;
+  snippet: string;
+  similarity_score: number;
+  match_reason?: string | null;
+  published_graph_version_ref?: PublishedGraphVersionRef;
+  linked_published_fact_refs?: PublishedFactRef[];
+}
+
+export interface SimilarEvidenceResponse {
+  project_id: string;
+  adapter_state: VectorAdapterState;
+  fallback_used: boolean;
+  items: SimilarEvidenceItem[];
+}
+
+export type RagAnswerState = "ANSWERED" | "INSUFFICIENT_EVIDENCE" | "ERROR";
+
+export type RagCitationKind = "EVIDENCE_CHUNK" | "SOURCE_CHUNK" | "PUBLISHED_ENTITY" | "PUBLISHED_RELATION";
+
+export interface RagAnswerRequest {
+  question: string;
+  published_graph_version_id?: string | null;
+  scope?: SearchResultKind[];
+  source_ids?: string[];
+  max_citations?: number;
+}
+
+export interface RagCitation {
+  citation_id: string;
+  kind: RagCitationKind;
+  evidence_ref?: EvidenceRef;
+  source_ref?: SourceRef;
+  published_fact_ref?: PublishedFactRef;
+  quote?: string | null;
+  snippet: string;
+  locator?: string | null;
+}
+
+export interface InsufficientEvidenceState {
+  reason_code: "NO_RELEVANT_EVIDENCE" | "NO_PUBLISHED_FACTS" | "CITATION_COVERAGE_TOO_LOW" | "VECTOR_UNAVAILABLE";
+  message: string;
+  missing_scopes?: string[];
+  suggested_queries?: string[];
+}
+
+export interface RagAnswerResponse {
+  project_id: string;
+  question: string;
+  state: RagAnswerState;
+  answer?: string | null;
+  coverage?: number | null;
+  published_graph_version_ref?: PublishedGraphVersionRef;
+  citations: RagCitation[];
+  linked_published_facts: PublishedFactRef[];
+  insufficient_evidence?: InsufficientEvidenceState;
+  debug?: Record<string, unknown>;
+}
+
+export type GraphExploreState = "READY" | "SAFE_TOO_LARGE" | "EMPTY" | "ERROR";
+
+export interface GraphExploreNode {
+  id: string;
+  published_entity_id: string;
+  class_id: string;
+  label: string;
+  hop: number;
+  properties?: Record<string, unknown>;
+  quality_summary?: Record<string, unknown>;
+  source_count?: number;
+  evidence_count?: number;
+  lineage_available?: boolean;
+}
+
+export interface GraphExploreEdge {
+  id: string;
+  published_relation_id: string;
+  source_node_id: string;
+  target_node_id: string;
+  relation_id: string;
+  label: string;
+  properties?: Record<string, unknown>;
+  quality_summary?: Record<string, unknown>;
+  evidence_count?: number;
+  lineage_available?: boolean;
+}
+
+export interface GraphTooLargeState {
+  estimated_nodes: number;
+  estimated_edges: number;
+  node_budget: number;
+  edge_budget: number;
+  suggested_filters?: string[];
+  message: string;
+}
+
+export interface PublishedLineagePanel {
+  fact_ref: PublishedFactRef;
+  published_graph_version_ref: PublishedGraphVersionRef;
+  publish_job_id?: string | null;
+  review_decision_ref?: ReviewDecisionRef;
+  candidate_ref?: CandidateRef;
+  evidence_refs: EvidenceRef[];
+  source_refs: SourceRef[];
+  ontology_version_id?: string | null;
+  model_run_id?: string | null;
+  prompt_version_id?: string | null;
+  created_at?: string | null;
+}
+
+export interface GraphExploreRequest {
+  root_entity_id?: string;
+  max_hops?: number;
+  state?: GraphExploreState;
+  published_graph_version_id?: string;
+}
+
+export interface GraphExploreResponse {
+  project_id: string;
+  state: GraphExploreState;
+  published_graph_version_ref: PublishedGraphVersionRef;
+  root_entity_id: string;
+  max_hops: number;
+  nodes: GraphExploreNode[];
+  edges: GraphExploreEdge[];
+  quality_overlays?: Array<Record<string, unknown>>;
+  source_overlays?: Array<Record<string, unknown>>;
+  lineage_panel?: PublishedLineagePanel;
+  too_large?: GraphTooLargeState;
+}
+
+export type ExternalApiAuthMode = "DEV_AUTH";
+
+export interface ExternalApiEndpointDoc {
+  group: "graph" | "source_evidence" | "search" | "rag";
+  method: "GET" | "POST";
+  path: string;
+  title: string;
+  description: string;
+  request_example?: Record<string, unknown>;
+  response_example: Record<string, unknown>;
+}
+
+export interface ExternalApiDocsSurface {
+  project_id: string;
+  auth_mode: ExternalApiAuthMode;
+  published_graph_version_ref?: PublishedGraphVersionRef;
+  endpoints: ExternalApiEndpointDoc[];
+  read_only: true;
+  dev_auth_missing: boolean;
+}
+
 export interface DashboardSummary {
   active_project_count: number;
   source_count: number;

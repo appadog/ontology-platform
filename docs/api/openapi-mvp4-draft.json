@@ -1,0 +1,4232 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform Backend - MVP4 Contract Draft",
+    "version": "0.4.0-draft",
+    "description": "Planning OpenAPI artifact for MVP4 contract-first Backend draft. Existing MVP3 paths remain stable; MVP4 paths are additive."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "quality",
+      "description": "Advanced explainable quality metric groups"
+    },
+    {
+      "name": "evaluation",
+      "description": "Evaluation datasets, golden sets, prompt experiments, and evaluation runs"
+    },
+    {
+      "name": "search",
+      "description": "Keyword search and similar evidence adapter boundary"
+    },
+    {
+      "name": "rag",
+      "description": "Grounded read-only RAG answers"
+    },
+    {
+      "name": "published-graph-explorer",
+      "description": "Advanced published graph exploration"
+    },
+    {
+      "name": "external-read-only",
+      "description": "MVP4 development-auth read-only external APIs"
+    }
+  ],
+  "paths": {
+    "/api/v1/projects/{project_id}/quality/metrics": {
+      "get": {
+        "tags": [
+          "quality"
+        ],
+        "summary": "List advanced quality metric groups",
+        "operationId": "list_mvp4_quality_metrics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/PublishedGraphVersionIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/SourceIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/PromptVersionIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ModelRunIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TimeWindowQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Explainable metric groups with formula metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityMetricsResponse"
+                },
+                "examples": {
+                  "metric_groups": {
+                    "$ref": "#/components/examples/QualityMetricsResponseExample"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/quality/metrics/{metric_id}": {
+      "get": {
+        "tags": [
+          "quality"
+        ],
+        "summary": "Get a single advanced quality metric detail",
+        "operationId": "get_mvp4_quality_metric_detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/MetricId"
+          },
+          {
+            "$ref": "#/components/parameters/PublishedGraphVersionIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/BreakdownDimensionQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metric detail with breakdown rows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityMetricDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/evaluation-datasets": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "List project evaluation datasets",
+        "operationId": "list_evaluation_datasets",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/EvaluationDatasetStatusQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evaluation datasets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationDatasetListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Create an evaluation dataset draft",
+        "operationId": "create_evaluation_dataset",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluationDatasetCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created dataset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationDataset"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-datasets/{dataset_id}": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Get evaluation dataset detail",
+        "operationId": "get_evaluation_dataset",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evaluation dataset detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationDataset"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-datasets/{dataset_id}/versions": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "List evaluation dataset versions",
+        "operationId": "list_evaluation_dataset_versions",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset versions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationDatasetVersionListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Create evaluation dataset version",
+        "operationId": "create_evaluation_dataset_version",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluationDatasetVersionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created dataset version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationDatasetVersion"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-dataset-versions/{dataset_version_id}": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Get evaluation dataset version detail",
+        "operationId": "get_evaluation_dataset_version",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetVersionId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset version detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationDatasetVersion"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-dataset-versions/{dataset_version_id}/golden-items": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "List golden set items",
+        "operationId": "list_golden_set_items",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetVersionId"
+          },
+          {
+            "$ref": "#/components/parameters/GoldenSetItemKindQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Golden set items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldenSetItemListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Create golden set item",
+        "operationId": "create_golden_set_item",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetVersionId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoldenSetItemCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created golden set item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldenSetItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/evaluation-runs": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "List evaluation runs",
+        "operationId": "list_evaluation_runs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/DatasetVersionIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/PromptVersionIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ModelRunIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evaluation runs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationRunListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Create a manual evaluation run draft",
+        "operationId": "create_evaluation_run",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluationRunCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created evaluation run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationRun"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-runs/{evaluation_run_id}": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Get evaluation run detail",
+        "operationId": "get_evaluation_run",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EvaluationRunId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evaluation run detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationRun"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/prompt-performance/summary": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Get prompt and model performance summary",
+        "operationId": "get_prompt_performance_summary",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/DatasetVersionIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/PromptVersionIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ModelRunIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/SourceTypeQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ClassTypeQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RelationTypeQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt/model performance comparison rows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptPerformanceSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/prompt-experiments": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "List prompt experiments",
+        "operationId": "list_prompt_experiments",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/PromptExperimentStatusQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt experiments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptExperimentListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Create manual prompt experiment",
+        "operationId": "create_prompt_experiment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptExperimentCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created prompt experiment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptExperiment"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/prompt-experiments/{experiment_id}": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Get prompt experiment detail",
+        "operationId": "get_prompt_experiment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ExperimentId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt experiment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptExperiment"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/search": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Keyword search across published graph, source, evidence, and lineage",
+        "operationId": "search_project",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/SearchScopeQuery"
+          },
+          {
+            "$ref": "#/components/parameters/PublishedGraphVersionIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/SourceIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Grouped search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                },
+                "examples": {
+                  "grouped": {
+                    "$ref": "#/components/examples/SearchResponseExample"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/vector/status": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Get vector adapter state",
+        "operationId": "get_vector_adapter_state",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vector adapter state and fallback info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VectorAdapterState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/similar-evidence": {
+      "post": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Find similar evidence using vector adapter or explicit fallback",
+        "operationId": "find_similar_evidence",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimilarEvidenceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Similar evidence results and adapter state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimilarEvidenceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/rag/answers": {
+      "post": {
+        "tags": [
+          "rag"
+        ],
+        "summary": "Create a grounded read-only RAG answer",
+        "operationId": "create_rag_answer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagAnswerRequest"
+              },
+              "examples": {
+                "question": {
+                  "$ref": "#/components/examples/RagAnswerRequestExample"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Grounded answer or insufficient-evidence state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagAnswerResponse"
+                },
+                "examples": {
+                  "answered": {
+                    "$ref": "#/components/examples/RagAnswerResponseExample"
+                  },
+                  "insufficient_evidence": {
+                    "$ref": "#/components/examples/RagInsufficientEvidenceExample"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/published-graph/explore": {
+      "get": {
+        "tags": [
+          "published-graph-explorer"
+        ],
+        "summary": "Explore current or selected published graph version",
+        "operationId": "explore_project_published_graph",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/RootEntityIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/PublishedGraphVersionIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/MaxHopsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ClassIdsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RelationIdsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeQualityOverlayQuery"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeSourceOverlayQuery"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeLineageQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Graph explorer response or safe-too-large state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphExploreResponse"
+                },
+                "examples": {
+                  "ready": {
+                    "$ref": "#/components/examples/GraphExploreResponseExample"
+                  },
+                  "safe_too_large": {
+                    "$ref": "#/components/examples/GraphTooLargeResponseExample"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/published-graph/versions/{version_id}/explore": {
+      "get": {
+        "tags": [
+          "published-graph-explorer"
+        ],
+        "summary": "Explore a specific published graph version",
+        "operationId": "explore_published_graph_version",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/VersionId"
+          },
+          {
+            "$ref": "#/components/parameters/RootEntityIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/MaxHopsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ClassIdsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RelationIdsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeQualityOverlayQuery"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeSourceOverlayQuery"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeLineageQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Graph explorer response or safe-too-large state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphExploreResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/published-graph/lineage": {
+      "get": {
+        "tags": [
+          "published-graph-explorer"
+        ],
+        "summary": "Get lineage panel data for a published fact",
+        "operationId": "get_published_fact_lineage_panel",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PublishedFactTypeQuery"
+          },
+          {
+            "$ref": "#/components/parameters/PublishedFactIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/PublishedGraphVersionIdQueryRequired"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lineage panel data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedLineagePanel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external/projects/{project_id}/published-graph/current": {
+      "get": {
+        "tags": [
+          "external-read-only"
+        ],
+        "summary": "External current published graph metadata",
+        "operationId": "external_get_current_published_graph",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read-only current graph metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalPublishedGraphEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external/published-graph/entities/{entity_id}": {
+      "get": {
+        "tags": [
+          "external-read-only"
+        ],
+        "summary": "External published entity lookup",
+        "operationId": "external_get_published_entity",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EntityId"
+          },
+          {
+            "$ref": "#/components/parameters/PublishedGraphVersionIdQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published entity with version and evidence context",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalPublishedEntityEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external/published-graph/relations/{relation_id}": {
+      "get": {
+        "tags": [
+          "external-read-only"
+        ],
+        "summary": "External published relation lookup",
+        "operationId": "external_get_published_relation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PublishedRelationId"
+          },
+          {
+            "$ref": "#/components/parameters/PublishedGraphVersionIdQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published relation with version and evidence context",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalPublishedRelationEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external/sources/{source_id}": {
+      "get": {
+        "tags": [
+          "external-read-only"
+        ],
+        "summary": "External source lookup",
+        "operationId": "external_get_source",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SourceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Source summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalSourceEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external/evidence/{evidence_id}": {
+      "get": {
+        "tags": [
+          "external-read-only"
+        ],
+        "summary": "External evidence lookup",
+        "operationId": "external_get_evidence",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EvidenceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evidence summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalEvidenceEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external/projects/{project_id}/search": {
+      "get": {
+        "tags": [
+          "external-read-only"
+        ],
+        "summary": "External read-only keyword search",
+        "operationId": "external_search_project",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/SearchScopeQuery"
+          },
+          {
+            "$ref": "#/components/parameters/PublishedGraphVersionIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "External grouped search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalSearchEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external/projects/{project_id}/rag/answers": {
+      "post": {
+        "tags": [
+          "external-read-only"
+        ],
+        "summary": "External read-only grounded RAG answer",
+        "operationId": "external_create_rag_answer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagAnswerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "External grounded answer or insufficient-evidence state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalRagAnswerEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ProjectId": {
+        "name": "project_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "MetricId": {
+        "name": "metric_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "DatasetId": {
+        "name": "dataset_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "DatasetVersionId": {
+        "name": "dataset_version_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "EvaluationRunId": {
+        "name": "evaluation_run_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ExperimentId": {
+        "name": "experiment_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "VersionId": {
+        "name": "version_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "EntityId": {
+        "name": "entity_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "PublishedRelationId": {
+        "name": "relation_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "SourceId": {
+        "name": "source_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "EvidenceId": {
+        "name": "evidence_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "PublishedGraphVersionIdQuery": {
+        "name": "published_graph_version_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "PublishedGraphVersionIdQueryRequired": {
+        "name": "published_graph_version_id",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "SourceIdQuery": {
+        "name": "source_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "PromptVersionIdQuery": {
+        "name": "prompt_version_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ModelRunIdQuery": {
+        "name": "model_run_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "DatasetVersionIdQuery": {
+        "name": "dataset_version_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "TimeWindowQuery": {
+        "name": "time_window",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "example": "LAST_30_DAYS"
+        }
+      },
+      "BreakdownDimensionQuery": {
+        "name": "breakdown_dimension",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "example": "relation_type"
+        }
+      },
+      "EvaluationDatasetStatusQuery": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/EvaluationDatasetStatus"
+        }
+      },
+      "GoldenSetItemKindQuery": {
+        "name": "kind",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/GoldenSetItemKind"
+        }
+      },
+      "PromptExperimentStatusQuery": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/PromptExperimentStatus"
+        }
+      },
+      "SourceTypeQuery": {
+        "name": "source_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ClassTypeQuery": {
+        "name": "class_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "RelationTypeQuery": {
+        "name": "relation_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "SearchQuery": {
+        "name": "q",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "SearchScopeQuery": {
+        "name": "scope",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SearchResultKind"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "RootEntityIdQuery": {
+        "name": "root_entity_id",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "MaxHopsQuery": {
+        "name": "max_hops",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 3
+        }
+      },
+      "ClassIdsQuery": {
+        "name": "class_ids",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "RelationIdsQuery": {
+        "name": "relation_ids",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "IncludeQualityOverlayQuery": {
+        "name": "include_quality_overlay",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "IncludeSourceOverlayQuery": {
+        "name": "include_source_overlay",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "IncludeLineageQuery": {
+        "name": "include_lineage",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "PublishedFactTypeQuery": {
+        "name": "fact_type",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/PublishedFactType"
+        }
+      },
+      "PublishedFactIdQuery": {
+        "name": "fact_id",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "LimitQuery": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 50,
+          "minimum": 1,
+          "maximum": 200
+        }
+      },
+      "OffsetQuery": {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0
+        }
+      }
+    },
+    "responses": {
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "EvaluationDatasetStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "ACTIVE",
+          "ARCHIVED"
+        ]
+      },
+      "GoldenSetItemKind": {
+        "type": "string",
+        "enum": [
+          "ENTITY",
+          "RELATION",
+          "PROPERTY_VALUE",
+          "EVIDENCE_LINK"
+        ]
+      },
+      "PromptExperimentStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "RUNNING",
+          "COMPLETED",
+          "CANCELLED"
+        ]
+      },
+      "QualityMetricGroup": {
+        "type": "string",
+        "enum": [
+          "COMPLETENESS",
+          "CONSISTENCY",
+          "TRACEABILITY",
+          "VALIDATION",
+          "REVIEW",
+          "DUPLICATE",
+          "RELATION_DENSITY"
+        ]
+      },
+      "QualityMetricUnit": {
+        "type": "string",
+        "enum": [
+          "COUNT",
+          "RATE",
+          "RATIO",
+          "PERCENT"
+        ]
+      },
+      "SearchResultKind": {
+        "type": "string",
+        "enum": [
+          "PUBLISHED_ENTITY",
+          "PUBLISHED_RELATION",
+          "SOURCE",
+          "SOURCE_CHUNK",
+          "EVIDENCE",
+          "LINEAGE"
+        ]
+      },
+      "VectorAdapterStatus": {
+        "type": "string",
+        "enum": [
+          "AVAILABLE",
+          "FALLBACK_KEYWORD",
+          "UNAVAILABLE",
+          "NOT_CONFIGURED"
+        ]
+      },
+      "VectorFallbackReason": {
+        "type": "string",
+        "enum": [
+          "VECTOR_DB_NOT_CONFIGURED",
+          "INDEX_NOT_READY",
+          "ADAPTER_ERROR",
+          "KEYWORD_FALLBACK_USED"
+        ]
+      },
+      "RagAnswerState": {
+        "type": "string",
+        "enum": [
+          "ANSWERED",
+          "INSUFFICIENT_EVIDENCE",
+          "ERROR"
+        ]
+      },
+      "RagCitationKind": {
+        "type": "string",
+        "enum": [
+          "EVIDENCE_CHUNK",
+          "SOURCE_CHUNK",
+          "PUBLISHED_ENTITY",
+          "PUBLISHED_RELATION"
+        ]
+      },
+      "GraphExploreState": {
+        "type": "string",
+        "enum": [
+          "READY",
+          "SAFE_TOO_LARGE",
+          "EMPTY",
+          "ERROR"
+        ]
+      },
+      "ExternalApiAuthMode": {
+        "type": "string",
+        "enum": [
+          "DEV_AUTH"
+        ]
+      },
+      "PublishedFactType": {
+        "type": "string",
+        "enum": [
+          "PUBLISHED_ENTITY",
+          "PUBLISHED_RELATION"
+        ]
+      },
+      "ApiErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "PublishedGraphVersionRef": {
+        "type": "object",
+        "required": [
+          "published_graph_version_id",
+          "published_graph_version",
+          "ontology_version_id",
+          "is_current"
+        ],
+        "properties": {
+          "published_graph_version_id": {
+            "type": "string"
+          },
+          "published_graph_version": {
+            "type": "integer"
+          },
+          "ontology_version_id": {
+            "type": "string"
+          },
+          "is_current": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "EvidenceRef": {
+        "type": "object",
+        "required": [
+          "evidence_id"
+        ],
+        "properties": {
+          "evidence_id": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_segment_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SourceRef": {
+        "type": "object",
+        "required": [
+          "source_id"
+        ],
+        "properties": {
+          "source_id": {
+            "type": "string"
+          },
+          "source_segment_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locator": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "CandidateRef": {
+        "type": "object",
+        "required": [
+          "candidate_kind",
+          "candidate_id"
+        ],
+        "properties": {
+          "candidate_kind": {
+            "type": "string",
+            "enum": [
+              "ENTITY",
+              "RELATION",
+              "PROPERTY_VALUE"
+            ]
+          },
+          "candidate_id": {
+            "type": "string"
+          }
+        }
+      },
+      "PublishedFactRef": {
+        "type": "object",
+        "required": [
+          "fact_type",
+          "fact_id",
+          "published_graph_version_id",
+          "label"
+        ],
+        "properties": {
+          "fact_type": {
+            "$ref": "#/components/schemas/PublishedFactType"
+          },
+          "fact_id": {
+            "type": "string"
+          },
+          "published_graph_version_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "ReviewDecisionRef": {
+        "type": "object",
+        "properties": {
+          "review_decision_id": {
+            "type": "string"
+          },
+          "review_decision_type": {
+            "type": "string",
+            "enum": [
+              "APPROVE",
+              "REJECT",
+              "REQUEST_CHANGES",
+              "MODIFY_AND_APPROVE"
+            ]
+          },
+          "reviewer_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviewed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "QualityMetricsResponse": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "generated_at",
+          "metric_groups"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "filters": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "metric_groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityMetricGroupResult"
+            }
+          }
+        }
+      },
+      "QualityMetricGroupResult": {
+        "type": "object",
+        "required": [
+          "group",
+          "label",
+          "metrics"
+        ],
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/QualityMetricGroup"
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityMetric"
+            }
+          }
+        }
+      },
+      "QualityMetric": {
+        "type": "object",
+        "required": [
+          "metric_id",
+          "group",
+          "label",
+          "unit",
+          "formula"
+        ],
+        "properties": {
+          "metric_id": {
+            "type": "string"
+          },
+          "group": {
+            "$ref": "#/components/schemas/QualityMetricGroup"
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unit": {
+            "$ref": "#/components/schemas/QualityMetricUnit"
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "rate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "trend": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "formula": {
+            "$ref": "#/components/schemas/QualityFormulaMetadata"
+          },
+          "drilldown": {
+            "$ref": "#/components/schemas/QualityDrilldownHint"
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "default": []
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          },
+          "breakdowns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityMetricBreakdown"
+            },
+            "default": []
+          }
+        }
+      },
+      "QualityMetricDetail": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "metric"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/QualityMetric"
+          },
+          "breakdown_rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityMetricBreakdown"
+            }
+          }
+        }
+      },
+      "QualityFormulaMetadata": {
+        "type": "object",
+        "required": [
+          "formula_id",
+          "numerator",
+          "denominator",
+          "scope",
+          "time_window",
+          "breakdown_dimension",
+          "drilldown_target"
+        ],
+        "properties": {
+          "formula_id": {
+            "type": "string"
+          },
+          "numerator": {
+            "type": "string"
+          },
+          "denominator": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "time_window": {
+            "type": "string"
+          },
+          "breakdown_dimension": {
+            "type": "string"
+          },
+          "drilldown_target": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unit": {
+            "$ref": "#/components/schemas/QualityMetricUnit"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "QualityDrilldownHint": {
+        "type": "object",
+        "required": [
+          "target",
+          "query"
+        ],
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "query": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "QualityMetricBreakdown": {
+        "type": "object",
+        "required": [
+          "dimension",
+          "label",
+          "value"
+        ],
+        "properties": {
+          "dimension": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "rate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "drilldown": {
+            "$ref": "#/components/schemas/QualityDrilldownHint"
+          }
+        }
+      },
+      "EvaluationDataset": {
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "name",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EvaluationDatasetStatus"
+          },
+          "owner_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "active_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EvaluationDatasetCreateRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EvaluationDatasetListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "total_count",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvaluationDataset"
+            }
+          },
+          "total_count": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          }
+        }
+      },
+      "EvaluationDatasetVersion": {
+        "type": "object",
+        "required": [
+          "id",
+          "dataset_id",
+          "project_id",
+          "version",
+          "status",
+          "golden_item_count",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EvaluationDatasetStatus"
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "default": []
+          },
+          "source_segment_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "default": []
+          },
+          "candidate_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CandidateRef"
+            },
+            "default": []
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "default": []
+          },
+          "golden_item_count": {
+            "type": "integer"
+          },
+          "created_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EvaluationDatasetVersionCreateRequest": {
+        "type": "object",
+        "properties": {
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "default": []
+          },
+          "source_segment_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "default": []
+          },
+          "candidate_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CandidateRef"
+            },
+            "default": []
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "default": []
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EvaluationDatasetVersionListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "total_count",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvaluationDatasetVersion"
+            }
+          },
+          "total_count": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          }
+        }
+      },
+      "GoldenSetItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "dataset_version_id",
+          "project_id",
+          "kind",
+          "expected_payload",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GoldenSetItemKind"
+          },
+          "expected_payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "default": []
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "default": []
+          },
+          "review_decision_ref": {
+            "$ref": "#/components/schemas/ReviewDecisionRef"
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          },
+          "reviewer_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "GoldenSetItemCreateRequest": {
+        "type": "object",
+        "required": [
+          "kind",
+          "expected_payload"
+        ],
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/GoldenSetItemKind"
+          },
+          "expected_payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "default": []
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "default": []
+          },
+          "review_decision_ref": {
+            "$ref": "#/components/schemas/ReviewDecisionRef"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "GoldenSetItemListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "total_count",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoldenSetItem"
+            }
+          },
+          "total_count": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          }
+        }
+      },
+      "RunWindow": {
+        "type": "object",
+        "properties": {
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "ended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "PromptExperiment": {
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "name",
+          "status",
+          "dataset_id",
+          "dataset_version_id",
+          "control_prompt_version_id",
+          "treatment_prompt_version_id",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "hypothesis": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/PromptExperimentStatus"
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "type": "string"
+          },
+          "control_prompt_version_id": {
+            "type": "string"
+          },
+          "treatment_prompt_version_id": {
+            "type": "string"
+          },
+          "model_provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "run_window": {
+            "$ref": "#/components/schemas/RunWindow"
+          },
+          "created_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PromptExperimentCreateRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "dataset_id",
+          "dataset_version_id",
+          "control_prompt_version_id",
+          "treatment_prompt_version_id"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "hypothesis": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "type": "string"
+          },
+          "control_prompt_version_id": {
+            "type": "string"
+          },
+          "treatment_prompt_version_id": {
+            "type": "string"
+          },
+          "model_provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PromptExperimentListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "total_count",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptExperiment"
+            }
+          },
+          "total_count": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          }
+        }
+      },
+      "EvaluationRun": {
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "dataset_version_id",
+          "status",
+          "metrics",
+          "dimensions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "type": "string"
+          },
+          "experiment_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prompt_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_run_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "SUCCESS",
+              "FAILED"
+            ]
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "ended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "requested_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/EvaluationRunMetrics"
+          },
+          "dimensions": {
+            "$ref": "#/components/schemas/EvaluationDimensions"
+          },
+          "error_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EvaluationRunCreateRequest": {
+        "type": "object",
+        "required": [
+          "dataset_version_id"
+        ],
+        "properties": {
+          "dataset_version_id": {
+            "type": "string"
+          },
+          "experiment_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prompt_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_run_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EvaluationRunMetrics": {
+        "type": "object",
+        "properties": {
+          "approval_rate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "rejection_rate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "modification_rate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "failed_validation_rate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "missing_evidence_rate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "correction_pattern_counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "EvaluationDimensions": {
+        "type": "object",
+        "properties": {
+          "prompt_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_run_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "class_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "relation_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "validation_outcome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "review_decision": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "correction_pattern": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EvaluationRunListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "total_count",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvaluationRun"
+            }
+          },
+          "total_count": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          }
+        }
+      },
+      "PromptPerformanceSummary": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "generated_at",
+          "comparison_dimensions",
+          "rows"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "filters": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "comparison_dimensions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptPerformanceRow"
+            }
+          }
+        }
+      },
+      "PromptPerformanceRow": {
+        "type": "object",
+        "required": [
+          "dimensions",
+          "approval_rate",
+          "rejection_rate",
+          "modification_rate",
+          "failed_validation_rate",
+          "missing_evidence_rate"
+        ],
+        "properties": {
+          "dimensions": {
+            "$ref": "#/components/schemas/EvaluationDimensions"
+          },
+          "approval_rate": {
+            "type": "number"
+          },
+          "rejection_rate": {
+            "type": "number"
+          },
+          "modification_rate": {
+            "type": "number"
+          },
+          "failed_validation_rate": {
+            "type": "number"
+          },
+          "missing_evidence_rate": {
+            "type": "number"
+          },
+          "latency_ms": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "token_count": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "cost": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "drilldown": {
+            "$ref": "#/components/schemas/QualityDrilldownHint"
+          }
+        }
+      },
+      "SearchResponse": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "query",
+          "groups",
+          "total_count",
+          "limit",
+          "offset",
+          "index_state"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchResultGroup"
+            }
+          },
+          "total_count": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "index_state": {
+            "type": "string",
+            "enum": [
+              "READY",
+              "PARTIAL",
+              "STALE"
+            ]
+          }
+        }
+      },
+      "SearchResultGroup": {
+        "type": "object",
+        "required": [
+          "kind",
+          "total_count",
+          "items"
+        ],
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SearchResultKind"
+          },
+          "total_count": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchResultItem"
+            }
+          }
+        }
+      },
+      "SearchResultItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "snippet",
+          "score"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchResultKind"
+          },
+          "title": {
+            "type": "string"
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number"
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          },
+          "source_ref": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "default": []
+          },
+          "lineage_ref": {
+            "$ref": "#/components/schemas/PublishedFactRef"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "VectorAdapterState": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "status",
+          "embedding_target"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/VectorAdapterStatus"
+          },
+          "embedding_target": {
+            "type": "string"
+          },
+          "index_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "indexed_chunk_count": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "last_indexed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VectorFallbackReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SimilarEvidenceRequest": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_segment_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidence_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "published_fact_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "published_fact_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublishedFactType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published_graph_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 50
+          }
+        }
+      },
+      "SimilarEvidenceResponse": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "adapter_state",
+          "fallback_used",
+          "items"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "adapter_state": {
+            "$ref": "#/components/schemas/VectorAdapterState"
+          },
+          "fallback_used": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimilarEvidenceItem"
+            }
+          }
+        }
+      },
+      "SimilarEvidenceItem": {
+        "type": "object",
+        "required": [
+          "evidence_ref",
+          "snippet",
+          "similarity_score"
+        ],
+        "properties": {
+          "evidence_ref": {
+            "$ref": "#/components/schemas/EvidenceRef"
+          },
+          "source_ref": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "similarity_score": {
+            "type": "number"
+          },
+          "match_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          },
+          "linked_published_fact_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedFactRef"
+            },
+            "default": []
+          }
+        }
+      },
+      "RagAnswerRequest": {
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 1
+          },
+          "published_graph_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scope": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchResultKind"
+            },
+            "default": []
+          },
+          "source_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "max_citations": {
+            "type": "integer",
+            "default": 5,
+            "minimum": 1,
+            "maximum": 20
+          }
+        }
+      },
+      "RagAnswerResponse": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "question",
+          "state",
+          "citations",
+          "linked_published_facts"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/RagAnswerState"
+          },
+          "answer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "coverage": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RagCitation"
+            }
+          },
+          "linked_published_facts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedFactRef"
+            }
+          },
+          "insufficient_evidence": {
+            "$ref": "#/components/schemas/InsufficientEvidenceState"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "RagCitation": {
+        "type": "object",
+        "required": [
+          "citation_id",
+          "kind",
+          "snippet"
+        ],
+        "properties": {
+          "citation_id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RagCitationKind"
+          },
+          "evidence_ref": {
+            "$ref": "#/components/schemas/EvidenceRef"
+          },
+          "source_ref": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "published_fact_ref": {
+            "$ref": "#/components/schemas/PublishedFactRef"
+          },
+          "quote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "locator": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "InsufficientEvidenceState": {
+        "type": "object",
+        "required": [
+          "reason_code",
+          "message"
+        ],
+        "properties": {
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "NO_RELEVANT_EVIDENCE",
+              "NO_PUBLISHED_FACTS",
+              "CITATION_COVERAGE_TOO_LOW",
+              "VECTOR_UNAVAILABLE"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "missing_scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "suggested_queries": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          }
+        }
+      },
+      "GraphExploreResponse": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "state",
+          "published_graph_version_ref",
+          "root_entity_id",
+          "max_hops",
+          "nodes",
+          "edges"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/GraphExploreState"
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          },
+          "root_entity_id": {
+            "type": "string"
+          },
+          "max_hops": {
+            "type": "integer",
+            "default": 2,
+            "maximum": 3
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GraphExploreNode"
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GraphExploreEdge"
+            }
+          },
+          "quality_overlays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GraphQualityOverlay"
+            },
+            "default": []
+          },
+          "source_overlays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GraphSourceOverlay"
+            },
+            "default": []
+          },
+          "lineage_panel": {
+            "$ref": "#/components/schemas/PublishedLineagePanel"
+          },
+          "too_large": {
+            "$ref": "#/components/schemas/GraphTooLargeState"
+          }
+        }
+      },
+      "GraphExploreNode": {
+        "type": "object",
+        "required": [
+          "id",
+          "published_entity_id",
+          "class_id",
+          "label",
+          "hop"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "published_entity_id": {
+            "type": "string"
+          },
+          "class_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "hop": {
+            "type": "integer"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "quality_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "source_count": {
+            "type": "integer",
+            "default": 0
+          },
+          "evidence_count": {
+            "type": "integer",
+            "default": 0
+          },
+          "lineage_available": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "GraphExploreEdge": {
+        "type": "object",
+        "required": [
+          "id",
+          "published_relation_id",
+          "source_node_id",
+          "target_node_id",
+          "relation_id",
+          "label"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "published_relation_id": {
+            "type": "string"
+          },
+          "source_node_id": {
+            "type": "string"
+          },
+          "target_node_id": {
+            "type": "string"
+          },
+          "relation_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "quality_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "evidence_count": {
+            "type": "integer",
+            "default": 0
+          },
+          "lineage_available": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "GraphQualityOverlay": {
+        "type": "object",
+        "required": [
+          "target_id",
+          "target_type",
+          "metrics"
+        ],
+        "properties": {
+          "target_id": {
+            "type": "string"
+          },
+          "target_type": {
+            "$ref": "#/components/schemas/PublishedFactType"
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityMetric"
+            }
+          }
+        }
+      },
+      "GraphSourceOverlay": {
+        "type": "object",
+        "required": [
+          "target_id",
+          "target_type",
+          "evidence_refs"
+        ],
+        "properties": {
+          "target_id": {
+            "type": "string"
+          },
+          "target_type": {
+            "$ref": "#/components/schemas/PublishedFactType"
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "default": []
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            }
+          }
+        }
+      },
+      "GraphTooLargeState": {
+        "type": "object",
+        "required": [
+          "estimated_nodes",
+          "estimated_edges",
+          "node_budget",
+          "edge_budget",
+          "message"
+        ],
+        "properties": {
+          "estimated_nodes": {
+            "type": "integer"
+          },
+          "estimated_edges": {
+            "type": "integer"
+          },
+          "node_budget": {
+            "type": "integer",
+            "default": 150
+          },
+          "edge_budget": {
+            "type": "integer",
+            "default": 300
+          },
+          "suggested_filters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "PublishedLineagePanel": {
+        "type": "object",
+        "required": [
+          "fact_ref",
+          "published_graph_version_ref",
+          "evidence_refs",
+          "source_refs"
+        ],
+        "properties": {
+          "fact_ref": {
+            "$ref": "#/components/schemas/PublishedFactRef"
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          },
+          "publish_job_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "review_decision_ref": {
+            "$ref": "#/components/schemas/ReviewDecisionRef"
+          },
+          "candidate_ref": {
+            "$ref": "#/components/schemas/CandidateRef"
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            }
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            }
+          },
+          "ontology_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_run_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prompt_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "PublishedEntityRead": {
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "published_graph_version_ref",
+          "class_id",
+          "canonical_name",
+          "lineage"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          },
+          "class_id": {
+            "type": "string"
+          },
+          "canonical_name": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "lineage": {
+            "$ref": "#/components/schemas/PublishedLineagePanel"
+          }
+        }
+      },
+      "PublishedRelationRead": {
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "published_graph_version_ref",
+          "source_published_entity_id",
+          "relation_id",
+          "target_published_entity_id",
+          "lineage"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          },
+          "source_published_entity_id": {
+            "type": "string"
+          },
+          "relation_id": {
+            "type": "string"
+          },
+          "target_published_entity_id": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "lineage": {
+            "$ref": "#/components/schemas/PublishedLineagePanel"
+          }
+        }
+      },
+      "SourceRead": {
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "EvidenceRead": {
+        "type": "object",
+        "required": [
+          "id",
+          "evidence_ref",
+          "snippet"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "evidence_ref": {
+            "$ref": "#/components/schemas/EvidenceRef"
+          },
+          "source_ref": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "linked_published_fact_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedFactRef"
+            },
+            "default": []
+          }
+        }
+      },
+      "ExternalApiEnvelopeBase": {
+        "type": "object",
+        "required": [
+          "auth_mode",
+          "project_id"
+        ],
+        "properties": {
+          "auth_mode": {
+            "$ref": "#/components/schemas/ExternalApiAuthMode"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "published_graph_version_ref": {
+            "$ref": "#/components/schemas/PublishedGraphVersionRef"
+          }
+        }
+      },
+      "ExternalPublishedGraphEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ExternalApiEnvelopeBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/PublishedGraphVersionRef"
+              }
+            }
+          }
+        ]
+      },
+      "ExternalPublishedEntityEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ExternalApiEnvelopeBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/PublishedEntityRead"
+              }
+            }
+          }
+        ]
+      },
+      "ExternalPublishedRelationEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ExternalApiEnvelopeBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/PublishedRelationRead"
+              }
+            }
+          }
+        ]
+      },
+      "ExternalSourceEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ExternalApiEnvelopeBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SourceRead"
+              }
+            }
+          }
+        ]
+      },
+      "ExternalEvidenceEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ExternalApiEnvelopeBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/EvidenceRead"
+              }
+            }
+          }
+        ]
+      },
+      "ExternalSearchEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ExternalApiEnvelopeBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SearchResponse"
+              }
+            }
+          }
+        ]
+      },
+      "ExternalRagAnswerEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ExternalApiEnvelopeBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/RagAnswerResponse"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "examples": {
+      "QualityMetricsResponseExample": {
+        "value": {
+          "project_id": "project-demo",
+          "published_graph_version_ref": {
+            "published_graph_version_id": "pgv-current",
+            "published_graph_version": 3,
+            "ontology_version_id": "ont-v5",
+            "is_current": true,
+            "created_at": "2026-06-19T00:00:00Z"
+          },
+          "generated_at": "2026-06-19T01:00:00Z",
+          "filters": {
+            "time_window": "LAST_30_DAYS"
+          },
+          "metric_groups": [
+            {
+              "group": "TRACEABILITY",
+              "label": "Traceability",
+              "metrics": [
+                {
+                  "metric_id": "traceability.evidence_coverage",
+                  "group": "TRACEABILITY",
+                  "label": "Evidence coverage",
+                  "unit": "RATE",
+                  "value": null,
+                  "rate": 0.94,
+                  "trend": 0.02,
+                  "formula": {
+                    "formula_id": "traceability.evidence_coverage.v1",
+                    "numerator": "published facts with at least one usable evidence ref",
+                    "denominator": "all published facts in selected graph version",
+                    "scope": "published graph version",
+                    "time_window": "LAST_30_DAYS",
+                    "breakdown_dimension": "relation_type",
+                    "drilldown_target": "published_graph",
+                    "unit": "RATE"
+                  },
+                  "drilldown": {
+                    "target": "published_graph",
+                    "label": "Open facts missing evidence",
+                    "query": {
+                      "evidence_state": "missing"
+                    }
+                  },
+                  "evidence_refs": [],
+                  "published_graph_version_ref": {
+                    "published_graph_version_id": "pgv-current",
+                    "published_graph_version": 3,
+                    "ontology_version_id": "ont-v5",
+                    "is_current": true
+                  },
+                  "breakdowns": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "SearchResponseExample": {
+        "value": {
+          "project_id": "project-demo",
+          "query": "acetaminophen",
+          "published_graph_version_ref": {
+            "published_graph_version_id": "pgv-current",
+            "published_graph_version": 3,
+            "ontology_version_id": "ont-v5",
+            "is_current": true
+          },
+          "groups": [
+            {
+              "kind": "PUBLISHED_ENTITY",
+              "total_count": 1,
+              "items": [
+                {
+                  "id": "pe-001",
+                  "kind": "PUBLISHED_ENTITY",
+                  "title": "Acetaminophen",
+                  "snippet": "Published drug entity with evidence-backed label.",
+                  "score": 0.98,
+                  "evidence_refs": [
+                    {
+                      "evidence_id": "ev-001",
+                      "source_id": "src-001",
+                      "source_segment_id": "seg-001",
+                      "label": "Label section"
+                    }
+                  ],
+                  "metadata": {}
+                }
+              ]
+            }
+          ],
+          "total_count": 1,
+          "limit": 20,
+          "offset": 0,
+          "index_state": "READY"
+        }
+      },
+      "RagAnswerRequestExample": {
+        "value": {
+          "question": "Which published evidence supports acetaminophen dosage facts?",
+          "published_graph_version_id": "pgv-current",
+          "scope": [
+            "PUBLISHED_ENTITY",
+            "PUBLISHED_RELATION",
+            "EVIDENCE"
+          ],
+          "source_ids": [],
+          "max_citations": 5
+        }
+      },
+      "RagAnswerResponseExample": {
+        "value": {
+          "project_id": "project-demo",
+          "question": "Which published evidence supports acetaminophen dosage facts?",
+          "state": "ANSWERED",
+          "answer": "The published dosage fact is supported by the medication label evidence chunk.",
+          "coverage": 0.91,
+          "published_graph_version_ref": {
+            "published_graph_version_id": "pgv-current",
+            "published_graph_version": 3,
+            "ontology_version_id": "ont-v5",
+            "is_current": true
+          },
+          "citations": [
+            {
+              "citation_id": "cit-001",
+              "kind": "EVIDENCE_CHUNK",
+              "evidence_ref": {
+                "evidence_id": "ev-001",
+                "source_id": "src-001",
+                "source_segment_id": "seg-001",
+                "label": "Label section"
+              },
+              "snippet": "Dosage statement from source chunk.",
+              "locator": "page 1"
+            }
+          ],
+          "linked_published_facts": [
+            {
+              "fact_type": "PUBLISHED_ENTITY",
+              "fact_id": "pe-001",
+              "published_graph_version_id": "pgv-current",
+              "label": "Acetaminophen"
+            }
+          ],
+          "debug": {
+            "candidate_graph_used": false
+          }
+        }
+      },
+      "RagInsufficientEvidenceExample": {
+        "value": {
+          "project_id": "project-demo",
+          "question": "Which candidate-only facts should be cited?",
+          "state": "INSUFFICIENT_EVIDENCE",
+          "answer": null,
+          "coverage": 0,
+          "citations": [],
+          "linked_published_facts": [],
+          "insufficient_evidence": {
+            "reason_code": "NO_PUBLISHED_FACTS",
+            "message": "No published graph facts with cited evidence support the question.",
+            "missing_scopes": [
+              "published_graph"
+            ],
+            "suggested_queries": [
+              "Search published evidence for the source term"
+            ]
+          },
+          "debug": {
+            "candidate_graph_used": false
+          }
+        }
+      },
+      "GraphExploreResponseExample": {
+        "value": {
+          "project_id": "project-demo",
+          "state": "READY",
+          "published_graph_version_ref": {
+            "published_graph_version_id": "pgv-current",
+            "published_graph_version": 3,
+            "ontology_version_id": "ont-v5",
+            "is_current": true
+          },
+          "root_entity_id": "pe-001",
+          "max_hops": 2,
+          "nodes": [
+            {
+              "id": "node-pe-001",
+              "published_entity_id": "pe-001",
+              "class_id": "class-drug",
+              "label": "Acetaminophen",
+              "hop": 0,
+              "properties": {},
+              "quality_summary": {},
+              "source_count": 1,
+              "evidence_count": 1,
+              "lineage_available": true
+            }
+          ],
+          "edges": [],
+          "quality_overlays": [],
+          "source_overlays": []
+        }
+      },
+      "GraphTooLargeResponseExample": {
+        "value": {
+          "project_id": "project-demo",
+          "state": "SAFE_TOO_LARGE",
+          "published_graph_version_ref": {
+            "published_graph_version_id": "pgv-current",
+            "published_graph_version": 3,
+            "ontology_version_id": "ont-v5",
+            "is_current": true
+          },
+          "root_entity_id": "pe-001",
+          "max_hops": 3,
+          "nodes": [],
+          "edges": [],
+          "too_large": {
+            "estimated_nodes": 240,
+            "estimated_edges": 510,
+            "node_budget": 150,
+            "edge_budget": 300,
+            "suggested_filters": [
+              "relation_ids",
+              "class_ids",
+              "max_hops=2"
+            ],
+            "message": "The requested graph exceeds the local demo safety budget."
+          }
+        }
+      }
+    }
+  }
+}

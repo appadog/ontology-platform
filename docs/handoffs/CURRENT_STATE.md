@@ -4,8 +4,8 @@
 
 ## Latest Wave
 
-- Current wave: `wave-018`
-- Overall status: `MVP 3 ACTUAL API SMOKE PASS / MVP 3 CLOSEOUT AND MVP 4 PREP`
+- Current wave: `wave-022`
+- Overall status: `MVP 4 TARGETED HARDENING CLOSED / QUALITY RECOMPUTATION CLOSEOUT`
 - 기준일: 2026-06-19
 
 ## Latest Decisions
@@ -60,6 +60,29 @@
 - `npm run smoke:mvp3:actual` is accepted as the reproducible MVP3 actual frontend API route smoke command.
 - MVP 3 can move to closeout with P1 follow-ups only: Docker/PostgreSQL compose smoke, broader Playwright suite formalization, and optional CORS expansion beyond frontend port `5173`.
 - Wave 18 should close MVP 3 product P0 and prepare MVP 4 contract-first entry for quality evaluation, advanced graph visualization, search/RAG, and operational UX.
+- Wave 18 QA accepts MVP 3 product P0 closeout as `PASS WITH P1 FOLLOW-UPS`.
+- MVP 3 is closed for product P0 scope. Remaining MVP3 follow-ups are P1: Docker/PostgreSQL Compose smoke, formal Playwright suite, optional CORS expansion, Neo4j adapter write, and broader rollback UI.
+- Wave 18 PM closeout checklist and MVP4 prep/backlog are accepted as ready inputs for Wave19.
+- Wave 18 Backend and Frontend regression evidence is accepted: backend tests/ruff/OpenAPI/seed sanity PASS; frontend tests/build/MVP3 actual smoke/MVP2 regression smoke PASS.
+- Wave 19 opens MVP 4 contract-first planning only. Broad MVP4 runtime/UI implementation must wait for PM freeze, Backend contract draft, Frontend field/state review, and QA executable checklist.
+- Wave 19 PM freeze is accepted as PASS: MVP4 P0 quality uses explainable metric groups only; weighted composite score and collaboration/SLA remain P1.
+- Wave 19 MVP4 durable boundary is recorded in ADR 0007: search/RAG/external APIs are read-only, candidate graph facts are excluded from RAG answers/citations, and vector/similar evidence is a P0 adapter/fallback contract with production vector hardening P1.
+- Wave 19 Backend contract draft is accepted as PASS: `docs/api/MVP4_API_CONTRACT_DRAFT.md` and `docs/api/openapi-mvp4-draft.json` are ready; the OpenAPI planning artifact parses as `3.1.0`, version `0.4.0-draft`, with `26` paths and `78` schemas.
+- Wave 19 Frontend field/state/IA review is accepted as PASS: no blocking DTO gap; non-blocking refinements are sample counts, source segment locator, edit lock reason, search index copy, fallback score semantics, and structured graph suggested filters.
+- Wave 19 QA checklist is accepted as PASS: `docs/backlog/INT4_MVP4_ACCEPTANCE.md` is ready; runtime acceptance remains `NOT RUNNABLE` only because MVP4 endpoints, deterministic seed, frontend DTO/client/mock, and route smoke are not implemented yet by design.
+- Wave 20 may open MVP4 thin implementation, focused on deterministic seed, additive Backend runtime/API, Frontend type/client/mock and first UI slices, actual OpenAPI alignment, and MVP3 regression guard.
+- Wave 20 PM scope guard is accepted as PASS: no new PM scope expansion was needed and P1 exclusions remained out of P0.
+- Wave 20 Backend thin runtime is accepted as useful but not release-clean: MVP4 tests, MVP3 backend regression, ruff, seed, and critical OpenAPI compare PASS; external source/evidence read endpoints return 500 under valid dev auth and must be fixed.
+- Wave 20 Frontend mock-first MVP4 UI is accepted as useful but not release-clean: tests/build/mock smoke PASS; actual MVP3 smoke regressed on the published graph route marker and actual MVP4 UI route probe is only PARTIAL.
+- Wave 20 QA verdict is `FAIL / WAVE21 HARDENING REQUIRED`.
+- `INT4-003` and `INT4-004` are PASS. `INT4-001`, `INT4-002`, `INT4-005`, and `INT4-006` are PARTIAL. `INT4-007` and `INT4-008` are FAIL. `INT4-009` remains P1 / NOT RUNNABLE.
+- Wave 21 must be focused hardening only: fix external source/evidence reads, restore MVP3 actual smoke, decide/record the external envelope OpenAPI comparison rule, and add or repair actual MVP4 smoke coverage before any broader MVP4 expansion.
+- Wave 21 PM accepted the concrete external envelope comparison rule: actual FastAPI OpenAPI does not need a standalone `ExternalApiEnvelopeBase` component if concrete external envelopes preserve `auth_mode`, `project_id`, relevant version context, and `data`.
+- Wave 21 Backend hardening is accepted as PASS: external source/evidence reads now return `200` under `X-Dev-Auth: mvp4-dev`; missing/invalid auth and blocked write methods are covered.
+- Wave 21 Frontend hardening is accepted as PASS: `npm run smoke:mvp3:actual`, `npm run smoke:mvp4:mock`, and `npm run smoke:mvp4:actual` all pass.
+- Wave 21 QA verdict is `PASS / TARGETED WAVE21 HARDENING CLOSED`.
+- Current MVP4 INT4 status after Wave21: `INT4-001`, `INT4-003`, `INT4-004`, `INT4-005`, `INT4-006`, `INT4-007`, `INT4-008` are PASS; `INT4-002` remains PARTIAL pending full raw quality metric recomputation proof; `INT4-009` remains P1 / NOT RUNNABLE.
+- Wave 22 may proceed to MVP4 expansion, but its first closeout target must be `INT4-002`: full raw recomputation proof for advanced quality metrics.
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -111,17 +134,20 @@
 | Frontend Productization | Closed in Wave 12. `PX-01`~`PX-08` PASS; responsive document-level overflow fixed and rechecked at `390x900`. | FE2-001~FE2-006, FE-012, INT2-003 |
 | Wave 13 UIUX Product Polish | Closed. `UX13-01`~`UX13-08` PASS after copy follow-up; fresh QA artifact in `/tmp/ontology-wave13-copy-qa-smoke`. | FE-012, FE2-001~FE2-006, INT2-003 |
 | MVP 3 Contract-First Entry | Closed in Wave 14. PM decisions, Backend API draft/OpenAPI, Frontend UX/API requirements, QA INT3 acceptance checklist, and ADR 0006 are ready. | PM3-001~PM3-005, BE3-001~BE3-010, FE3-001~FE3-008, INT3-001~INT3-007 |
-| MVP 3 Thin Implementation | Open in Wave 15. PM enum/reason-code freeze must precede Backend/Frontend implementation; runtime QA is not yet runnable until implementation lands. | PM3-001~PM3-005, BE3-001~BE3-010, FE3-001~FE3-008, INT3-001~INT3-007 |
-| MVP 3 Actual API DTO Sync | Open in Wave 16. Backend actual API PASS and Frontend mock UX PASS; Frontend must align QualitySummary, PublishJob, PublishedGraphVersion, PublishedLineage, PublishedEntity, and PublishedRelation with actual OpenAPI or add typed API-to-view-model adapters. | FE3-006, FE3-008, INT3-006 |
+| MVP 3 Thin Implementation | Closed in Wave 15. PM freeze, Backend thin runtime, and Frontend mock workflow landed; Wave16 later closed actual DTO drift. | PM3-001~PM3-005, BE3-001~BE3-010, FE3-001~FE3-008, INT3-001~INT3-007 |
+| MVP 3 Actual API DTO Sync | Closed in Wave 16. Frontend aligned QualitySummary, PublishJob, PublishedGraphVersion, PublishedLineage, PublishedEntity, and PublishedRelation to actual OpenAPI. | FE3-006, FE3-008, INT3-006 |
 | MVP 3 Actual API Smoke Harness | Closed in Wave 17. Deterministic seed, actual API route smoke, mock route smoke, MVP2 regression, backend focused tests, and frontend tests/build PASS. | BE3-006, BE3-007, BE3-008, FE3-005, FE3-006, FE3-007, INT3-003, INT3-004, INT3-006 |
-| MVP 3 Closeout / MVP 4 Prep | Open in Wave 18. Need MVP3 closeout checklist/release notes and MVP4 contract-first brief/backlog before broad MVP4 implementation. | PM3-005, INT3-001~INT3-007, PM4-001~PM4-005 |
+| MVP 3 Closeout / MVP 4 Prep | Closed in Wave 18. MVP3 product P0 accepted as `PASS WITH P1 FOLLOW-UPS`; MVP4 prep brief and draft backlog are ready. | PM3-005, INT3-001~INT3-007, PM4-001~PM4-008 |
+| MVP 4 Contract-First Planning | Closed in Wave 19. PM freeze, Backend contract/OpenAPI draft, Frontend field/state/IA review, and QA `INT4-*` checklist are ready. | PM4-001~PM4-008, BE4-001~BE4-009, FE4-001~FE4-008, INT4-001~INT4-009 |
+| MVP 4 Thin Implementation | Closed after Wave21 hardening. Backend/Frontend thin surfaces exist, actual smokes pass, external read-only APIs pass, and envelope comparison is resolved. | BE4-001~BE4-009, FE4-001~FE4-007, INT4-001, INT4-003~INT4-008 |
+| MVP 4 Quality Recompute Closeout | Open in Wave22. Need full raw recomputation proof for advanced quality metrics and UI/API evidence for numerator, denominator, formula metadata, precision tolerance, and drilldown consistency. | INT4-002, BE4-001, FE4-001 |
 
 ## Next Gate
 
-1. PM: Produce MVP3 closeout checklist/release note and MVP4 prep brief/backlog.
-2. Backend: Run closeout regression and document MVP3 seed/OpenAPI commands; review MVP4 backend contract implications.
-3. Frontend: Run closeout build/test/smoke and review MVP4 UI/IA implications without opening broad MVP4 UI implementation yet.
-4. QA: Verify MVP3 closeout matrix and recommend whether Wave19 may start MVP4 contract-first implementation.
+1. PM: Define the exact `INT4-002` recomputation proof standard: metric formulas, raw input sources, precision tolerance, and accepted evidence artifacts.
+2. Backend: Add deterministic recomputation artifact or endpoint/test support proving `COMPLETENESS`, `CONSISTENCY`, `TRACEABILITY`, `VALIDATION`, `REVIEW`, `DUPLICATE`, and `RELATION_DENSITY` metrics from seed/raw API data.
+3. Frontend: Surface numerator/denominator/sample context and formula/drilldown confidence clearly enough for QA to verify `INT4-002` without inventing a composite score.
+4. QA: Re-run `INT4-002` plus regression guard for all Wave21 PASS surfaces, then recommend MVP4 closeout or additional expansion.
 
 ## Latest Role Reports
 
@@ -190,6 +216,22 @@
 | Backend | wave-017 | `PASS / MVP3 SEED HELPER READY` | `scripts/seed_mvp3.py` seeds fixed project, review tasks, publish queue, current published graph, quality metrics |
 | Frontend | wave-017 | `PASS / MVP3 ACTUAL SMOKE READY` | `npm run smoke:mvp3:actual` added; actual and mock route smokes PASS |
 | QA | wave-017 | `PASS / MVP3 ACTUAL SMOKE VERIFIED` | INT3-003/004/006 actual evidence PASS; MVP2 regression PASS; no Wave17 blocker |
+| PM | wave-018 | `PASS / MVP3 CLOSEOUT AND MVP4 PREP READY` | MVP3 closeout checklist, MVP4 prep brief, and MVP4 draft backlog ready |
+| Backend | wave-018 | `PASS / MVP3 BACKEND CLOSEOUT READY` | Backend tests/ruff/OpenAPI compare/seed sanity PASS; README commands updated; MVP4 backend questions captured |
+| Frontend | wave-018 | `PASS / MVP3 FRONTEND CLOSEOUT READY` | Frontend tests/build/MVP3 actual smoke/MVP2 regression smoke PASS; MVP4 UI questions captured |
+| QA | wave-018 | `PASS WITH P1 FOLLOW-UPS / MVP3 CLOSED` | MVP3 product P0 accepted; Wave19 MVP4 contract-first planning recommended |
+| PM | wave-019 | `PASS / MVP4 PM FREEZE READY` | Metric groups only, frozen enums, read-only search/RAG, graph safety limits, dev-auth external APIs, SLA P1; ADR 0007 added |
+| Backend | wave-019 | `PASS / MVP4 CONTRACT DRAFT READY` | MVP4 API draft and OpenAPI planning artifact ready; 26 paths, 78 schemas, additive to MVP3 |
+| Frontend | wave-019 | `PASS / MVP4 UX REQUIREMENTS READY` | No blocking DTO gap; project-scoped route/IA and first-class states documented |
+| QA | wave-019 | `PASS / INT4 CHECKLIST READY` | `INT4_MVP4_ACCEPTANCE.md` ready; Wave20 entry unblocked; runtime checks NOT RUNNABLE until implementation |
+| PM | wave-020 | `PASS / SCOPE GUARD READY` | Wave20 thin implementation scope confirmed; no new PM decision opened |
+| Backend | wave-020 | `PASS / THIN RUNTIME WITH HARDENING GAPS` | MVP4 runtime, seed, tests, OpenAPI critical compare PASS; external source/evidence reads need fix |
+| Frontend | wave-020 | `PASS / MOCK UI WITH ACTUAL GAPS` | MVP4 DTO/mock/UI/build/test/mock smoke PASS; MVP3 actual smoke regression and actual MVP4 probe gaps remain |
+| QA | wave-020 | `FAIL / WAVE21 HARDENING REQUIRED` | INT4-003/004 PASS; INT4-007/008 FAIL; INT4-001/002/005/006 PARTIAL; expansion blocked |
+| PM | wave-021 | `PASS / ENVELOPE DECISION RECORDED` | Concrete external envelope schemas accepted as runtime contract; no scope expansion |
+| Backend | wave-021 | `PASS / EXTERNAL API HARDENED` | Source/evidence external reads fixed; MVP4/MVP3 tests, ruff, seed, OpenAPI compare PASS |
+| Frontend | wave-021 | `PASS / ACTUAL SMOKES RESTORED` | MVP3 actual, MVP4 mock, MVP4 actual smokes PASS; missing markers restored |
+| QA | wave-021 | `PASS / TARGETED HARDENING CLOSED` | INT4-001/003/004/005/006/007/008 PASS; INT4-002 remains PARTIAL; INT4-009 P1 |
 
 ## Report Index
 
@@ -212,4 +254,8 @@
 | wave-015 | `wave-015/PM_REPORT.md` | `wave-015/BACKEND_REPORT.md` | `wave-015/FRONTEND_REPORT.md` | `wave-015/QA_REPORT.md` | `wave-015/NEXT_ORDERS.md` |
 | wave-016 | `wave-016/PM_REPORT.md` | `wave-016/BACKEND_REPORT.md` | `wave-016/FRONTEND_REPORT.md` | `wave-016/QA_REPORT.md` | `wave-016/NEXT_ORDERS.md` |
 | wave-017 | `wave-017/PM_REPORT.md` | `wave-017/BACKEND_REPORT.md` | `wave-017/FRONTEND_REPORT.md` | `wave-017/QA_REPORT.md` | `wave-017/NEXT_ORDERS.md` |
-| wave-018 | pending | pending | pending | pending | `wave-018/NEXT_ORDERS.md` |
+| wave-018 | `wave-018/PM_REPORT.md` | `wave-018/BACKEND_REPORT.md` | `wave-018/FRONTEND_REPORT.md` | `wave-018/QA_REPORT.md` | `wave-018/NEXT_ORDERS.md` |
+| wave-019 | `wave-019/PM_REPORT.md` | `wave-019/BACKEND_REPORT.md` | `wave-019/FRONTEND_REPORT.md` | `wave-019/QA_REPORT.md` | `wave-019/NEXT_ORDERS.md` |
+| wave-020 | `wave-020/PM_REPORT.md` | `wave-020/BACKEND_REPORT.md` | `wave-020/FRONTEND_REPORT.md` | `wave-020/QA_REPORT.md` | `wave-020/NEXT_ORDERS.md` |
+| wave-021 | `wave-021/PM_REPORT.md` | `wave-021/BACKEND_REPORT.md` | `wave-021/FRONTEND_REPORT.md` | `wave-021/QA_REPORT.md` | `wave-021/NEXT_ORDERS.md` |
+| wave-022 | pending | pending | pending | pending | `wave-022/NEXT_ORDERS.md` |

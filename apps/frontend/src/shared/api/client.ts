@@ -25,14 +25,36 @@ import {
   mockReviewTasks,
 } from "../mocks/mvp3Fixtures";
 import {
+  buildMockGraphExplore,
+  buildMockRagAnswer,
+  buildMockSearchResponse,
+  mockMvp4DatasetVersions,
+  mockMvp4Datasets,
+  mockMvp4EvaluationRuns,
+  mockMvp4ExternalApiDocs,
+  mockMvp4GoldenItems,
+  mockMvp4PromptExperiments,
+  mockMvp4PromptPerformance,
+  mockMvp4QualityMetrics,
+  mockMvp4SimilarEvidence,
+  mockMvp4VectorStatus,
+} from "../mocks/mvp4Fixtures";
+import {
   CandidateEntity,
   CandidateListFilters,
   CandidateEvidence,
   CandidateRelation,
   DashboardSummary,
+  EvaluationDataset,
+  EvaluationDatasetVersion,
+  EvaluationRun,
+  ExternalApiDocsSurface,
   ExtractionJob,
   ExtractionJobCreateRequest,
   ExtractionJobDetail,
+  GoldenSetItem,
+  GraphExploreRequest,
+  GraphExploreResponse,
   ModelRun,
   OntologyGraph,
   OntologyClass,
@@ -53,10 +75,20 @@ import {
   PublishedGraphSnapshot,
   PublishCandidate,
   PublishJob,
+  PromptExperiment,
+  PromptPerformanceSummary,
   QualitySummary,
+  QualityMetricDetail,
+  QualityMetricsResponse,
+  RagAnswerRequest,
+  RagAnswerResponse,
   ReviewTaskDetail,
   ReviewTaskListFilters,
   ReviewTaskListResponse,
+  SearchRequest,
+  SearchResponse,
+  SimilarEvidenceRequest,
+  SimilarEvidenceResponse,
   PromptTemplate,
   PromptVersion,
   SourceData,
@@ -65,6 +97,7 @@ import {
   SourceProfile,
   SourceSegment,
   SourceUploadRequest,
+  VectorAdapterState,
 } from "./types";
 
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== "false";
@@ -99,12 +132,12 @@ async function delay<T>(value: T): Promise<T> {
   return value;
 }
 
-async function request<T>(path: string): Promise<T> {
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (USE_MOCK_API) {
     throw new Error(`No mock handler registered for ${path}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`);
+  const response = await fetch(`${API_BASE_URL}${path}`, init);
 
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status}`);
@@ -299,6 +332,12 @@ function buildAnyQueryString(filters: Record<string, unknown> = {}): string {
 
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+function assertMvp4Project(projectId: string) {
+  if (projectId !== mockMvp4QualityMetrics.project_id) {
+    throw new Error("MVP4 fixture not found");
+  }
 }
 
 function filterReviewTasks(projectId: string, filters: ReviewTaskListFilters = {}): ReviewTaskListResponse {
@@ -1665,6 +1704,195 @@ export const apiClient = {
     }
 
     return request<QualitySummary>(`/api/v1/projects/${projectId}/quality/summary`);
+  },
+
+  async getQualityMetrics(projectId: string): Promise<QualityMetricsResponse> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(mockMvp4QualityMetrics);
+    }
+
+    return request<QualityMetricsResponse>(`/api/v1/projects/${projectId}/quality/metrics`);
+  },
+
+  async getQualityMetricDetail(projectId: string, metricId: string): Promise<QualityMetricDetail> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      const metric = mockMvp4QualityMetrics.metric_groups
+        .flatMap((group) => group.metrics)
+        .find((item) => item.metric_id === metricId);
+
+      if (!metric) {
+        throw new Error("Quality metric fixture not found");
+      }
+
+      return delay({
+        project_id: projectId,
+        metric,
+        breakdown_rows: metric.breakdowns ?? [],
+      });
+    }
+
+    return request<QualityMetricDetail>(`/api/v1/projects/${projectId}/quality/metrics/${metricId}`);
+  },
+
+  async listEvaluationDatasets(projectId: string): Promise<EvaluationDataset[]> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(mockMvp4Datasets.filter((dataset) => dataset.project_id === projectId));
+    }
+
+    return request<EvaluationDataset[]>(`/api/v1/projects/${projectId}/evaluation-datasets`);
+  },
+
+  async getEvaluationDataset(datasetId: string): Promise<EvaluationDataset> {
+    if (USE_MOCK_API) {
+      const dataset = mockMvp4Datasets.find((item) => item.id === datasetId);
+
+      if (!dataset) {
+        throw new Error("Evaluation dataset fixture not found");
+      }
+
+      return delay(dataset);
+    }
+
+    return request<EvaluationDataset>(`/api/v1/evaluation-datasets/${datasetId}`);
+  },
+
+  async listEvaluationDatasetVersions(datasetId: string): Promise<EvaluationDatasetVersion[]> {
+    if (USE_MOCK_API) {
+      return delay(mockMvp4DatasetVersions.filter((version) => version.dataset_id === datasetId));
+    }
+
+    return request<EvaluationDatasetVersion[]>(`/api/v1/evaluation-datasets/${datasetId}/versions`);
+  },
+
+  async getEvaluationDatasetVersion(datasetVersionId: string): Promise<EvaluationDatasetVersion> {
+    if (USE_MOCK_API) {
+      const version = mockMvp4DatasetVersions.find((item) => item.id === datasetVersionId);
+
+      if (!version) {
+        throw new Error("Evaluation dataset version fixture not found");
+      }
+
+      return delay(version);
+    }
+
+    return request<EvaluationDatasetVersion>(`/api/v1/evaluation-dataset-versions/${datasetVersionId}`);
+  },
+
+  async listGoldenItems(datasetVersionId: string): Promise<GoldenSetItem[]> {
+    if (USE_MOCK_API) {
+      return delay(mockMvp4GoldenItems.filter((item) => item.dataset_version_id === datasetVersionId));
+    }
+
+    return request<GoldenSetItem[]>(`/api/v1/evaluation-dataset-versions/${datasetVersionId}/golden-items`);
+  },
+
+  async getPromptPerformanceSummary(projectId: string): Promise<PromptPerformanceSummary> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(mockMvp4PromptPerformance);
+    }
+
+    return request<PromptPerformanceSummary>(`/api/v1/projects/${projectId}/prompt-performance/summary`);
+  },
+
+  async listPromptExperiments(projectId: string): Promise<PromptExperiment[]> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(mockMvp4PromptExperiments.filter((experiment) => experiment.project_id === projectId));
+    }
+
+    return request<PromptExperiment[]>(`/api/v1/projects/${projectId}/prompt-experiments`);
+  },
+
+  async listEvaluationRuns(projectId: string): Promise<EvaluationRun[]> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(mockMvp4EvaluationRuns.filter((run) => run.project_id === projectId));
+    }
+
+    return request<EvaluationRun[]>(`/api/v1/projects/${projectId}/evaluation-runs`);
+  },
+
+  async searchProject(projectId: string, filters: SearchRequest = {}): Promise<SearchResponse> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(buildMockSearchResponse(projectId, filters.query ?? "", filters.index_state));
+    }
+
+    return request<SearchResponse>(`/api/v1/projects/${projectId}/search${buildAnyQueryString(filters as Record<string, unknown>)}`);
+  },
+
+  async getVectorStatus(projectId: string): Promise<VectorAdapterState> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(mockMvp4VectorStatus);
+    }
+
+    return request<VectorAdapterState>(`/api/v1/projects/${projectId}/vector/status`);
+  },
+
+  async findSimilarEvidence(projectId: string, payload: SimilarEvidenceRequest): Promise<SimilarEvidenceResponse> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay({
+        ...mockMvp4SimilarEvidence,
+        items: mockMvp4SimilarEvidence.items.slice(0, payload.limit ?? mockMvp4SimilarEvidence.items.length),
+      });
+    }
+
+    return jsonRequest<SimilarEvidenceResponse>(`/api/v1/projects/${projectId}/similar-evidence`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async createRagAnswer(projectId: string, payload: RagAnswerRequest): Promise<RagAnswerResponse> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(buildMockRagAnswer(projectId, payload.question));
+    }
+
+    return jsonRequest<RagAnswerResponse>(`/api/v1/projects/${projectId}/rag/answers`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async explorePublishedGraph(projectId: string, filters: GraphExploreRequest = {}): Promise<GraphExploreResponse> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      const state = filters.max_hops && filters.max_hops > 3 ? "SAFE_TOO_LARGE" : filters.state ?? "READY";
+      return delay(buildMockGraphExplore(projectId, state));
+    }
+
+    return request<GraphExploreResponse>(
+      `/api/v1/projects/${projectId}/published-graph/explore${buildAnyQueryString(filters as Record<string, unknown>)}`,
+    );
+  },
+
+  async getExternalApiDocs(projectId: string): Promise<ExternalApiDocsSurface> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(mockMvp4ExternalApiDocs);
+    }
+
+    const graph = await request<Record<string, unknown>>(`/api/v1/external/projects/${projectId}/published-graph/current`, {
+      headers: { "X-Dev-Auth": "mvp4-dev" },
+    });
+    return {
+      project_id: projectId,
+      auth_mode: "DEV_AUTH",
+      published_graph_version_ref:
+        "published_graph_version_ref" in graph
+          ? (graph.published_graph_version_ref as ExternalApiDocsSurface["published_graph_version_ref"])
+          : undefined,
+      read_only: true,
+      dev_auth_missing: false,
+      endpoints: mockMvp4ExternalApiDocs.endpoints,
+    };
   },
 
   async listModelRuns(jobId: string): Promise<ModelRun[]> {

@@ -1,7 +1,20 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
-import { BarChart3, Boxes, Database, GitBranch, ListChecks, Rocket, Save, Sparkles } from "lucide-react";
+import {
+  BarChart3,
+  Boxes,
+  Code2,
+  Database,
+  FlaskConical,
+  GitBranch,
+  ListChecks,
+  MessageSquareQuote,
+  Rocket,
+  Save,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { useProject, useUpdateProject } from "../shared/api/queries";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
@@ -119,6 +132,30 @@ export function ProjectDetailPage() {
           <CardAction to={`/projects/${project.id}/quality`}>
             <BarChart3 aria-hidden="true" />
             Quality dashboard
+          </CardAction>
+        </HanaCard>
+        <HanaCard title="Search" description="게시 그래프, 원천, 근거, lineage 결과를 프로젝트 안에서 묶어 봅니다.">
+          <CardAction to={`/projects/${project.id}/search`}>
+            <Search aria-hidden="true" />
+            Integrated search
+          </CardAction>
+        </HanaCard>
+        <HanaCard title="RAG Answers" description="게시된 사실과 인용 근거에 기반한 답변 작업 공간입니다.">
+          <CardAction to={`/projects/${project.id}/rag`}>
+            <MessageSquareQuote aria-hidden="true" />
+            RAG workspace
+          </CardAction>
+        </HanaCard>
+        <HanaCard title="Evaluation" description="Golden set, 평가 데이터셋, prompt/model 성능을 확인합니다.">
+          <CardAction to={`/projects/${project.id}/evaluation-datasets`}>
+            <FlaskConical aria-hidden="true" />
+            Evaluation sets
+          </CardAction>
+        </HanaCard>
+        <HanaCard title="External API" description="개발 인증 기반 read-only 소비자 문서를 확인합니다.">
+          <CardAction to={`/projects/${project.id}/external-api`}>
+            <Code2 aria-hidden="true" />
+            API docs
           </CardAction>
         </HanaCard>
       </QuickLinks>

@@ -4,6 +4,7 @@ from app.modules.audit.router import router as audit_router
 from app.modules.auth.router import router as auth_router
 from app.modules.candidate.router import router as candidate_router
 from app.modules.extraction.router import router as extraction_router
+from app.modules.mvp4.router import router as mvp4_router
 from app.modules.ontology.router import router as ontology_router
 from app.modules.publish.router import router as publish_router
 from app.modules.prompt.router import router as prompt_router
@@ -26,3 +27,4 @@ api_router.include_router(review_router)
 api_router.include_router(audit_router)
 api_router.include_router(publish_router)
 api_router.include_router(quality_router)
+api_router.include_router(mvp4_router)

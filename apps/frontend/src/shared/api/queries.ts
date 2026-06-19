@@ -3,6 +3,7 @@ import { apiClient } from "./client";
 import {
   CandidateListFilters,
   ExtractionJobCreateRequest,
+  GraphExploreRequest,
   OntologyClassCreateRequest,
   OntologyClassUpdateRequest,
   OntologyPropertyCreateRequest,
@@ -13,7 +14,10 @@ import {
   PublishCandidate,
   ProjectCreateRequest,
   ProjectUpdateRequest,
+  RagAnswerRequest,
   ReviewTaskListFilters,
+  SearchRequest,
+  SimilarEvidenceRequest,
   SourceUploadRequest,
 } from "./types";
 
@@ -461,6 +465,108 @@ export function useQualitySummary(projectId: string) {
   return useQuery({
     queryKey: ["projects", projectId, "quality-summary"],
     queryFn: () => apiClient.getQualitySummary(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useQualityMetrics(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "quality-metrics"],
+    queryFn: () => apiClient.getQualityMetrics(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useEvaluationDatasets(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "evaluation-datasets"],
+    queryFn: () => apiClient.listEvaluationDatasets(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useEvaluationDatasetVersions(datasetId: string) {
+  return useQuery({
+    queryKey: ["evaluation-datasets", datasetId, "versions"],
+    queryFn: () => apiClient.listEvaluationDatasetVersions(datasetId),
+    enabled: Boolean(datasetId),
+  });
+}
+
+export function useGoldenItems(datasetVersionId: string) {
+  return useQuery({
+    queryKey: ["evaluation-dataset-versions", datasetVersionId, "golden-items"],
+    queryFn: () => apiClient.listGoldenItems(datasetVersionId),
+    enabled: Boolean(datasetVersionId),
+  });
+}
+
+export function usePromptPerformanceSummary(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "prompt-performance-summary"],
+    queryFn: () => apiClient.getPromptPerformanceSummary(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function usePromptExperiments(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "prompt-experiments"],
+    queryFn: () => apiClient.listPromptExperiments(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useEvaluationRuns(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "evaluation-runs"],
+    queryFn: () => apiClient.listEvaluationRuns(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useProjectSearch(projectId: string, filters: SearchRequest = {}) {
+  return useQuery({
+    queryKey: ["projects", projectId, "search", filters],
+    queryFn: () => apiClient.searchProject(projectId, filters),
+    enabled: Boolean(projectId) && Boolean(filters.query),
+  });
+}
+
+export function useVectorStatus(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "vector-status"],
+    queryFn: () => apiClient.getVectorStatus(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useSimilarEvidence(projectId: string, payload: SimilarEvidenceRequest) {
+  return useQuery({
+    queryKey: ["projects", projectId, "similar-evidence", payload],
+    queryFn: () => apiClient.findSimilarEvidence(projectId, payload),
+    enabled: Boolean(projectId) && Boolean(payload.query || payload.evidence_id || payload.source_segment_id || payload.published_fact_id),
+  });
+}
+
+export function useCreateRagAnswer(projectId: string) {
+  return useMutation({
+    mutationFn: (payload: RagAnswerRequest) => apiClient.createRagAnswer(projectId, payload),
+  });
+}
+
+export function usePublishedGraphExplore(projectId: string, filters: GraphExploreRequest = {}) {
+  return useQuery({
+    queryKey: ["projects", projectId, "published-graph-explore", filters],
+    queryFn: () => apiClient.explorePublishedGraph(projectId, filters),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useExternalApiDocs(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "external-api-docs"],
+    queryFn: () => apiClient.getExternalApiDocs(projectId),
     enabled: Boolean(projectId),
   });
 }
