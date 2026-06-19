@@ -2,6 +2,7 @@ import { Play, RotateCcw } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
 import { useExtractionJob, useExtractionJobs, useModelRuns, useRetryExtractionJob, useRunExtractionJob } from "../shared/api/queries";
+import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
@@ -10,7 +11,7 @@ import { formatDateTime } from "../shared/lib/format";
 import { DataLink, KeyValueGrid, Mono, TableWrap } from "./mvp2Shared";
 
 export function ExtractionJobMonitorPage() {
-  const { projectId = "project-corp-knowledge", jobId = "" } = useParams();
+  const { projectId = "", jobId = "" } = useParams();
   const listQuery = useExtractionJobs(projectId);
   const detailQuery = useExtractionJob(jobId);
   const modelRunsQuery = useModelRuns(jobId);
@@ -40,6 +41,13 @@ export function ExtractionJobMonitorPage() {
 
     return (
       <>
+        <Breadcrumbs
+          items={[
+            { label: "Projects", to: "/projects" },
+            { label: "Extraction", to: `/projects/${activeJob.project_id}/extraction-jobs` },
+            { label: activeJob.id },
+          ]}
+        />
         <PageHeader title="Extraction Job Monitor" description="MockProvider job lifecycle, progress, failure reason, masked model run metadata를 확인합니다.">
           <HanaBadge tone={statusToTone(activeJob.status)}>{activeJob.status}</HanaBadge>
           <HanaButton type="button" onClick={() => runJob.mutate()} disabled={runJob.isPending || activeJob.status === "SUCCESS"}>
@@ -66,6 +74,9 @@ export function ExtractionJobMonitorPage() {
           <MetricCard label="Ended" value={activeJob.ended_at ? formatDateTime(activeJob.ended_at) : "Not ended"}>
             Terminal status timestamp
           </MetricCard>
+          <MetricCard label="Retry Chain" value={activeJob.retry_of_job_id ? "Retry" : "Root"}>
+            {activeJob.retry_of_job_id ? `Parent ${activeJob.retry_of_job_id}` : "Candidate/evidence duplicates are collapsed by chain key."}
+          </MetricCard>
         </MetricGrid>
         <HanaCard title="Job detail" description="Backend actual API mode 전환 지점: GET/POST /api/v1/extraction-jobs/{job_id}">
           <KeyValueGrid>
@@ -87,6 +98,8 @@ export function ExtractionJobMonitorPage() {
             </dd>
             <dt>Error</dt>
             <dd>{activeJob.error_code ? `${activeJob.error_code}: ${activeJob.error_message ?? ""}` : "-"}</dd>
+            <dt>Retry dedupe</dt>
+            <dd>{activeJob.retry_of_job_id ? `Retry of ${activeJob.retry_of_job_id}` : "Root job; repeated run results reuse retry-chain natural keys."}</dd>
             <dt>Candidates</dt>
             <dd>
               <DataLink to={`/extraction-jobs/${activeJob.id}/candidates`}>Open candidate results</DataLink>
@@ -133,6 +146,20 @@ export function ExtractionJobMonitorPage() {
     );
   }
 
+  if (!projectId) {
+    return (
+      <PageState
+        kind="empty"
+        title="Project context가 필요합니다"
+        description="Projects에서 작업할 project를 선택한 뒤 extraction jobs를 확인하세요."
+        actionLabel="Go to projects"
+        onAction={() => {
+          window.location.assign("/projects");
+        }}
+      />
+    );
+  }
+
   if (listQuery.isLoading) {
     return <PageState kind="loading" title="Extraction jobs를 불러오는 중" description="project extraction job 목록을 조회하고 있습니다." />;
   }
@@ -151,6 +178,12 @@ export function ExtractionJobMonitorPage() {
 
   return (
     <>
+      <Breadcrumbs
+        items={[
+          { label: "Projects", to: "/projects" },
+          { label: "Extraction" },
+        ]}
+      />
       <PageHeader title="Extraction Jobs" description="MockProvider extraction job 상태와 candidate result 진입점을 확인합니다.">
         <ActionLink to={`/projects/${projectId}/extraction/new`}>New job</ActionLink>
       </PageHeader>

@@ -13,12 +13,6 @@ import { SourceDetailPage } from "../pages/SourceDetailPage";
 import { SourceManagerPage } from "../pages/SourceManagerPage";
 import { SourceProfilingPage } from "../pages/SourceProfilingPage";
 
-const defaultProjectId = "project-corp-knowledge";
-const defaultProfileSourceId = "source-policy-csv";
-const defaultChunkSourceId = "source-handbook-pdf";
-const defaultJobId = "job-policy-extraction";
-const defaultEvidenceId = "evidence-policy-row-1";
-
 export const router = createBrowserRouter([
   {
     element: <App />,
@@ -81,39 +75,23 @@ export const router = createBrowserRouter([
       },
       {
         path: "/ontology",
-        element: <Navigate to={`/projects/${defaultProjectId}/ontology`} replace />,
+        element: <Navigate to="/projects" replace />,
       },
       {
         path: "/sources",
-        element: <Navigate to={`/projects/${defaultProjectId}/sources`} replace />,
+        element: <Navigate to="/projects" replace />,
       },
       {
         path: "/sources/:sourceId",
         element: <SourceDetailPage />,
       },
       {
-        path: "/profile",
-        element: <Navigate to={`/projects/${defaultProjectId}/sources/${defaultProfileSourceId}/profile`} replace />,
-      },
-      {
-        path: "/chunks",
-        element: <Navigate to={`/projects/${defaultProjectId}/sources/${defaultChunkSourceId}/chunks`} replace />,
-      },
-      {
-        path: "/extraction/new",
-        element: <Navigate to={`/projects/${defaultProjectId}/extraction/new`} replace />,
-      },
-      {
-        path: "/extraction-jobs",
-        element: <Navigate to={`/projects/${defaultProjectId}/extraction-jobs`} replace />,
+        path: "/extraction",
+        element: <Navigate to="/projects" replace />,
       },
       {
         path: "/candidates",
-        element: <Navigate to={`/extraction-jobs/${defaultJobId}/candidates`} replace />,
-      },
-      {
-        path: "/evidence",
-        element: <Navigate to={`/candidate-evidence/${defaultEvidenceId}`} replace />,
+        element: <Navigate to="/projects" replace />,
       },
     ],
   },

@@ -9,6 +9,7 @@ from app.core.enums import (
     CandidateValidationCode,
     ExtractionJobStatus,
     ModelRunStatus,
+    OntologyElementStatus,
     ProjectStatus,
     PublishStatus,
     ValidationStatus,
@@ -218,15 +219,33 @@ def _text_segments(segments: list[SourceSegmentModel]) -> list[SourceSegmentMode
 def _classes_for_version(db: Session, version_id: str) -> list[OntologyClassModel]:
     return db.scalars(
         select(OntologyClassModel)
-        .where(OntologyClassModel.version_id == version_id)
+        .where(
+            OntologyClassModel.version_id == version_id,
+            OntologyClassModel.status != OntologyElementStatus.DELETED,
+        )
         .order_by(OntologyClassModel.created_at.asc())
     ).all()
 
 
 def _relations_for_version(db: Session, version_id: str) -> list[OntologyRelationModel]:
+    active_class_ids = set(
+        db.scalars(
+            select(OntologyClassModel.id).where(
+                OntologyClassModel.version_id == version_id,
+                OntologyClassModel.status != OntologyElementStatus.DELETED,
+            )
+        ).all()
+    )
+    if not active_class_ids:
+        return []
     return db.scalars(
         select(OntologyRelationModel)
-        .where(OntologyRelationModel.version_id == version_id)
+        .where(
+            OntologyRelationModel.version_id == version_id,
+            OntologyRelationModel.status != OntologyElementStatus.DELETED,
+            OntologyRelationModel.domain_class_id.in_(active_class_ids),
+            OntologyRelationModel.range_class_id.in_(active_class_ids),
+        )
         .order_by(OntologyRelationModel.created_at.asc())
     ).all()
 
@@ -282,10 +301,218 @@ def _create_model_run(
     return model_run
 
 
+def _fixture_key(job: ExtractionJobModel) -> str:
+    return job.fixture_id or "default"
+
+
+def _natural_key(parts: list[object]) -> str:
+    return "||".join("<none>" if part is None else str(part) for part in parts)
+
+
+def _retry_root(db: Session, job: ExtractionJobModel) -> ExtractionJobModel:
+    current = job
+    seen_ids: set[str] = set()
+    while current.retry_of_job_id is not None and current.id not in seen_ids:
+        seen_ids.add(current.id)
+        parent = db.get(ExtractionJobModel, current.retry_of_job_id)
+        if parent is None:
+            break
+        current = parent
+    return current
+
+
+def _retry_chain_job_ids(db: Session, job: ExtractionJobModel) -> list[str]:
+    root = _retry_root(db, job)
+    chain_ids: list[str] = []
+    queue = [root.id]
+    seen_ids: set[str] = set()
+    while queue:
+        job_id = queue.pop(0)
+        if job_id in seen_ids:
+            continue
+        seen_ids.add(job_id)
+        chain_ids.append(job_id)
+        children = db.scalars(
+            select(ExtractionJobModel).where(ExtractionJobModel.retry_of_job_id == job_id)
+        ).all()
+        queue.extend(child.id for child in children)
+    return chain_ids
+
+
+def _candidate_client_id(job: ExtractionJobModel, payload: dict, *, kind: str, index: int) -> str:
+    return payload.get("client_candidate_id") or _natural_key([_fixture_key(job), kind, index])
+
+
+def _candidate_record_client_id(
+    job: ExtractionJobModel, candidate: CandidateEntityModel | CandidateRelationModel, *, kind: str
+) -> str:
+    raw_payload = candidate.raw_payload or {}
+    return raw_payload.get("client_candidate_id") or _natural_key(
+        [_fixture_key(job), kind, raw_payload.get("provider_index")]
+    )
+
+
+def _candidate_natural_key(
+    root_job_id: str, job: ExtractionJobModel, *, kind: str, client_candidate_id: str
+) -> str:
+    return _natural_key(
+        [
+            root_job_id,
+            job.provider,
+            _fixture_key(job),
+            job.source_id,
+            job.ontology_version_id,
+            job.prompt_version_id,
+            kind,
+            client_candidate_id,
+        ]
+    )
+
+
+def _segment_locator(segment: SourceSegmentModel) -> str:
+    return _natural_key(
+        [
+            segment.id,
+            segment.segment_type.value,
+            segment.row_index,
+            segment.column_name,
+            segment.page_number,
+            segment.section_title,
+            segment.paragraph_index,
+            segment.chunk_index,
+        ]
+    )
+
+
+def _evidence_natural_key(
+    root_job_id: str,
+    job: ExtractionJobModel,
+    source: SourceDataModel,
+    segment: SourceSegmentModel,
+    *,
+    client_evidence_id: str | None = None,
+) -> str:
+    return _natural_key(
+        [
+            root_job_id,
+            job.provider,
+            _fixture_key(job),
+            source.id,
+            segment.id,
+            client_evidence_id or _segment_locator(segment),
+        ]
+    )
+
+
+def _empty_dedupe_result(root_job_id: str, chain_job_ids: list[str]) -> dict:
+    return {
+        "retry_root_job_id": root_job_id,
+        "chain_job_ids": chain_job_ids,
+        "created_candidates": 0,
+        "skipped_duplicate_candidates": 0,
+        "created_evidence": 0,
+        "reused_evidence": 0,
+    }
+
+
+def _add_candidate_evidence_to_state(
+    db: Session,
+    *,
+    root_job_id: str,
+    candidate_job: ExtractionJobModel,
+    evidence_ids: list[str],
+    evidence_by_key: dict[str, CandidateEvidenceModel],
+) -> None:
+    for evidence_id in evidence_ids:
+        evidence = db.get(CandidateEvidenceModel, evidence_id)
+        if evidence is None or evidence.source_segment_id is None:
+            continue
+        stored_key = (evidence.metadata_ or {}).get("retry_chain_natural_key")
+        if stored_key:
+            evidence_by_key[stored_key] = evidence
+            continue
+        segment = db.get(SourceSegmentModel, evidence.source_segment_id)
+        source = db.get(SourceDataModel, evidence.source_id)
+        if segment is None or source is None:
+            continue
+        evidence_by_key[_evidence_natural_key(root_job_id, candidate_job, source, segment)] = (
+            evidence
+        )
+
+
+def _dedupe_state(db: Session, job: ExtractionJobModel) -> dict:
+    root = _retry_root(db, job)
+    chain_job_ids = _retry_chain_job_ids(db, job)
+    jobs = db.scalars(
+        select(ExtractionJobModel).where(ExtractionJobModel.id.in_(chain_job_ids))
+    ).all()
+    jobs_by_id = {chain_job.id: chain_job for chain_job in jobs}
+    candidate_keys: set[str] = set()
+    entity_by_key: dict[str, CandidateEntityModel] = {}
+    evidence_by_key: dict[str, CandidateEvidenceModel] = {}
+
+    entities = db.scalars(
+        select(CandidateEntityModel).where(
+            CandidateEntityModel.extraction_job_id.in_(chain_job_ids)
+        )
+    ).all()
+    for entity in entities:
+        entity_job = jobs_by_id.get(entity.extraction_job_id)
+        if entity_job is None:
+            continue
+        client_id = _candidate_record_client_id(entity_job, entity, kind="entity")
+        candidate_key = _candidate_natural_key(
+            root.id, entity_job, kind="entity", client_candidate_id=client_id
+        )
+        candidate_keys.add(candidate_key)
+        entity_by_key[candidate_key] = entity
+        _add_candidate_evidence_to_state(
+            db,
+            root_job_id=root.id,
+            candidate_job=entity_job,
+            evidence_ids=entity.evidence_ids,
+            evidence_by_key=evidence_by_key,
+        )
+
+    relations = db.scalars(
+        select(CandidateRelationModel).where(
+            CandidateRelationModel.extraction_job_id.in_(chain_job_ids)
+        )
+    ).all()
+    for relation in relations:
+        relation_job = jobs_by_id.get(relation.extraction_job_id)
+        if relation_job is None:
+            continue
+        client_id = _candidate_record_client_id(relation_job, relation, kind="relation")
+        candidate_keys.add(
+            _candidate_natural_key(
+                root.id, relation_job, kind="relation", client_candidate_id=client_id
+            )
+        )
+        _add_candidate_evidence_to_state(
+            db,
+            root_job_id=root.id,
+            candidate_job=relation_job,
+            evidence_ids=relation.evidence_ids,
+            evidence_by_key=evidence_by_key,
+        )
+
+    return {
+        "root_job_id": root.id,
+        "chain_job_ids": chain_job_ids,
+        "candidate_keys": candidate_keys,
+        "entity_by_key": entity_by_key,
+        "evidence_by_key": evidence_by_key,
+    }
+
+
 def _create_evidence(
     db: Session,
     source: SourceDataModel,
     segment: SourceSegmentModel,
+    *,
+    retry_chain_natural_key: str,
+    client_evidence_id: str | None = None,
 ) -> CandidateEvidenceModel:
     evidence_text = segment.text or ""
     evidence = CandidateEvidenceModel(
@@ -303,10 +530,40 @@ def _create_evidence(
         evidence_text=evidence_text[:500],
         start_offset=0,
         end_offset=min(len(evidence_text), 500),
-        metadata_={"segment_type": segment.segment_type.value},
+        metadata_={
+            "segment_type": segment.segment_type.value,
+            "retry_chain_natural_key": retry_chain_natural_key,
+            "client_evidence_id": client_evidence_id,
+        },
     )
     db.add(evidence)
     db.flush()
+    return evidence
+
+
+def _reuse_or_create_evidence(
+    db: Session,
+    *,
+    source: SourceDataModel,
+    segment: SourceSegmentModel,
+    retry_chain_natural_key: str,
+    client_evidence_id: str | None,
+    evidence_by_key: dict[str, CandidateEvidenceModel],
+    dedupe_result: dict,
+) -> CandidateEvidenceModel:
+    existing = evidence_by_key.get(retry_chain_natural_key)
+    if existing is not None:
+        dedupe_result["reused_evidence"] += 1
+        return existing
+    evidence = _create_evidence(
+        db,
+        source,
+        segment,
+        retry_chain_natural_key=retry_chain_natural_key,
+        client_evidence_id=client_evidence_id,
+    )
+    evidence_by_key[retry_chain_natural_key] = evidence
+    dedupe_result["created_evidence"] += 1
     return evidence
 
 
@@ -321,13 +578,30 @@ def _persist_candidates(
     relations: list[OntologyRelationModel],
     provider_entities: list[dict],
     provider_relations: list[dict],
-) -> None:
+) -> dict:
     text_segments = _text_segments(segments) or segments
     classes_by_name = {ontology_class.name: ontology_class for ontology_class in classes}
     relations_by_name = {relation.name: relation for relation in relations}
-    created_entities: list[CandidateEntityModel] = []
+    dedupe_state = _dedupe_state(db, job)
+    dedupe_result = _empty_dedupe_result(dedupe_state["root_job_id"], dedupe_state["chain_job_ids"])
+    candidate_keys: set[str] = dedupe_state["candidate_keys"]
+    entity_by_key: dict[str, CandidateEntityModel] = dedupe_state["entity_by_key"]
+    evidence_by_key: dict[str, CandidateEvidenceModel] = dedupe_state["evidence_by_key"]
+    provider_entities_by_index: list[CandidateEntityModel | None] = []
 
     for index, payload in enumerate(provider_entities):
+        client_candidate_id = _candidate_client_id(job, payload, kind="entity", index=index)
+        candidate_key = _candidate_natural_key(
+            dedupe_state["root_job_id"],
+            job,
+            kind="entity",
+            client_candidate_id=client_candidate_id,
+        )
+        if candidate_key in candidate_keys:
+            dedupe_result["skipped_duplicate_candidates"] += 1
+            provider_entities_by_index.append(entity_by_key.get(candidate_key))
+            continue
+
         class_model = classes_by_name.get(payload.get("class_name"))
         validation_status = ValidationStatus.PASSED
         validation_codes: list[str] = []
@@ -343,7 +617,21 @@ def _persist_candidates(
             validation_codes.append(CandidateValidationCode.MISSING_EVIDENCE.value)
         else:
             segment = text_segments[min(index, len(text_segments) - 1)]
-            evidence = _create_evidence(db, source, segment)
+            evidence = _reuse_or_create_evidence(
+                db,
+                source=source,
+                segment=segment,
+                retry_chain_natural_key=_evidence_natural_key(
+                    dedupe_state["root_job_id"],
+                    job,
+                    source,
+                    segment,
+                    client_evidence_id=payload.get("client_evidence_id"),
+                ),
+                client_evidence_id=payload.get("client_evidence_id"),
+                evidence_by_key=evidence_by_key,
+                dedupe_result=dedupe_result,
+            )
             evidence_ids.append(evidence.id)
             source_segment_id = segment.id
 
@@ -368,7 +656,8 @@ def _persist_candidates(
             raw_payload={
                 "fixture_id": job.fixture_id,
                 "provider_index": index,
-                "client_candidate_id": payload.get("client_candidate_id"),
+                "client_candidate_id": client_candidate_id,
+                "retry_chain_natural_key": candidate_key,
             },
             validation_status=validation_status,
             validation_codes=validation_codes,
@@ -377,20 +666,34 @@ def _persist_candidates(
         )
         db.add(entity)
         db.flush()
-        created_entities.append(entity)
+        candidate_keys.add(candidate_key)
+        entity_by_key[candidate_key] = entity
+        provider_entities_by_index.append(entity)
+        dedupe_result["created_candidates"] += 1
 
     for index, payload in enumerate(provider_relations):
+        client_candidate_id = _candidate_client_id(job, payload, kind="relation", index=index)
+        candidate_key = _candidate_natural_key(
+            dedupe_state["root_job_id"],
+            job,
+            kind="relation",
+            client_candidate_id=client_candidate_id,
+        )
+        if candidate_key in candidate_keys:
+            dedupe_result["skipped_duplicate_candidates"] += 1
+            continue
+
         relation_model = relations_by_name.get(payload.get("relation_name"))
         source_entity_index = payload.get("source_entity_index", 0)
         target_entity_index = payload.get("target_entity_index", 1)
         source_entity = (
-            created_entities[source_entity_index]
-            if source_entity_index < len(created_entities)
+            provider_entities_by_index[source_entity_index]
+            if source_entity_index < len(provider_entities_by_index)
             else None
         )
         target_entity = (
-            created_entities[target_entity_index]
-            if target_entity_index < len(created_entities)
+            provider_entities_by_index[target_entity_index]
+            if target_entity_index < len(provider_entities_by_index)
             else None
         )
         validation_status = ValidationStatus.PASSED
@@ -406,7 +709,21 @@ def _persist_candidates(
         evidence_ids: list[str] = []
         source_segment_id = None
         if segment is not None:
-            evidence = _create_evidence(db, source, segment)
+            evidence = _reuse_or_create_evidence(
+                db,
+                source=source,
+                segment=segment,
+                retry_chain_natural_key=_evidence_natural_key(
+                    dedupe_state["root_job_id"],
+                    job,
+                    source,
+                    segment,
+                    client_evidence_id=payload.get("client_evidence_id"),
+                ),
+                client_evidence_id=payload.get("client_evidence_id"),
+                evidence_by_key=evidence_by_key,
+                dedupe_result=dedupe_result,
+            )
             evidence_ids.append(evidence.id)
             source_segment_id = segment.id
         else:
@@ -429,7 +746,8 @@ def _persist_candidates(
             raw_payload={
                 "fixture_id": job.fixture_id,
                 "provider_index": index,
-                "client_candidate_id": payload.get("client_candidate_id"),
+                "client_candidate_id": client_candidate_id,
+                "retry_chain_natural_key": candidate_key,
             },
             validation_status=validation_status,
             validation_codes=validation_codes,
@@ -437,6 +755,11 @@ def _persist_candidates(
             publish_status=PublishStatus.NOT_PUBLISHED,
         )
         db.add(candidate_relation)
+        db.flush()
+        candidate_keys.add(candidate_key)
+        dedupe_result["created_candidates"] += 1
+
+    return dedupe_result
 
 
 @router.get(
@@ -602,7 +925,7 @@ def run_extraction_job(job_id: str, db: Session = Depends(get_db)) -> Extraction
         started_at=started_at,
         ended_at=ended_at,
     )
-    _persist_candidates(
+    dedupe_result = _persist_candidates(
         db,
         job=job,
         source=source,
@@ -613,6 +936,11 @@ def run_extraction_job(job_id: str, db: Session = Depends(get_db)) -> Extraction
         provider_entities=response.entities,
         provider_relations=response.relations,
     )
+    model_run.raw_response = {
+        **model_run.raw_response,
+        "dedupe": dedupe_result,
+    }
+    db.add(model_run)
     job.status = (
         ExtractionJobStatus.PARTIAL_FAILED
         if response.partial_failed
@@ -620,7 +948,14 @@ def run_extraction_job(job_id: str, db: Session = Depends(get_db)) -> Extraction
     )
     job.progress = 100
     job.error_code = "PARTIAL_FAILED" if response.partial_failed else None
-    job.error_message = "; ".join(response.warnings) if response.warnings else None
+    messages = list(response.warnings)
+    if dedupe_result["skipped_duplicate_candidates"] > 0 or dedupe_result["reused_evidence"] > 0:
+        messages.append(
+            "Retry-chain dedupe reused/skipped "
+            f"{dedupe_result['skipped_duplicate_candidates']} candidate(s) and "
+            f"{dedupe_result['reused_evidence']} evidence record(s)."
+        )
+    job.error_message = "; ".join(messages) if messages else None
     job.ended_at = ended_at
     db.add(job)
     db.commit()

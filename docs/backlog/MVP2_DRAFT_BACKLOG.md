@@ -97,6 +97,199 @@ Wave 6 thin slice 결과는 `PARTIAL`이다. Backend/API core는 동작하지만
 - `INVALID_EVIDENCE_REFERENCE`를 재현할 deterministic fixture 또는 test hook 추가 여부를 PM/Backend가 Wave 7에서 확정한다.
 - Retry no-duplicate natural key 범위를 PM이 Wave 7에서 확정한다.
 
+## Wave 7 QA Findings
+
+Wave 7 actual API contract sync는 `PASS`다.
+
+- `INT2-001` Profiling contract review: PASS.
+- `INT2-002` Chunk/evidence traceability: PASS.
+- `INT2-003` Mock extraction flow: PASS.
+- `INT2-004` Failure/retry smoke: PASS.
+- Provider API value는 `mock`, UI display label은 `MockProvider`로 고정한다.
+- `SourceParseResponse`, `PromptVersion`, `CandidateEvidence` mismatches are resolved.
+- `invalid_evidence_reference` runtime smoke is available and PASS.
+- Docker Compose smoke remains an accepted environment exception until Docker CLI is available.
+
+## Wave 8 Candidate Scope
+
+Wave 8 may expand features in a focused way, but should not open external LLM providers, review/publish workflow, RAG, or advanced PDF parsing.
+
+- Retry-chain dedupe implementation and tests.
+- Candidate detail drawer or panel.
+- Evidence text/locator highlight in the existing evidence viewer.
+- Replace deterministic fixture shortcuts with selected/recent project and job flow.
+- Restructure LNB so only top-level work areas are globally listed and ID-bound pages are reached by contextual drilldown.
+- Improve ontology-building workflow clarity across Project, Ontology, Source, Extraction, Candidate, and Evidence screens.
+- Complete ontology modeler edit/delete UX for draft class, property, and relation authoring.
+- Regularize browser smoke tooling or document a stable fallback.
+
+## Wave 8 Focused Expansion Acceptance
+
+Wave 8 acceptance는 기존 MVP 1/MVP 2 contract를 깨지 않고 사용자가 "온톨로지를 구성하고 source 기반 후보와 evidence를 확인하는 길"을 UI에서 따라갈 수 있게 하는 데 둔다. 긴 설명문으로 기능을 설명하는 방식은 PASS 기준이 아니다. 화면 구조, selected project context, breadcrumb/compact path, primary action, empty state, status, row/action link가 다음 action을 보여줘야 한다.
+
+Wave 8은 아래 범위만 연다. 외부 LLM provider, review/publish workflow, RAG, advanced PDF parsing, 대규모 리디자인은 열지 않는다.
+
+### Primary Ontology-Building Workflow
+
+1. Project 선택 또는 생성: 사용자는 최근/선택 project context를 확인하고, project가 없거나 선택이 깨졌을 때 project list/create로 복구할 수 있다.
+2. Ontology draft 작성: project 안에서 draft ontology version을 선택하거나 생성한다. `published`/`archived` version은 읽기 전용으로 표시하고 새 draft 생성 CTA를 제공한다.
+3. Class/property/relation 구성: draft version에서 class, property, relation을 생성/수정/삭제하고 graph/list/detail이 같은 상태를 바라본다.
+4. Source upload/profile/parse: source upload 후 structured source는 profile, document source는 parse/chunk로 이동할 수 있다.
+5. Extraction job 생성/실행: source, ontology version, prompt version, provider `mock`, fixture를 기준으로 job을 만들고 실행한다.
+6. Candidate/evidence 확인: job result에서 candidate entity/relation을 보고 drawer/panel에서 evidence와 locator highlight를 확인한다.
+
+### Frontend Flow Acceptance
+
+- Project-scoped screen은 현재 project를 topbar, page header, breadcrumb/compact path 중 최소 하나에 표시한다.
+- Empty state는 다음 action CTA를 제공한다. 예: no source이면 upload, no draft이면 create draft, no job이면 create extraction job.
+- Loading/error/empty/success 상태가 화면별로 분리되어야 하며, error state는 parent screen으로 돌아가는 복구 action을 제공한다.
+- ID 기반 detail screen은 parent row/action/context link에서 진입한다. LNB에 특정 `project_id`, `source_id`, `job_id`, `evidence_id`가 필요한 route를 평면 나열하지 않는다.
+- Long helper copy로 workflow를 설명하지 않는다. 기본 화면 구조, primary button, status chip, row action, breadcrumb가 흐름을 전달해야 한다.
+
+### Ontology Modeler Edit/Delete Acceptance
+
+- Draft ontology version에서 class/property/relation은 생성, 수정, 삭제가 가능해야 한다.
+- Published 또는 archived ontology version은 read-only다. 수정/삭제 control은 disabled 또는 hidden 처리하고, 새 draft 생성 CTA를 제공한다.
+- Delete는 물리 삭제가 아니라 backend contract의 element `status=DELETED` 처리로 이해한다. UI는 삭제 후 graph/list/detail에서 해당 element를 숨기거나 deleted state로 분리 표시한다.
+- Class 삭제 전 confirm UI는 연결된 property/relation 영향 범위를 보여준다. 최소 기준은 affected property count, inbound/outbound relation count, 삭제 대상 class name이다.
+- Class 삭제 후 연결 property/relation이 orphan selection으로 남아 있으면 안 된다. Graph/list/detail selection은 안전한 fallback으로 clear되거나 parent/draft root로 이동한다.
+- Property/relation 삭제 후 detail panel이 같은 deleted element를 계속 editable 상태로 보여주면 FAIL이다.
+- 삭제 action은 destructive confirm 절차를 거친다. Confirm copy에는 삭제 대상 이름과 삭제가 draft에만 적용된다는 사실을 포함한다.
+
+### LNB and Drilldown IA Acceptance
+
+- LNB에는 전역 최상위 업무 영역만 둔다: Dashboard, Projects, Ontology, Sources, Extraction, Candidates 같은 project-level entry까지만 허용한다.
+- 특정 project/source/job/evidence id가 필요한 화면은 LNB에 직접 노출하지 않는다.
+- ID 기반 화면은 parent list row, detail action, contextual link, breadcrumb에서 진입한다.
+- 현재 위치는 breadcrumb 또는 compact path로 표시한다. 예: `Projects / {project} / Sources / {source} / Evidence`.
+- MVP 1 style guide의 app shell과 page header 패턴을 유지한다. Wave 8은 navigation 정리이지 대규모 visual redesign이 아니다.
+
+### Selected/Recent Project and Job Navigation Acceptance
+
+- 사용자가 project-scoped route에 들어왔는데 selected project가 없으면 Projects list/create로 복구할 수 있어야 한다.
+- Recent project/job은 편의 기능이며 canonical API contract가 아니다. Stale local selection은 recoverable not-found state로 처리한다.
+- Extraction job result 진입은 selected/recent job shortcut보다 project 안의 job list row/action을 우선한다.
+- Deterministic fixture shortcut은 QA/dev helper로 남길 수 있지만 product primary path를 대체하면 안 된다.
+
+### Retry-Chain Dedupe Acceptance
+
+- Dedupe scope는 같은 job 내부가 아니라 retry chain 전체다. Retry root는 `retry_of_job_id`가 null인 최초 ancestor job이다.
+- Duplicate candidate natural key는 `retry_root_job_id`, `provider`, `fixture_id`, `source_id`, `ontology_version_id`, `prompt_version_id`, candidate kind, provider stable `client_candidate_id`를 기준으로 한다.
+- MockProvider가 stable `client_candidate_id`를 제공하지 못하면 fixture id, candidate kind, provider output index, segment locator로 deterministic key를 만든다.
+- Duplicate evidence natural key는 `retry_root_job_id`, `provider`, `fixture_id`, `source_id`, `source_segment_id`, provider stable `client_evidence_id` 또는 deterministic segment locator를 기준으로 한다.
+- Retry 후 candidate/evidence list는 같은 retry-chain natural key의 중복 row를 보여주지 않는다.
+- User-facing 상태는 retry source job, retry job, result list에서 일관되어야 한다. 최소 기준은 retry target job link, retry 생성 여부, dedupe/reused count 또는 "duplicates reused/skipped" 상태 메시지 중 하나를 표시하는 것이다.
+
+### Candidate Detail Drawer/Panel Acceptance
+
+- Candidate row/card에서 drawer 또는 side panel을 열 수 있다.
+- Panel은 candidate summary, candidate kind, class/relation, confidence, validation status/codes, review/publish read-only status, source id, ontology version id, prompt version id, model run id, evidence list를 표시한다.
+- Panel은 review approval, rejection, publish action을 제공하지 않는다.
+- Evidence item은 source/evidence detail 또는 viewer highlight로 이동할 수 있어야 한다.
+- Missing evidence는 `MISSING_EVIDENCE` warning으로, broken evidence는 `INVALID_EVIDENCE_REFERENCE` failed state로 보여주고 화면은 crash하지 않는다.
+
+### Evidence Highlight Acceptance
+
+- Structured source evidence는 `row_index`와 `column_name`으로 table row/cell highlight를 제공한다.
+- Text source evidence는 `page_number`, `section_title`, `paragraph_id`, `chunk_id`, `start_offset`, `end_offset` 중 가능한 locator로 chunk/paragraph/span highlight를 제공한다.
+- Exact span highlight가 불가능하면 chunk/paragraph block highlight로 fallback한다.
+- Missing/broken evidence reference는 fallback panel에서 raw evidence id, source id, source segment id, validation code를 보여주고 parent candidate/job으로 돌아갈 수 있어야 한다.
+- 고급 PDF parsing dependency나 새로운 PDF renderer 도입은 Wave 8 범위가 아니다.
+
+### Browser Smoke Tooling Decision
+
+- Wave 8의 기본 browser smoke tooling은 Frontend/QA dev dependency로 관리되는 Playwright를 기준으로 한다.
+- Browser install, certificate, local runtime 제약이 있으면 manual UAT 또는 headless fallback을 허용하되, 실행 불가 사유와 스크린샷/로그/명령 결과를 보고서에 남겨야 한다.
+- Fallback은 정규 smoke 기준을 대체하는 permanent product decision이 아니다.
+
+## Wave 8 QA Findings
+
+Wave 8 focused expansion은 `PARTIAL`이다. Retry-chain dedupe와 primary workflow는 유의미하게 전진했지만, 더 넓은 MVP 2 기능 확장 전 아래 targeted hardening을 Wave 9에서 먼저 닫는다.
+
+- MVP 1 regression gate: PASS.
+- Wave 7 contract sync 유지: PASS.
+- `INT2-003` Mock extraction flow: PASS.
+- `INT2-004` Failure/retry smoke: PASS.
+- UI ontology-building workflow clarity: PASS.
+- Retry-chain dedupe: PASS.
+- Ontology modeler edit/delete UX: PARTIAL.
+- LNB/drilldown IA: PARTIAL.
+- Candidate detail/evidence highlight: PARTIAL.
+
+### Wave 9 Targeted Hardening Scope
+
+- Backend class delete semantics:
+  - class soft delete 후 deleted class에 연결된 `graph.properties[]`가 orphan payload로 남지 않아야 한다.
+  - 연결 property/relation을 함께 `DELETED` 처리하거나, graph endpoint에서 deleted class에 연결된 property/relation을 제외한다.
+  - extraction candidate generation input에서도 deleted ontology class/relation/property가 사용되지 않도록 확인한다.
+- Frontend ontology delete confirmation:
+  - class delete confirm은 class name, affected property count, inbound relation count, outbound relation count, draft-only 적용 사실을 표시한다.
+  - property/relation delete confirm은 target name과 draft-only 적용 사실을 표시한다.
+  - 삭제 후 graph/list/detail selection이 안전하게 clear 또는 parent context로 fallback한다.
+- Evidence viewer context:
+  - broken/direct evidence route fallback은 evidence id뿐 아니라 가능한 source id, source segment id, validation code, parent candidate/job 복귀 action을 보여준다.
+  - breadcrumb/path는 project/source/job/candidate/evidence 맥락을 최대한 유지한다.
+- QA:
+  - Wave 9는 full sync wave가 아니라 targeted regression wave다.
+  - Docker Compose는 Docker CLI가 없으면 기존 environment exception을 유지한다.
+
+### Wave 9 Targeted Hardening Decisions
+
+- Ontology class delete semantics:
+  - Decision: draft class soft delete는 cascade soft delete를 기본 의미로 한다. 삭제 대상 class는 `status=DELETED`가 되고, 해당 class에 직접 속한 property와 해당 class를 domain/range 또는 source/target으로 참조하는 relation도 같은 draft 안에서 `status=DELETED` 처리한다.
+  - Read invariant: graph/extraction read path는 defensive filter를 적용한다. Legacy data나 partial migration 때문에 연결 property/relation의 status가 아직 `DELETED`가 아니더라도, deleted class에 연결된 property/relation은 `GET /api/v1/ontology/versions/{version_id}/graph`와 extraction candidate generation input에 노출되면 안 된다.
+  - Physical delete는 하지 않는다. Published/archived ontology version은 계속 read-only이며 새 draft CTA로만 수정 흐름에 진입한다.
+- Delete confirmation copy acceptance:
+  - Class delete confirm은 class name, affected property count, inbound relation count, outbound relation count, draft-only 적용 사실을 분리 표시한다.
+  - Count는 이미 `DELETED`인 element를 제외한 현재 draft graph 기준으로 계산한다.
+  - Property/relation delete confirm은 target name과 draft-only 적용 사실을 표시한다.
+  - 삭제 후 graph/list/detail selection은 deleted element에 머물지 않는다. 선택은 clear되거나 parent draft/modeler context로 이동해야 한다.
+- Evidence broken/direct route fallback acceptance:
+  - Product UI에서 생성하는 evidence link는 parent project/source/job/candidate context를 route state 또는 query/context link로 전달해야 한다.
+  - Broken/direct evidence fallback은 가능한 source id, source segment id, validation code, evidence id를 보여준다.
+  - Parent candidate/job context가 있으면 parent candidate 또는 job으로 돌아가는 action을 제공한다.
+  - 임의 direct URL처럼 parent context가 없으면 context unavailable state를 보여주고 selected/recent project의 candidate/job list로 복구하는 action을 제공한다. App-generated link에서 parent action이 빠지면 FAIL이다.
+- LNB/drilldown targeted acceptance:
+  - LNB에는 ID 기반 detail page를 평면 노출하지 않는다.
+  - Project/source/job/candidate/evidence detail은 parent screen의 row/action/context link에서 진입한다.
+  - Breadcrumb 또는 compact path는 project/source/job/candidate/evidence 맥락 중 현재 화면이 가진 context를 잃지 않아야 한다.
+
+### Wave 9 QA Findings
+
+Wave 9 targeted hardening은 `PASS`다. Wave 10에서 더 넓은 MVP 2 local demo expansion을 열 수 있다.
+
+- MVP 1 regression gate: PASS.
+- Wave 7 contract sync 유지: PASS.
+- Ontology delete orphan issue: PASS.
+- Class cascade soft delete, graph/list/extraction defensive filter: PASS.
+- Delete confirmation UX: PASS.
+- Evidence fallback/breadcrumb context: PASS.
+- LNB/drilldown residual gap: PASS.
+- `INT2-002`: PASS.
+- Docker Compose smoke는 Docker CLI 부재로 `NOT RUNNABLE`이며 기존 environment exception을 유지한다.
+
+### Wave 10 Broader Local Demo Scope
+
+Wave 10은 MVP 2를 실제 로컬 데모 흐름으로 넓힌다. 목표는 source profile/parse에서 extraction job 생성/실행, candidate/evidence 확인까지 사용자가 반복해서 검증할 수 있는 상태를 만드는 것이다. 외부 LLM provider, review/publish workflow, RAG, advanced PDF parsing, 신규 candidate detail endpoint는 여전히 열지 않는다.
+
+- Source profile/parse edge cases:
+  - CSV/Excel profile 재실행, empty/small table, mixed type/null ratio/sample warnings를 확인한다.
+  - TXT/PDF deterministic parse/chunk 결과와 warnings를 UI/API/fixture에서 일관되게 보여준다.
+- Prompt/job lifecycle:
+  - prompt template/version 선택, active version 표시, missing prompt/version 복구 흐름을 정리한다.
+  - job 생성/실행/retry/failure 상태와 masked model run metadata를 사용자가 확인할 수 있어야 한다.
+- Fixture catalog:
+  - `default`, `partial_invalid`, `invalid_evidence_reference`, `missing` fixture를 QA가 명확히 선택/재현할 수 있어야 한다.
+  - `partial_invalid`은 missing evidence warning/partial failure를 재현한다.
+  - `invalid_evidence_reference`는 broken evidence fallback을 재현한다.
+  - `missing`은 `MOCK_FIXTURE_NOT_FOUND` failure path를 재현한다.
+- Candidate/evidence browsing:
+  - validation status/code, evidence presence, entity/relation kind 기준 필터와 empty/error state를 확인한다.
+  - normal/missing/broken evidence route가 source/job/candidate context를 잃지 않아야 한다.
+- QA:
+  - Wave 10은 targeted smoke가 아니라 broader MVP 2 local demo regression이다.
+  - Wave 10 종료 시 다음 단계가 MVP 2 closeout인지, 추가 hardening인지 판정한다.
+
 ## Wave 7 Contract Sync Decisions
 
 Wave 7은 기능 확장이 아니라 FE/OpenAPI contract sync closeout wave다. Candidate detail drawer, evidence highlight, 고급 PDF parsing, 외부 LLM provider, review/publish/RAG 범위는 열지 않는다.

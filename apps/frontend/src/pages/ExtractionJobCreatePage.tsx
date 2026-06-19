@@ -2,13 +2,14 @@ import { Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCreateExtractionJob, useOntologyVersions, usePromptTemplates, usePromptVersions, useSources } from "../shared/api/queries";
+import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, HanaSelect } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
 import { ButtonSlot, Field, FormGrid, KeyValueGrid, MutedText } from "./mvp2Shared";
 
 export function ExtractionJobCreatePage() {
-  const { projectId = "project-corp-knowledge" } = useParams();
+  const { projectId = "" } = useParams();
   const navigate = useNavigate();
   const [sourceId, setSourceId] = useState("");
   const [ontologyVersionId, setOntologyVersionId] = useState("");
@@ -58,6 +59,18 @@ export function ExtractionJobCreatePage() {
   const isError = isSourcesError || isVersionsError || isPromptsError || isPromptVersionsError;
   const canCreate = Boolean(sourceId && ontologyVersionId && promptVersionId && modelName.trim()) && !createJob.isPending;
 
+  if (!projectId) {
+    return (
+      <PageState
+        kind="empty"
+        title="Project context가 필요합니다"
+        description="Projects에서 작업할 project를 선택한 뒤 extraction job을 생성하세요."
+        actionLabel="Go to projects"
+        onAction={() => navigate("/projects")}
+      />
+    );
+  }
+
   if (isLoading) {
     return <PageState kind="loading" title="Extraction job 생성 폼을 불러오는 중" description="source, ontology version, prompt version fixture를 조회하고 있습니다." />;
   }
@@ -80,7 +93,15 @@ export function ExtractionJobCreatePage() {
   }
 
   if (sources.length === 0 || versions.length === 0 || prompts.length === 0 || promptVersions.length === 0) {
-    return <PageState kind="empty" title="Job 생성에 필요한 입력이 부족합니다" description="source, ontology version, prompt version이 모두 필요합니다." />;
+    return (
+      <PageState
+        kind="empty"
+        title="Job 생성에 필요한 입력이 부족합니다"
+        description="source, ontology version, prompt version이 모두 필요합니다."
+        actionLabel={sources.length === 0 ? "Go to sources" : "Go to ontology"}
+        onAction={() => navigate(sources.length === 0 ? `/projects/${projectId}/sources` : `/projects/${projectId}/ontology`)}
+      />
+    );
   }
 
   function handleCreate() {
@@ -105,6 +126,13 @@ export function ExtractionJobCreatePage() {
 
   return (
     <>
+      <Breadcrumbs
+        items={[
+          { label: "Projects", to: "/projects" },
+          { label: "Extraction", to: `/projects/${projectId}/extraction-jobs` },
+          { label: "Create job" },
+        ]}
+      />
       <PageHeader title="Create Extraction Job" description="MockProvider로 source, ontology version, prompt version을 묶어 candidate extraction job을 생성합니다.">
         <HanaBadge tone="muted">MockProvider only</HanaBadge>
       </PageHeader>

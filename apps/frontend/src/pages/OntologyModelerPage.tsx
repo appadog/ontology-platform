@@ -1,28 +1,55 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ReactFlow, { Background, Controls, Edge, Node } from "react-flow-renderer";
-import styled from "styled-components";
-import { Plus, Search } from "lucide-react";
+import styled, { useTheme } from "styled-components";
+import { Plus, Save, Search, Trash2 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import {
   useCreateOntologyClass,
   useCreateOntologyProperty,
   useCreateOntologyRelation,
   useCreateOntologyVersion,
+  useDeleteOntologyClass,
+  useDeleteOntologyProperty,
+  useDeleteOntologyRelation,
   useOntologyGraph,
   useOntologyVersions,
+  useUpdateOntologyClass,
+  useUpdateOntologyProperty,
+  useUpdateOntologyRelation,
 } from "../shared/api/queries";
-import { Cardinality, PropertyDataType } from "../shared/api/types";
-import { mockProjects } from "../shared/mocks/fixtures";
+import { Cardinality, OntologyClass, OntologyProperty, OntologyRelation, PropertyDataType } from "../shared/api/types";
+import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
 
-const currentProjectId = mockProjects[0].id;
 const dataTypeOptions: PropertyDataType[] = ["STRING", "TEXT", "INTEGER", "FLOAT", "BOOLEAN", "DATE", "DATETIME", "URI"];
-const cardinalityOptions: Cardinality[] = ["ONE_TO_ONE", "ONE_TO_MANY", "MANY_TO_ONE", "MANY_TO_MANY", "OPTIONAL", "REQUIRED", "MULTIPLE"];
+const cardinalityOptions: Cardinality[] = [
+  "ONE_TO_ONE",
+  "ONE_TO_MANY",
+  "MANY_TO_ONE",
+  "MANY_TO_MANY",
+  "OPTIONAL",
+  "REQUIRED",
+  "MULTIPLE",
+];
+
+function nullableText(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function toNumber(value: string, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
 
 export function OntologyModelerPage() {
-  const [selectedClassId, setSelectedClassId] = useState("class-policy");
+  const theme = useTheme();
+  const { projectId = "" } = useParams();
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState("");
+  const [selectedRelationId, setSelectedRelationId] = useState("");
   const [className, setClassName] = useState("Company");
   const [propertyName, setPropertyName] = useState("company_name");
   const [propertyDataType, setPropertyDataType] = useState<PropertyDataType>("STRING");
@@ -30,21 +57,212 @@ export function OntologyModelerPage() {
   const [relationName, setRelationName] = useState("RELATED_TO");
   const [relationCardinality, setRelationCardinality] = useState<Cardinality>("MANY_TO_MANY");
   const [relationTargetClassId, setRelationTargetClassId] = useState("");
-  const { projectId = currentProjectId } = useParams();
+  const [classForm, setClassForm] = useState({ name: "", label: "", description: "", x: "0", y: "0" });
+  const [propertyForm, setPropertyForm] = useState({
+    label: "",
+    description: "",
+    data_type: "STRING" as PropertyDataType,
+    cardinality: "OPTIONAL" as Cardinality,
+    required: false,
+  });
+  const [relationForm, setRelationForm] = useState({
+    label: "",
+    description: "",
+    domain_class_id: "",
+    range_class_id: "",
+    cardinality: "MANY_TO_MANY" as Cardinality,
+    required: false,
+  });
+
   const { data: versions, isLoading: isVersionsLoading, isError: isVersionsError } = useOntologyVersions(projectId);
   const versionId = versions?.[0]?.id ?? "";
   const { data: graph, isLoading, isError, refetch } = useOntologyGraph(versionId);
   const createVersion = useCreateOntologyVersion(projectId);
   const createClass = useCreateOntologyClass(versionId);
+  const updateClass = useUpdateOntologyClass(versionId);
+  const deleteClass = useDeleteOntologyClass(versionId);
   const createProperty = useCreateOntologyProperty(versionId);
+  const updateProperty = useUpdateOntologyProperty(versionId);
+  const deleteProperty = useDeleteOntologyProperty(versionId);
   const createRelation = useCreateOntologyRelation(versionId);
+  const updateRelation = useUpdateOntologyRelation(versionId);
+  const deleteRelation = useDeleteOntologyRelation(versionId);
 
-  const nodes = useMemo<Node[]>(() => {
+  const classRecords = useMemo<OntologyClass[]>(() => {
     if (!graph) {
       return [];
     }
 
-    return graph.nodes.map((graphNode) => ({
+    return (
+      graph.classes ??
+      graph.nodes.map((node) => ({
+        id: node.class_id,
+        version_id: graph.version_id,
+        name: node.label,
+        label: node.label,
+        description: null,
+        status: node.status,
+        position: node.position,
+        created_at: "",
+        updated_at: "",
+      }))
+    ).filter((ontologyClass) => ontologyClass.status !== "DELETED");
+  }, [graph]);
+
+  const visibleNodes = useMemo(() => {
+    if (!graph) {
+      return [];
+    }
+
+    return graph.nodes.filter((node) => node.status !== "DELETED");
+  }, [graph]);
+
+  const visibleClassIds = useMemo(() => new Set(visibleNodes.map((node) => node.class_id)), [visibleNodes]);
+
+  const relationRecords = useMemo<OntologyRelation[]>(() => {
+    if (!graph) {
+      return [];
+    }
+
+    return (
+      graph.relations ??
+      graph.edges.map((edge) => ({
+        id: edge.relation_id,
+        version_id: graph.version_id,
+        name: edge.label,
+        label: edge.label,
+        description: null,
+        domain_class_id: edge.source_class_id,
+        range_class_id: edge.target_class_id,
+        cardinality: edge.cardinality,
+        required: false,
+        status: edge.status,
+        created_at: "",
+        updated_at: "",
+      }))
+    ).filter(
+      (relation) =>
+        relation.status !== "DELETED" &&
+        visibleClassIds.has(relation.domain_class_id) &&
+        visibleClassIds.has(relation.range_class_id),
+    );
+  }, [graph, visibleClassIds]);
+
+  const visibleEdges = useMemo(() => {
+    if (!graph) {
+      return [];
+    }
+
+    return graph.edges.filter(
+      (edge) =>
+        edge.status !== "DELETED" &&
+        visibleClassIds.has(edge.source_class_id) &&
+        visibleClassIds.has(edge.target_class_id),
+    );
+  }, [graph, visibleClassIds]);
+
+  const visibleProperties = useMemo(() => {
+    if (!graph) {
+      return [];
+    }
+
+    return graph.properties.filter((property) => property.status !== "DELETED" && visibleClassIds.has(property.class_id));
+  }, [graph, visibleClassIds]);
+
+  const selectedNode = visibleNodes.find((node) => node.class_id === selectedClassId) ?? visibleNodes[0];
+  const selectedClass = selectedNode ? classRecords.find((ontologyClass) => ontologyClass.id === selectedNode.class_id) : undefined;
+  const selectedProperties = selectedNode
+    ? visibleProperties.filter((property) => property.class_id === selectedNode.class_id)
+    : [];
+  const selectedProperty =
+    selectedProperties.find((property) => property.id === selectedPropertyId) ?? selectedProperties[0];
+  const selectedRelations = selectedNode
+    ? relationRecords.filter(
+        (relation) =>
+          relation.domain_class_id === selectedNode.class_id || relation.range_class_id === selectedNode.class_id,
+      )
+    : [];
+  const selectedRelation =
+    selectedRelations.find((relation) => relation.id === selectedRelationId) ?? selectedRelations[0];
+  const relationTargetOptions = selectedNode ? visibleNodes.filter((node) => node.class_id !== selectedNode.class_id) : [];
+  const resolvedRelationTargetClassId =
+    relationTargetOptions.find((node) => node.class_id === relationTargetClassId)?.class_id ?? relationTargetOptions[0]?.class_id ?? "";
+  const isDraftVersion = graph?.version_status === "DRAFT";
+
+  useEffect(() => {
+    if (!selectedClassId && visibleNodes[0]) {
+      setSelectedClassId(visibleNodes[0].class_id);
+      return;
+    }
+
+    if (selectedClassId && !visibleNodes.some((node) => node.class_id === selectedClassId)) {
+      setSelectedClassId(visibleNodes[0]?.class_id ?? "");
+    }
+  }, [selectedClassId, visibleNodes]);
+
+  useEffect(() => {
+    setSelectedPropertyId((current) => {
+      if (!selectedProperties.length) {
+        return "";
+      }
+      return selectedProperties.some((property) => property.id === current) ? current : selectedProperties[0].id;
+    });
+  }, [selectedProperties]);
+
+  useEffect(() => {
+    setSelectedRelationId((current) => {
+      if (!selectedRelations.length) {
+        return "";
+      }
+      return selectedRelations.some((relation) => relation.id === current) ? current : selectedRelations[0].id;
+    });
+  }, [selectedRelations]);
+
+  useEffect(() => {
+    if (!selectedClass) {
+      return;
+    }
+
+    setClassForm({
+      name: selectedClass.name,
+      label: selectedClass.label,
+      description: selectedClass.description ?? "",
+      x: String(selectedClass.position.x),
+      y: String(selectedClass.position.y),
+    });
+  }, [selectedClass]);
+
+  useEffect(() => {
+    if (!selectedProperty) {
+      return;
+    }
+
+    setPropertyForm({
+      label: selectedProperty.label,
+      description: selectedProperty.description ?? "",
+      data_type: selectedProperty.data_type,
+      cardinality: selectedProperty.cardinality,
+      required: selectedProperty.required,
+    });
+  }, [selectedProperty]);
+
+  useEffect(() => {
+    if (!selectedRelation) {
+      return;
+    }
+
+    setRelationForm({
+      label: selectedRelation.label,
+      description: selectedRelation.description ?? "",
+      domain_class_id: selectedRelation.domain_class_id,
+      range_class_id: selectedRelation.range_class_id,
+      cardinality: selectedRelation.cardinality,
+      required: selectedRelation.required,
+    });
+  }, [selectedRelation]);
+
+  const nodes = useMemo<Node[]>(() => {
+    return visibleNodes.map((graphNode) => ({
       id: graphNode.class_id,
       type: "default",
       position: graphNode.position,
@@ -58,21 +276,17 @@ export function OntologyModelerPage() {
         ),
       },
       style: {
-        borderColor: graphNode.status === "ACTIVE" ? "#1f5f8b" : "#475569",
+        borderColor: graphNode.status === "ACTIVE" || graphNode.status === "DRAFT" ? theme.color.graphNode : theme.color.borderStrong,
         borderRadius: 8,
         borderWidth: 2,
         padding: 0,
         width: 178,
       },
     }));
-  }, [graph]);
+  }, [theme, visibleNodes]);
 
   const edges = useMemo<Edge[]>(() => {
-    if (!graph) {
-      return [];
-    }
-
-    return graph.edges.map((edge) => ({
+    return visibleEdges.map((edge) => ({
       id: edge.id,
       source: edge.source_class_id,
       target: edge.target_class_id,
@@ -80,14 +294,28 @@ export function OntologyModelerPage() {
       animated: edge.status === "DRAFT",
       arrowHeadType: "arrowclosed",
       style: {
-        stroke: edge.status === "ACTIVE" ? "#7c3aed" : "#475569",
+        stroke: edge.status === "ACTIVE" || edge.status === "DRAFT" ? theme.color.graphRelation : theme.color.borderStrong,
         strokeWidth: 2,
       },
     }));
-  }, [graph]);
+  }, [theme, visibleEdges]);
+
+  if (!projectId) {
+    return (
+      <PageState
+        kind="empty"
+        title="Project context가 필요합니다"
+        description="Projects에서 작업할 project를 선택한 뒤 ontology draft를 구성하세요."
+        actionLabel="Go to projects"
+        onAction={() => {
+          window.location.assign("/projects");
+        }}
+      />
+    );
+  }
 
   if (isVersionsLoading || (versionId && isLoading)) {
-    return <PageState kind="loading" title="온톨로지 모델러를 불러오는 중" description="버전, 클래스, 관계, 속성 fixture를 그래프 데이터로 변환하고 있습니다." />;
+    return <PageState kind="loading" title="온톨로지 모델러를 불러오는 중" description="버전, 클래스, 관계, 속성 그래프를 준비하고 있습니다." />;
   }
 
   if (isVersionsError) {
@@ -103,7 +331,13 @@ export function OntologyModelerPage() {
   if (!versionId) {
     return (
       <>
-        <PageHeader title="Ontology Modeler" description="MVP 1 P0 흐름을 시작하려면 먼저 draft ontology version을 생성합니다.">
+        <Breadcrumbs
+          items={[
+            { label: "Projects", to: "/projects" },
+            { label: "Ontology" },
+          ]}
+        />
+        <PageHeader title="Ontology Modeler" description="Draft version을 만들면 class, property, relation을 구성할 수 있습니다.">
           <HanaButton
             variant="primary"
             type="button"
@@ -117,7 +351,7 @@ export function OntologyModelerPage() {
         <PageState
           kind="empty"
           title="Draft ontology version이 없습니다"
-          description="새 draft version을 만들면 class, property, relation authoring을 시작할 수 있습니다."
+          description="새 draft version을 만든 뒤 class부터 추가하세요."
           actionLabel={createVersion.isPending ? "Creating" : "Create draft version"}
           onAction={() => createVersion.mutate({ created_by: "dev-admin" })}
         />
@@ -132,30 +366,31 @@ export function OntologyModelerPage() {
         kind="error"
         title="온톨로지 그래프를 불러오지 못했습니다"
         description="OntologyVersion 또는 graph endpoint boundary를 확인하세요."
-        actionLabel="다시 시도"
+        actionLabel="Retry"
         onAction={() => void refetch()}
       />
     );
   }
 
-  const selectedNode = graph.nodes.find((node) => node.class_id === selectedClassId) ?? graph.nodes[0];
-  const selectedClass = selectedNode ? graph.classes?.find((ontologyClass) => ontologyClass.id === selectedNode.class_id) : undefined;
-  const selectedProperties = selectedNode ? graph.properties.filter((property) => property.class_id === selectedNode.class_id) : [];
-  const selectedEdges = selectedNode
-    ? graph.edges.filter((edge) => edge.source_class_id === selectedNode.class_id || edge.target_class_id === selectedNode.class_id)
-    : [];
-  const relationTargetOptions = selectedNode ? graph.nodes.filter((node) => node.class_id !== selectedNode.class_id) : [];
-  const resolvedRelationTargetClassId =
-    relationTargetOptions.find((node) => node.class_id === relationTargetClassId)?.class_id ?? relationTargetOptions[0]?.class_id ?? "";
-  const authoringError = [createVersion.error, createClass.error, createProperty.error, createRelation.error].find(Boolean) as Error | undefined;
-  const isDraftVersion = graph.version_status === "DRAFT";
+  const authoringError = [
+    createVersion.error,
+    createClass.error,
+    updateClass.error,
+    deleteClass.error,
+    createProperty.error,
+    updateProperty.error,
+    deleteProperty.error,
+    createRelation.error,
+    updateRelation.error,
+    deleteRelation.error,
+  ].find(Boolean) as Error | undefined;
   const canCreateClass = isDraftVersion && className.trim().length > 0 && !createClass.isPending;
   const canCreateProperty =
     isDraftVersion && Boolean(selectedNode) && propertyName.trim().length > 0 && !createProperty.isPending;
   const canCreateRelation =
     isDraftVersion && Boolean(selectedNode) && Boolean(resolvedRelationTargetClassId) && relationName.trim().length > 0 && !createRelation.isPending;
-  const nextClassPosition = { x: 120 + graph.nodes.length * 190, y: 120 + graph.nodes.length * 44 };
-  const nextClassName = `Class${graph.nodes.length + 2}`;
+  const nextClassPosition = { x: 120 + visibleNodes.length * 190, y: 120 + visibleNodes.length * 44 };
+  const nextClassName = `Class${visibleNodes.length + 2}`;
 
   function handleCreateClass() {
     if (!canCreateClass) {
@@ -194,7 +429,8 @@ export function OntologyModelerPage() {
         required: propertyCardinality === "REQUIRED",
       },
       {
-        onSuccess: () => {
+        onSuccess: (property) => {
+          setSelectedPropertyId(property.id);
           setPropertyName(`${propertyName.trim()}_next`);
         },
       },
@@ -217,19 +453,152 @@ export function OntologyModelerPage() {
         required: false,
       },
       {
-        onSuccess: () => {
+        onSuccess: (relation) => {
+          setSelectedRelationId(relation.id);
           setRelationName(`${relationName.trim()}_NEXT`);
         },
       },
     );
   }
 
+  function handleUpdateClass() {
+    if (!isDraftVersion || !selectedClass || !classForm.name.trim()) {
+      return;
+    }
+
+    updateClass.mutate({
+      classId: selectedClass.id,
+      payload: {
+        name: classForm.name.trim(),
+        label: classForm.label.trim() || classForm.name.trim(),
+        description: nullableText(classForm.description),
+        position: {
+          x: toNumber(classForm.x, selectedClass.position.x),
+          y: toNumber(classForm.y, selectedClass.position.y),
+        },
+      },
+    });
+  }
+
+  function handleDeleteClass() {
+    if (!isDraftVersion || !selectedClass) {
+      return;
+    }
+
+    const relatedPropertyCount = visibleProperties.filter((property) => property.class_id === selectedClass.id).length;
+    const inboundRelationCount = relationRecords.filter((relation) => relation.range_class_id === selectedClass.id).length;
+    const outboundRelationCount = relationRecords.filter((relation) => relation.domain_class_id === selectedClass.id).length;
+
+    const confirmed = window.confirm(
+      [
+        "Delete draft class",
+        `Class: ${selectedClass.label} (${selectedClass.name})`,
+        `Affected properties: ${relatedPropertyCount}`,
+        `Inbound relations: ${inboundRelationCount}`,
+        `Outbound relations: ${outboundRelationCount}`,
+        "This action applies only to the current DRAFT version.",
+      ].join("\n"),
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const nextClassId = visibleNodes.find((node) => node.class_id !== selectedClass.id)?.class_id ?? "";
+    deleteClass.mutate(selectedClass.id, {
+      onSuccess: () => {
+        setSelectedClassId(nextClassId);
+        setSelectedPropertyId("");
+        setSelectedRelationId("");
+      },
+    });
+  }
+
+  function handleUpdateProperty() {
+    if (!isDraftVersion || !selectedProperty) {
+      return;
+    }
+
+    updateProperty.mutate({
+      propertyId: selectedProperty.id,
+      payload: {
+        label: propertyForm.label.trim() || selectedProperty.name,
+        description: nullableText(propertyForm.description),
+        data_type: propertyForm.data_type,
+        cardinality: propertyForm.cardinality,
+        required: propertyForm.required,
+      },
+    });
+  }
+
+  function handleDeleteProperty() {
+    if (!isDraftVersion || !selectedProperty) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      [
+        "Delete draft property",
+        `Property: ${selectedProperty.label} (${selectedProperty.name})`,
+        "This action applies only to the current DRAFT version.",
+      ].join("\n"),
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    deleteProperty.mutate(selectedProperty.id, {
+      onSuccess: () => setSelectedPropertyId(""),
+    });
+  }
+
+  function handleUpdateRelation() {
+    if (!isDraftVersion || !selectedRelation) {
+      return;
+    }
+
+    updateRelation.mutate({
+      relationId: selectedRelation.id,
+      payload: {
+        label: relationForm.label.trim() || selectedRelation.name,
+        description: nullableText(relationForm.description),
+        domain_class_id: relationForm.domain_class_id,
+        range_class_id: relationForm.range_class_id,
+        cardinality: relationForm.cardinality,
+        required: relationForm.required,
+      },
+    });
+  }
+
+  function handleDeleteRelation() {
+    if (!isDraftVersion || !selectedRelation) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      [
+        "Delete draft relation",
+        `Relation: ${selectedRelation.label} (${selectedRelation.name})`,
+        "This action applies only to the current DRAFT version.",
+      ].join("\n"),
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    deleteRelation.mutate(selectedRelation.id, {
+      onSuccess: () => setSelectedRelationId(""),
+    });
+  }
+
   const authoringPanel = (
-    <HanaCard title="Authoring actions" description="MVP 1 actual API smoke를 위한 최소 draft/class/property/relation 생성 패널입니다.">
+    <HanaCard title="Authoring actions" description="Draft에서 class, property, relation을 순서대로 추가합니다.">
       <AuthoringGrid>
         <Field>
           <span>Class</span>
-          <HanaInput value={className} onChange={(event) => setClassName(event.target.value)} placeholder="Company" />
+          <HanaInput value={className} onChange={(event) => setClassName(event.target.value)} placeholder="Company" disabled={!isDraftVersion} />
         </Field>
         <ButtonSlot>
           <HanaButton variant="primary" type="button" disabled={!canCreateClass} onClick={handleCreateClass}>
@@ -239,11 +608,20 @@ export function OntologyModelerPage() {
         </ButtonSlot>
         <Field>
           <span>Property</span>
-          <HanaInput value={propertyName} onChange={(event) => setPropertyName(event.target.value)} placeholder="company_name" disabled={!selectedNode} />
+          <HanaInput
+            value={propertyName}
+            onChange={(event) => setPropertyName(event.target.value)}
+            placeholder="company_name"
+            disabled={!selectedNode || !isDraftVersion}
+          />
         </Field>
         <Field>
           <span>Data type</span>
-          <HanaSelect value={propertyDataType} onChange={(event) => setPropertyDataType(event.target.value as PropertyDataType)} disabled={!selectedNode}>
+          <HanaSelect
+            value={propertyDataType}
+            onChange={(event) => setPropertyDataType(event.target.value as PropertyDataType)}
+            disabled={!selectedNode || !isDraftVersion}
+          >
             {dataTypeOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -253,7 +631,11 @@ export function OntologyModelerPage() {
         </Field>
         <Field>
           <span>Property cardinality</span>
-          <HanaSelect value={propertyCardinality} onChange={(event) => setPropertyCardinality(event.target.value as Cardinality)} disabled={!selectedNode}>
+          <HanaSelect
+            value={propertyCardinality}
+            onChange={(event) => setPropertyCardinality(event.target.value as Cardinality)}
+            disabled={!selectedNode || !isDraftVersion}
+          >
             {cardinalityOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -268,14 +650,19 @@ export function OntologyModelerPage() {
         </ButtonSlot>
         <Field>
           <span>Relation</span>
-          <HanaInput value={relationName} onChange={(event) => setRelationName(event.target.value)} placeholder="HAS_DEPARTMENT" disabled={!selectedNode} />
+          <HanaInput
+            value={relationName}
+            onChange={(event) => setRelationName(event.target.value)}
+            placeholder="HAS_DEPARTMENT"
+            disabled={!selectedNode || !isDraftVersion}
+          />
         </Field>
         <Field>
           <span>Target class</span>
           <HanaSelect
             value={resolvedRelationTargetClassId}
             onChange={(event) => setRelationTargetClassId(event.target.value)}
-            disabled={relationTargetOptions.length === 0}
+            disabled={relationTargetOptions.length === 0 || !isDraftVersion}
           >
             {relationTargetOptions.length === 0 ? (
               <option value="">Need another class</option>
@@ -290,7 +677,11 @@ export function OntologyModelerPage() {
         </Field>
         <Field>
           <span>Relation cardinality</span>
-          <HanaSelect value={relationCardinality} onChange={(event) => setRelationCardinality(event.target.value as Cardinality)} disabled={!selectedNode}>
+          <HanaSelect
+            value={relationCardinality}
+            onChange={(event) => setRelationCardinality(event.target.value as Cardinality)}
+            disabled={!selectedNode || !isDraftVersion}
+          >
             {cardinalityOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -304,45 +695,84 @@ export function OntologyModelerPage() {
           </HanaButton>
         </ButtonSlot>
       </AuthoringGrid>
-      {!isDraftVersion && <InlineNotice>Published/archived ontology version은 읽기 전용입니다. 새 draft version에서 수정하세요.</InlineNotice>}
+      {!isDraftVersion && (
+        <ReadOnlyBar>
+          <span>Published/archived version은 읽기 전용입니다.</span>
+          <HanaButton
+            type="button"
+            variant="primary"
+            disabled={createVersion.isPending}
+            onClick={() => createVersion.mutate({ created_by: "dev-admin" })}
+          >
+            <Plus aria-hidden="true" />
+            {createVersion.isPending ? "Creating" : "Create Draft Version"}
+          </HanaButton>
+        </ReadOnlyBar>
+      )}
       {authoringError && <InlineError>{authoringError.message}</InlineError>}
     </HanaCard>
   );
 
-  if (graph.nodes.length === 0) {
+  if (visibleNodes.length === 0) {
     return (
       <>
-        <PageHeader title="Ontology Modeler" description="클래스 node, 관계 edge, 속성 정의를 실제 API boundary로 작성합니다.">
+        <Breadcrumbs
+          items={[
+            { label: "Projects", to: "/projects" },
+            { label: "Ontology" },
+          ]}
+        />
+        <PageHeader title="Ontology Modeler" description="Draft graph에 class를 추가해 모델링을 시작합니다.">
           <HanaBadge tone={statusToTone(graph.version_status)}>{graph.version_status}</HanaBadge>
         </PageHeader>
         {authoringPanel}
-        <PageState kind="empty" title="클래스가 없습니다" description="Create class 액션으로 OntologyClass를 만들면 그래프에 node로 표시됩니다." />
+        <PageState
+          kind="empty"
+          title="클래스가 없습니다"
+          description="Create class 후 property와 relation을 이어서 구성하세요."
+          actionLabel={isDraftVersion ? "Create class" : "Create draft version"}
+          onAction={isDraftVersion ? handleCreateClass : () => createVersion.mutate({ created_by: "dev-admin" })}
+        />
       </>
     );
   }
 
   return (
     <>
-      <PageHeader title="Ontology Modeler" description="클래스 node, 관계 edge, 속성 정의를 실제 API boundary와 같은 DTO로 작성합니다.">
+      <Breadcrumbs
+        items={[
+          { label: "Projects", to: "/projects" },
+          { label: "Ontology" },
+        ]}
+      />
+      <PageHeader title="Ontology Modeler" description="Draft graph에서 class, property, relation을 생성하고 다듬습니다.">
         <HanaBadge tone={statusToTone(graph.version_status)}>{graph.version_status}</HanaBadge>
-        <HanaButton variant="primary" type="button" disabled={!canCreateClass} onClick={handleCreateClass}>
-          <Plus aria-hidden="true" />
-          {createClass.isPending ? "Creating" : "Add Class"}
-        </HanaButton>
+        {!isDraftVersion && (
+          <HanaButton type="button" variant="primary" disabled={createVersion.isPending} onClick={() => createVersion.mutate({ created_by: "dev-admin" })}>
+            <Plus aria-hidden="true" />
+            {createVersion.isPending ? "Creating" : "Create Draft Version"}
+          </HanaButton>
+        )}
+        {isDraftVersion && (
+          <HanaButton variant="primary" type="button" disabled={!canCreateClass} onClick={handleCreateClass}>
+            <Plus aria-hidden="true" />
+            {createClass.isPending ? "Creating" : "Add Class"}
+          </HanaButton>
+        )}
       </PageHeader>
       {authoringPanel}
       <ModelerGrid>
         <LeftPanel>
           <PanelHeader>
             <h2>Classes</h2>
-            <HanaBadge tone="neutral">{graph.nodes.length}</HanaBadge>
+            <HanaBadge tone="neutral">{visibleNodes.length}</HanaBadge>
           </PanelHeader>
           <SearchBox>
             <Search aria-hidden="true" />
             <HanaInput placeholder="Search class" />
           </SearchBox>
           <EntityList>
-            {graph.nodes.map((graphNode) => (
+            {visibleNodes.map((graphNode) => (
               <button
                 key={graphNode.id}
                 type="button"
@@ -357,8 +787,8 @@ export function OntologyModelerPage() {
           </EntityList>
         </LeftPanel>
         <CanvasCard>
-          <ReactFlow nodes={nodes} edges={edges} fitView nodesDraggable onNodeClick={(_, node) => setSelectedClassId(node.id)}>
-            <Background gap={18} color="#d8e0ea" />
+          <ReactFlow nodes={nodes} edges={edges} fitView nodesDraggable={false} onNodeClick={(_, node) => setSelectedClassId(node.id)}>
+            <Background gap={18} color={theme.color.border} />
             <Controls />
           </ReactFlow>
         </CanvasCard>
@@ -367,37 +797,235 @@ export function OntologyModelerPage() {
             <h2>{selectedNode.label}</h2>
             <HanaBadge tone={statusToTone(selectedNode.status)}>{selectedNode.status}</HanaBadge>
           </PanelHeader>
-          <Description>{selectedClass?.description ?? "Canonical OntologyGraph node payload에서 선택된 class입니다."}</Description>
-          <DetailGroup>
-            <h3>Properties</h3>
+          <PanelSection>
+            <SectionTitle>Class detail</SectionTitle>
+            <EditGrid>
+              <Field>
+                <span>Name</span>
+                <HanaInput value={classForm.name} disabled={!isDraftVersion} onChange={(event) => setClassForm((form) => ({ ...form, name: event.target.value }))} />
+              </Field>
+              <Field>
+                <span>Label</span>
+                <HanaInput value={classForm.label} disabled={!isDraftVersion} onChange={(event) => setClassForm((form) => ({ ...form, label: event.target.value }))} />
+              </Field>
+              <Field>
+                <span>Description</span>
+                <HanaInput
+                  value={classForm.description}
+                  disabled={!isDraftVersion}
+                  onChange={(event) => setClassForm((form) => ({ ...form, description: event.target.value }))}
+                />
+              </Field>
+              <CoordinateRow>
+                <Field>
+                  <span>X</span>
+                  <HanaInput value={classForm.x} disabled={!isDraftVersion} onChange={(event) => setClassForm((form) => ({ ...form, x: event.target.value }))} />
+                </Field>
+                <Field>
+                  <span>Y</span>
+                  <HanaInput value={classForm.y} disabled={!isDraftVersion} onChange={(event) => setClassForm((form) => ({ ...form, y: event.target.value }))} />
+                </Field>
+              </CoordinateRow>
+            </EditGrid>
+            <ActionRow>
+              <HanaButton type="button" disabled={!isDraftVersion || updateClass.isPending || !classForm.name.trim()} onClick={handleUpdateClass}>
+                <Save aria-hidden="true" />
+                {updateClass.isPending ? "Saving" : "Save class"}
+              </HanaButton>
+              <HanaButton type="button" variant="danger" disabled={!isDraftVersion || deleteClass.isPending} onClick={handleDeleteClass}>
+                <Trash2 aria-hidden="true" />
+                {deleteClass.isPending ? "Deleting" : "Delete class"}
+              </HanaButton>
+            </ActionRow>
+          </PanelSection>
+          <PanelSection>
+            <SectionTitle>Properties</SectionTitle>
             {selectedProperties.length === 0 ? (
-              <SmallEmpty>등록된 속성이 없습니다.</SmallEmpty>
+              <SmallEmpty>{isDraftVersion ? "Create property로 선택 class의 속성을 추가하세요." : "등록된 속성이 없습니다."}</SmallEmpty>
             ) : (
-              selectedProperties.map((property) => (
-                <DetailRow key={property.id}>
-                  <div>
+              <SelectableList>
+                {selectedProperties.map((property) => (
+                  <SelectableRow
+                    key={property.id}
+                    type="button"
+                    data-selected={property.id === selectedProperty?.id}
+                    onClick={() => setSelectedPropertyId(property.id)}
+                  >
                     <strong>{property.label}</strong>
-                    <span>{property.name}</span>
-                  </div>
-                  <HanaBadge tone={statusToTone(property.status)}>{property.status}</HanaBadge>
-                </DetailRow>
-              ))
+                    <span>
+                      {property.data_type} · {property.cardinality}
+                    </span>
+                  </SelectableRow>
+                ))}
+              </SelectableList>
             )}
-          </DetailGroup>
-          <DetailGroup>
-            <h3>Relations</h3>
-            {selectedEdges.map((edge) => (
-              <DetailRow key={edge.id}>
-                <div>
-                  <strong>{edge.label}</strong>
-                  <span>
-                    {edge.source_class_id} → {edge.target_class_id} · {edge.cardinality}
-                  </span>
-                </div>
-                <HanaBadge tone={statusToTone(edge.status)}>{edge.status}</HanaBadge>
-              </DetailRow>
-            ))}
-          </DetailGroup>
+            {selectedProperty && (
+              <>
+                <EditGrid>
+                  <Field>
+                    <span>Label</span>
+                    <HanaInput value={propertyForm.label} disabled={!isDraftVersion} onChange={(event) => setPropertyForm((form) => ({ ...form, label: event.target.value }))} />
+                  </Field>
+                  <Field>
+                    <span>Description</span>
+                    <HanaInput
+                      value={propertyForm.description}
+                      disabled={!isDraftVersion}
+                      onChange={(event) => setPropertyForm((form) => ({ ...form, description: event.target.value }))}
+                    />
+                  </Field>
+                  <Field>
+                    <span>Data type</span>
+                    <HanaSelect
+                      value={propertyForm.data_type}
+                      disabled={!isDraftVersion}
+                      onChange={(event) => setPropertyForm((form) => ({ ...form, data_type: event.target.value as PropertyDataType }))}
+                    >
+                      {dataTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </HanaSelect>
+                  </Field>
+                  <Field>
+                    <span>Cardinality</span>
+                    <HanaSelect
+                      value={propertyForm.cardinality}
+                      disabled={!isDraftVersion}
+                      onChange={(event) => setPropertyForm((form) => ({ ...form, cardinality: event.target.value as Cardinality }))}
+                    >
+                      {cardinalityOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </HanaSelect>
+                  </Field>
+                  <CheckField>
+                    <input
+                      type="checkbox"
+                      checked={propertyForm.required}
+                      disabled={!isDraftVersion}
+                      onChange={(event) => setPropertyForm((form) => ({ ...form, required: event.target.checked }))}
+                    />
+                    Required
+                  </CheckField>
+                </EditGrid>
+                <ActionRow>
+                  <HanaButton type="button" disabled={!isDraftVersion || updateProperty.isPending} onClick={handleUpdateProperty}>
+                    <Save aria-hidden="true" />
+                    {updateProperty.isPending ? "Saving" : "Save property"}
+                  </HanaButton>
+                  <HanaButton type="button" variant="danger" disabled={!isDraftVersion || deleteProperty.isPending} onClick={handleDeleteProperty}>
+                    <Trash2 aria-hidden="true" />
+                    {deleteProperty.isPending ? "Deleting" : "Delete property"}
+                  </HanaButton>
+                </ActionRow>
+              </>
+            )}
+          </PanelSection>
+          <PanelSection>
+            <SectionTitle>Relations</SectionTitle>
+            {selectedRelations.length === 0 ? (
+              <SmallEmpty>{isDraftVersion ? "Create relation으로 class 간 연결을 추가하세요." : "등록된 관계가 없습니다."}</SmallEmpty>
+            ) : (
+              <SelectableList>
+                {selectedRelations.map((relation) => (
+                  <SelectableRow
+                    key={relation.id}
+                    type="button"
+                    data-selected={relation.id === selectedRelation?.id}
+                    onClick={() => setSelectedRelationId(relation.id)}
+                  >
+                    <strong>{relation.label}</strong>
+                    <span>
+                      {relation.domain_class_id} → {relation.range_class_id}
+                    </span>
+                  </SelectableRow>
+                ))}
+              </SelectableList>
+            )}
+            {selectedRelation && (
+              <>
+                <EditGrid>
+                  <Field>
+                    <span>Label</span>
+                    <HanaInput value={relationForm.label} disabled={!isDraftVersion} onChange={(event) => setRelationForm((form) => ({ ...form, label: event.target.value }))} />
+                  </Field>
+                  <Field>
+                    <span>Description</span>
+                    <HanaInput
+                      value={relationForm.description}
+                      disabled={!isDraftVersion}
+                      onChange={(event) => setRelationForm((form) => ({ ...form, description: event.target.value }))}
+                    />
+                  </Field>
+                  <Field>
+                    <span>Domain</span>
+                    <HanaSelect
+                      value={relationForm.domain_class_id}
+                      disabled={!isDraftVersion}
+                      onChange={(event) => setRelationForm((form) => ({ ...form, domain_class_id: event.target.value }))}
+                    >
+                      {visibleNodes.map((node) => (
+                        <option key={node.class_id} value={node.class_id}>
+                          {node.label}
+                        </option>
+                      ))}
+                    </HanaSelect>
+                  </Field>
+                  <Field>
+                    <span>Range</span>
+                    <HanaSelect
+                      value={relationForm.range_class_id}
+                      disabled={!isDraftVersion}
+                      onChange={(event) => setRelationForm((form) => ({ ...form, range_class_id: event.target.value }))}
+                    >
+                      {visibleNodes.map((node) => (
+                        <option key={node.class_id} value={node.class_id}>
+                          {node.label}
+                        </option>
+                      ))}
+                    </HanaSelect>
+                  </Field>
+                  <Field>
+                    <span>Cardinality</span>
+                    <HanaSelect
+                      value={relationForm.cardinality}
+                      disabled={!isDraftVersion}
+                      onChange={(event) => setRelationForm((form) => ({ ...form, cardinality: event.target.value as Cardinality }))}
+                    >
+                      {cardinalityOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </HanaSelect>
+                  </Field>
+                  <CheckField>
+                    <input
+                      type="checkbox"
+                      checked={relationForm.required}
+                      disabled={!isDraftVersion}
+                      onChange={(event) => setRelationForm((form) => ({ ...form, required: event.target.checked }))}
+                    />
+                    Required
+                  </CheckField>
+                </EditGrid>
+                <ActionRow>
+                  <HanaButton type="button" disabled={!isDraftVersion || updateRelation.isPending} onClick={handleUpdateRelation}>
+                    <Save aria-hidden="true" />
+                    {updateRelation.isPending ? "Saving" : "Save relation"}
+                  </HanaButton>
+                  <HanaButton type="button" variant="danger" disabled={!isDraftVersion || deleteRelation.isPending} onClick={handleDeleteRelation}>
+                    <Trash2 aria-hidden="true" />
+                    {deleteRelation.isPending ? "Deleting" : "Delete relation"}
+                  </HanaButton>
+                </ActionRow>
+              </>
+            )}
+          </PanelSection>
         </RightPanel>
       </ModelerGrid>
     </>
@@ -406,7 +1034,7 @@ export function OntologyModelerPage() {
 
 const ModelerGrid = styled.div`
   display: grid;
-  grid-template-columns: 280px minmax(420px, 1fr) 330px;
+  grid-template-columns: 280px minmax(420px, 1fr) 360px;
   gap: 14px;
   min-height: 680px;
 
@@ -512,36 +1140,57 @@ const GraphNodeLabel = styled.div`
   }
 `;
 
-const Description = styled.p`
-  margin: 0;
-  color: ${({ theme }) => theme.color.textMuted};
-  line-height: 1.55;
-`;
-
-const DetailGroup = styled.section`
+const PanelSection = styled.section`
   display: grid;
-  gap: 8px;
-
-  h3 {
-    margin: 0;
-    font-size: 13px;
-    text-transform: uppercase;
-    color: ${({ theme }) => theme.color.textMuted};
-  }
+  gap: ${({ theme }) => theme.spacing.md};
+  padding-top: ${({ theme }) => theme.spacing.md};
+  border-top: 1px solid ${({ theme }) => theme.color.border};
 `;
 
-const DetailRow = styled.div`
+const SectionTitle = styled.h3`
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.color.textMuted};
+`;
+
+const EditGrid = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const CoordinateRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const ActionRow = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const SelectableList = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const SelectableRow = styled.button`
+  display: grid;
+  gap: 3px;
+  width: 100%;
   padding: 10px;
   border: 1px solid ${({ theme }) => theme.color.border};
   border-radius: ${({ theme }) => theme.radius.sm};
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  color: ${({ theme }) => theme.color.text};
+  text-align: left;
+  cursor: pointer;
 
-  div {
-    display: grid;
-    gap: 3px;
+  &[data-selected="true"] {
+    border-color: ${({ theme }) => theme.color.primary};
+    background: ${({ theme }) => theme.color.primarySoft};
   }
 
   span {
@@ -584,17 +1233,33 @@ const Field = styled.label`
   }
 `;
 
+const CheckField = styled.label`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  color: ${({ theme }) => theme.color.textMuted};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+`;
+
 const ButtonSlot = styled.div`
   display: flex;
   align-items: center;
   min-width: 0;
 `;
 
-const InlineNotice = styled.p`
-  margin: 0;
+const ReadOnlyBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.spacing.md};
   padding: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
   color: ${({ theme }) => theme.color.textMuted};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+
+  @media (max-width: 640px) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 `;
 
 const InlineError = styled.p`

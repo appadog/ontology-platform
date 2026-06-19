@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -126,6 +126,17 @@ def _property_schema(ontology_property: OntologyPropertyModel) -> OntologyProper
 
 def _relation_schema(relation: OntologyRelationModel) -> OntologyRelation:
     return OntologyRelation.model_validate(relation)
+
+
+def _active_class_ids_for_version(db: Session, version_id: str) -> set[str]:
+    return set(
+        db.scalars(
+            select(OntologyClassModel.id).where(
+                OntologyClassModel.version_id == version_id,
+                OntologyClassModel.status != OntologyElementStatus.DELETED,
+            )
+        ).all()
+    )
 
 
 @router.get(
@@ -293,6 +304,29 @@ def delete_class(class_id: str, db: Session = Depends(get_db)) -> OntologyClass:
     _draft_version_or_error(db, ontology_class.version_id)
     ontology_class.status = OntologyElementStatus.DELETED
     db.add(ontology_class)
+    related_properties = db.scalars(
+        select(OntologyPropertyModel).where(
+            OntologyPropertyModel.version_id == ontology_class.version_id,
+            OntologyPropertyModel.class_id == ontology_class.id,
+            OntologyPropertyModel.status != OntologyElementStatus.DELETED,
+        )
+    ).all()
+    related_relations = db.scalars(
+        select(OntologyRelationModel).where(
+            OntologyRelationModel.version_id == ontology_class.version_id,
+            OntologyRelationModel.status != OntologyElementStatus.DELETED,
+            or_(
+                OntologyRelationModel.domain_class_id == ontology_class.id,
+                OntologyRelationModel.range_class_id == ontology_class.id,
+            ),
+        )
+    ).all()
+    for ontology_property in related_properties:
+        ontology_property.status = OntologyElementStatus.DELETED
+        db.add(ontology_property)
+    for relation in related_relations:
+        relation.status = OntologyElementStatus.DELETED
+        db.add(relation)
     db.commit()
     db.refresh(ontology_class)
     return _class_schema(ontology_class)
@@ -306,11 +340,15 @@ def delete_class(class_id: str, db: Session = Depends(get_db)) -> OntologyClass:
 )
 def list_properties(version_id: str, db: Session = Depends(get_db)) -> list[OntologyProperty]:
     _version_or_404(db, version_id)
+    active_class_ids = _active_class_ids_for_version(db, version_id)
+    if not active_class_ids:
+        return []
     properties = db.scalars(
         select(OntologyPropertyModel)
         .where(
             OntologyPropertyModel.version_id == version_id,
             OntologyPropertyModel.status != OntologyElementStatus.DELETED,
+            OntologyPropertyModel.class_id.in_(active_class_ids),
         )
         .order_by(OntologyPropertyModel.created_at.asc())
     ).all()
@@ -392,11 +430,16 @@ def delete_property(property_id: str, db: Session = Depends(get_db)) -> Ontology
 )
 def list_relations(version_id: str, db: Session = Depends(get_db)) -> list[OntologyRelation]:
     _version_or_404(db, version_id)
+    active_class_ids = _active_class_ids_for_version(db, version_id)
+    if not active_class_ids:
+        return []
     relations = db.scalars(
         select(OntologyRelationModel)
         .where(
             OntologyRelationModel.version_id == version_id,
             OntologyRelationModel.status != OntologyElementStatus.DELETED,
+            OntologyRelationModel.domain_class_id.in_(active_class_ids),
+            OntologyRelationModel.range_class_id.in_(active_class_ids),
         )
         .order_by(OntologyRelationModel.created_at.asc())
     ).all()

@@ -4,8 +4,11 @@ import {
   CandidateListFilters,
   ExtractionJobCreateRequest,
   OntologyClassCreateRequest,
+  OntologyClassUpdateRequest,
   OntologyPropertyCreateRequest,
+  OntologyPropertyUpdateRequest,
   OntologyRelationCreateRequest,
+  OntologyRelationUpdateRequest,
   OntologyVersionCreateRequest,
   ProjectCreateRequest,
   ProjectUpdateRequest,
@@ -102,6 +105,31 @@ export function useCreateOntologyClass(versionId: string) {
   });
 }
 
+export function useUpdateOntologyClass(versionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ classId, payload }: { classId: string; payload: OntologyClassUpdateRequest }) =>
+      apiClient.updateOntologyClass(classId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["ontology", "versions", versionId, "graph"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useDeleteOntologyClass(versionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (classId: string) => apiClient.deleteOntologyClass(classId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["ontology", "versions", versionId, "graph"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 export function useCreateOntologyProperty(versionId: string) {
   const queryClient = useQueryClient();
 
@@ -114,11 +142,61 @@ export function useCreateOntologyProperty(versionId: string) {
   });
 }
 
+export function useUpdateOntologyProperty(versionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ propertyId, payload }: { propertyId: string; payload: OntologyPropertyUpdateRequest }) =>
+      apiClient.updateOntologyProperty(propertyId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["ontology", "versions", versionId, "graph"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useDeleteOntologyProperty(versionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (propertyId: string) => apiClient.deleteOntologyProperty(propertyId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["ontology", "versions", versionId, "graph"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 export function useCreateOntologyRelation(versionId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: OntologyRelationCreateRequest) => apiClient.createOntologyRelation(versionId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["ontology", "versions", versionId, "graph"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useUpdateOntologyRelation(versionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ relationId, payload }: { relationId: string; payload: OntologyRelationUpdateRequest }) =>
+      apiClient.updateOntologyRelation(relationId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["ontology", "versions", versionId, "graph"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useDeleteOntologyRelation(versionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (relationId: string) => apiClient.deleteOntologyRelation(relationId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["ontology", "versions", versionId, "graph"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });

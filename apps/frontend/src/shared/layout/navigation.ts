@@ -1,4 +1,4 @@
-import { Activity, BarChart3, Boxes, Database, FileText, FolderKanban, ListChecks, ScanSearch, Sparkles, LayoutDashboard } from "lucide-react";
+import { Boxes, Database, FolderKanban, ListChecks, Sparkles, LayoutDashboard } from "lucide-react";
 
 export const navigationItems = [
   {
@@ -22,33 +22,13 @@ export const navigationItems = [
     icon: Database,
   },
   {
-    label: "Profiling",
-    path: "/profile",
-    icon: BarChart3,
-  },
-  {
-    label: "Chunks",
-    path: "/chunks",
-    icon: FileText,
-  },
-  {
-    label: "Extract",
-    path: "/extraction/new",
+    label: "Extraction",
+    path: "/extraction",
     icon: Sparkles,
-  },
-  {
-    label: "Jobs",
-    path: "/extraction-jobs",
-    icon: Activity,
   },
   {
     label: "Candidates",
     path: "/candidates",
     icon: ListChecks,
-  },
-  {
-    label: "Evidence",
-    path: "/evidence",
-    icon: ScanSearch,
   },
 ];

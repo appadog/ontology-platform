@@ -89,6 +89,152 @@ def test_project_ontology_graph_flow() -> None:
     assert len(graph["properties"]) == 1
 
 
+def test_class_delete_hides_orphan_property_and_connected_relation_from_graph() -> None:
+    project_response = client.post(
+        "/api/v1/projects",
+        json={"name": "Class Delete Graph Project", "description": "Delete cascade graph flow"},
+    )
+    assert project_response.status_code == 201
+    project_id = project_response.json()["id"]
+
+    version_response = client.post(f"/api/v1/projects/{project_id}/ontology/versions")
+    assert version_response.status_code == 201
+    version_id = version_response.json()["id"]
+
+    company_id = client.post(
+        f"/api/v1/ontology/versions/{version_id}/classes",
+        json={"name": "Company", "label": "Company", "position": {"x": 100, "y": 100}},
+    ).json()["id"]
+    department_id = client.post(
+        f"/api/v1/ontology/versions/{version_id}/classes",
+        json={"name": "Department", "label": "Department", "position": {"x": 300, "y": 100}},
+    ).json()["id"]
+    property_response = client.post(
+        f"/api/v1/ontology/versions/{version_id}/properties",
+        json={
+            "class_id": company_id,
+            "name": "company_name",
+            "label": "Company Name",
+            "data_type": "STRING",
+            "cardinality": "REQUIRED",
+            "required": True,
+        },
+    )
+    assert property_response.status_code == 201
+    relation_response = client.post(
+        f"/api/v1/ontology/versions/{version_id}/relations",
+        json={
+            "name": "HAS_DEPARTMENT",
+            "label": "Has Department",
+            "domain_class_id": company_id,
+            "range_class_id": department_id,
+            "cardinality": "ONE_TO_MANY",
+        },
+    )
+    assert relation_response.status_code == 201
+
+    delete_response = client.delete(f"/api/v1/ontology/classes/{company_id}")
+    assert delete_response.status_code == 200
+    assert delete_response.json()["status"] == "DELETED"
+
+    graph_response = client.get(f"/api/v1/ontology/versions/{version_id}/graph")
+    assert graph_response.status_code == 200
+    graph = graph_response.json()
+    assert [node["class_id"] for node in graph["nodes"]] == [department_id]
+    assert graph["properties"] == []
+    assert graph["edges"] == []
+    assert [ontology_class["id"] for ontology_class in graph["classes"]] == [department_id]
+    assert graph["relations"] == []
+
+    assert client.get(f"/api/v1/ontology/versions/{version_id}/properties").json() == []
+    assert client.get(f"/api/v1/ontology/versions/{version_id}/relations").json() == []
+
+
+def test_deleted_ontology_elements_are_excluded_from_extraction_input() -> None:
+    project_response = client.post(
+        "/api/v1/projects",
+        json={
+            "name": "Class Delete Extraction Project",
+            "description": "Deleted ontology extraction input flow",
+        },
+    )
+    assert project_response.status_code == 201
+    project_id = project_response.json()["id"]
+
+    version_response = client.post(f"/api/v1/projects/{project_id}/ontology/versions")
+    assert version_response.status_code == 201
+    version_id = version_response.json()["id"]
+    company_id = client.post(
+        f"/api/v1/ontology/versions/{version_id}/classes",
+        json={"name": "Company", "label": "Company", "position": {"x": 100, "y": 100}},
+    ).json()["id"]
+    department_id = client.post(
+        f"/api/v1/ontology/versions/{version_id}/classes",
+        json={"name": "Department", "label": "Department", "position": {"x": 300, "y": 100}},
+    ).json()["id"]
+    relation_response = client.post(
+        f"/api/v1/ontology/versions/{version_id}/relations",
+        json={
+            "name": "HAS_DEPARTMENT",
+            "label": "Has Department",
+            "domain_class_id": company_id,
+            "range_class_id": department_id,
+            "cardinality": "ONE_TO_MANY",
+        },
+    )
+    assert relation_response.status_code == 201
+    assert client.delete(f"/api/v1/ontology/classes/{company_id}").status_code == 200
+
+    source_response = client.post(
+        f"/api/v1/projects/{project_id}/sources/upload",
+        data={"source_type": "CSV"},
+        files={
+            "file": (
+                "departments.csv",
+                b"department_name\nResearch\nSales\n",
+                "text/csv",
+            )
+        },
+    )
+    assert source_response.status_code == 201
+    source_id = source_response.json()["id"]
+    assert client.post(f"/api/v1/sources/{source_id}/parse").status_code == 200
+
+    prompt_response = client.post(
+        f"/api/v1/projects/{project_id}/prompts",
+        json={"name": "Extract active ontology only", "description": "Deleted ontology smoke"},
+    )
+    assert prompt_response.status_code == 201
+    prompt_version_response = client.post(
+        f"/api/v1/prompts/{prompt_response.json()['id']}/versions",
+        json={
+            "template": "Extract candidate entities and relations.",
+            "output_schema": {"type": "object"},
+        },
+    )
+    assert prompt_version_response.status_code == 201
+
+    job_response = client.post(
+        f"/api/v1/projects/{project_id}/extraction-jobs",
+        json={
+            "source_id": source_id,
+            "ontology_version_id": version_id,
+            "prompt_version_id": prompt_version_response.json()["id"],
+            "fixture_id": "default",
+        },
+    )
+    assert job_response.status_code == 201
+
+    run_response = client.post(f"/api/v1/extraction-jobs/{job_response.json()['id']}/run")
+    assert run_response.status_code == 200
+    run = run_response.json()
+    raw_request = run["model_runs"][0]["raw_request"]
+    assert raw_request["class_names"] == ["Department"]
+    assert raw_request["relation_names"] == []
+    assert run["candidate_entity_count"] == 1
+    assert run["candidate_relation_count"] == 0
+
+
 def test_source_upload_csv_txt_excel_preview_flow() -> None:
     project_response = client.post(
         "/api/v1/projects",
@@ -451,6 +597,40 @@ def test_mvp2_prompt_extraction_candidate_thin_flow() -> None:
     assert invalid_entities[0]["evidence_ids"] == ["invalid-evidence-reference"]
     invalid_evidence_detail = client.get("/api/v1/candidate-evidence/invalid-evidence-reference")
     assert invalid_evidence_detail.status_code == 404
+
+    retry_response = client.post(f"/api/v1/extraction-jobs/{invalid_run['id']}/retry")
+    assert retry_response.status_code == 201
+    retry_job = retry_response.json()
+    assert retry_job["status"] == "PENDING"
+    assert retry_job["retry_of_job_id"] == invalid_run["id"]
+
+    source_job_after_retry = client.get(f"/api/v1/extraction-jobs/{invalid_run['id']}").json()
+    assert source_job_after_retry["status"] == "RETRYING"
+
+    retry_run_response = client.post(f"/api/v1/extraction-jobs/{retry_job['id']}/run")
+    assert retry_run_response.status_code == 200
+    retry_run = retry_run_response.json()
+    assert retry_run["status"] == "PARTIAL_FAILED"
+    assert retry_run["candidate_entity_count"] == 0
+    assert retry_run["candidate_relation_count"] == 0
+    assert "Retry-chain dedupe" in retry_run["error_message"]
+    retry_dedupe = retry_run["model_runs"][0]["raw_response"]["dedupe"]
+    assert retry_dedupe["retry_root_job_id"] == invalid_run["id"]
+    assert retry_dedupe["created_candidates"] == 0
+    assert retry_dedupe["skipped_duplicate_candidates"] == 4
+    assert retry_dedupe["created_evidence"] == 0
+
+    retry_entities_response = client.get(
+        f"/api/v1/extraction-jobs/{retry_job['id']}/candidates/entities"
+    )
+    assert retry_entities_response.status_code == 200
+    assert retry_entities_response.json() == []
+
+    root_entities_response = client.get(
+        f"/api/v1/extraction-jobs/{invalid_run['id']}/candidates/entities"
+    )
+    assert root_entities_response.status_code == 200
+    assert len(root_entities_response.json()) == 3
 
 
 def test_openapi_ontology_graph_compat_fields_are_optional_deprecated() -> None:

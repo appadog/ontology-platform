@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import styled from "styled-components";
 import { useParseSource, useSource, useSourceSegments } from "../shared/api/queries";
+import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
@@ -41,6 +42,14 @@ export function DocumentChunkViewerPage() {
 
   return (
     <>
+      <Breadcrumbs
+        items={[
+          { label: "Projects", to: "/projects" },
+          { label: "Sources", to: `/projects/${source.project_id}/sources` },
+          { label: source.file_name, to: `/projects/${source.project_id}/sources/${source.id}` },
+          { label: "Chunks" },
+        ]}
+      />
       <PageHeader title="Document Chunks" description="TXT/PDF parse 결과와 CSV/Excel row/cell segment를 source evidence anchor로 확인합니다.">
         <HanaBadge tone="muted">MVP2 THIN</HanaBadge>
         <HanaButton type="button" onClick={() => parseSource.mutate()} disabled={parseSource.isPending}>

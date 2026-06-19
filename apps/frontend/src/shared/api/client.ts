@@ -29,10 +29,13 @@ import {
   OntologyGraph,
   OntologyClass,
   OntologyClassCreateRequest,
+  OntologyClassUpdateRequest,
   OntologyProperty,
   OntologyPropertyCreateRequest,
+  OntologyPropertyUpdateRequest,
   OntologyRelation,
   OntologyRelationCreateRequest,
+  OntologyRelationUpdateRequest,
   OntologyVersion,
   OntologyVersionCreateRequest,
   ProjectCreateRequest,
@@ -506,6 +509,103 @@ export const apiClient = {
     });
   },
 
+  async updateOntologyClass(classId: string, payload: OntologyClassUpdateRequest): Promise<OntologyClass> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const graphEntry = Object.entries(mockOntologyGraphStore).find(([, graph]) =>
+        (graph.classes ?? []).some((ontologyClass) => ontologyClass.id === classId),
+      );
+
+      if (!graphEntry) {
+        throw new Error("Ontology class not found");
+      }
+
+      const [versionId, graph] = graphEntry;
+      const currentClass = (graph.classes ?? []).find((ontologyClass) => ontologyClass.id === classId);
+
+      if (!currentClass) {
+        throw new Error("Ontology class not found");
+      }
+
+      const nextClass: OntologyClass = {
+        ...currentClass,
+        name: payload.name ?? currentClass.name,
+        label: payload.label ?? currentClass.label,
+        description: payload.description === undefined ? currentClass.description : payload.description,
+        status: payload.status ?? currentClass.status,
+        position: payload.position ?? currentClass.position,
+        updated_at: now,
+      };
+
+      mockOntologyGraphStore[versionId] = {
+        ...graph,
+        nodes: graph.nodes.map((node) =>
+          node.class_id === classId
+            ? {
+                ...node,
+                label: nextClass.label,
+                position: nextClass.position,
+                status: nextClass.status,
+              }
+            : node,
+        ),
+        classes: (graph.classes ?? []).map((ontologyClass) =>
+          ontologyClass.id === classId ? nextClass : ontologyClass,
+        ),
+      };
+
+      return delay(nextClass);
+    }
+
+    return jsonRequest<OntologyClass>(`/api/v1/ontology/classes/${classId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async deleteOntologyClass(classId: string): Promise<OntologyClass> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const graphEntry = Object.entries(mockOntologyGraphStore).find(([, graph]) =>
+        (graph.classes ?? []).some((ontologyClass) => ontologyClass.id === classId),
+      );
+
+      if (!graphEntry) {
+        throw new Error("Ontology class not found");
+      }
+
+      const [versionId, graph] = graphEntry;
+      const currentClass = (graph.classes ?? []).find((ontologyClass) => ontologyClass.id === classId);
+
+      if (!currentClass) {
+        throw new Error("Ontology class not found");
+      }
+
+      const deletedClass: OntologyClass = {
+        ...currentClass,
+        status: "DELETED",
+        updated_at: now,
+      };
+
+      mockOntologyGraphStore[versionId] = {
+        ...graph,
+        nodes: graph.nodes.filter((node) => node.class_id !== classId),
+        edges: graph.edges.filter((edge) => edge.source_class_id !== classId && edge.target_class_id !== classId),
+        properties: graph.properties.filter((property) => property.class_id !== classId),
+        classes: (graph.classes ?? []).filter((ontologyClass) => ontologyClass.id !== classId),
+        relations: (graph.relations ?? []).filter(
+          (relation) => relation.domain_class_id !== classId && relation.range_class_id !== classId,
+        ),
+      };
+
+      return delay(deletedClass);
+    }
+
+    return jsonRequest<OntologyClass>(`/api/v1/ontology/classes/${classId}`, {
+      method: "DELETE",
+    });
+  },
+
   async createOntologyProperty(versionId: string, payload: OntologyPropertyCreateRequest): Promise<OntologyProperty> {
     if (USE_MOCK_API) {
       const now = new Date().toISOString();
@@ -536,6 +636,87 @@ export const apiClient = {
     return jsonRequest<OntologyProperty>(`/api/v1/ontology/versions/${versionId}/properties`, {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+  },
+
+  async updateOntologyProperty(propertyId: string, payload: OntologyPropertyUpdateRequest): Promise<OntologyProperty> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const graphEntry = Object.entries(mockOntologyGraphStore).find(([, graph]) =>
+        graph.properties.some((property) => property.id === propertyId),
+      );
+
+      if (!graphEntry) {
+        throw new Error("Ontology property not found");
+      }
+
+      const [versionId, graph] = graphEntry;
+      const currentProperty = graph.properties.find((property) => property.id === propertyId);
+
+      if (!currentProperty) {
+        throw new Error("Ontology property not found");
+      }
+
+      const nextProperty: OntologyProperty = {
+        ...currentProperty,
+        name: payload.name ?? currentProperty.name,
+        label: payload.label ?? currentProperty.label,
+        description: payload.description === undefined ? currentProperty.description ?? null : payload.description,
+        data_type: payload.data_type ?? currentProperty.data_type,
+        cardinality: payload.cardinality ?? currentProperty.cardinality,
+        required: payload.required ?? currentProperty.required,
+        status: payload.status ?? currentProperty.status,
+        updated_at: now,
+      };
+
+      mockOntologyGraphStore[versionId] = {
+        ...graph,
+        properties: graph.properties.map((property) => (property.id === propertyId ? nextProperty : property)),
+      };
+
+      return delay(nextProperty);
+    }
+
+    return jsonRequest<OntologyProperty>(`/api/v1/ontology/properties/${propertyId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async deleteOntologyProperty(propertyId: string): Promise<OntologyProperty> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const graphEntry = Object.entries(mockOntologyGraphStore).find(([, graph]) =>
+        graph.properties.some((property) => property.id === propertyId),
+      );
+
+      if (!graphEntry) {
+        throw new Error("Ontology property not found");
+      }
+
+      const [versionId, graph] = graphEntry;
+      const currentProperty = graph.properties.find((property) => property.id === propertyId);
+
+      if (!currentProperty) {
+        throw new Error("Ontology property not found");
+      }
+
+      const deletedProperty: OntologyProperty = {
+        ...currentProperty,
+        status: "DELETED",
+        updated_at: now,
+      };
+
+      mockOntologyGraphStore[versionId] = {
+        ...graph,
+        properties: graph.properties.filter((property) => property.id !== propertyId),
+      };
+
+      return delay(deletedProperty);
+    }
+
+    return jsonRequest<OntologyProperty>(`/api/v1/ontology/properties/${propertyId}`, {
+      method: "DELETE",
     });
   },
 
@@ -581,6 +762,103 @@ export const apiClient = {
     return jsonRequest<OntologyRelation>(`/api/v1/ontology/versions/${versionId}/relations`, {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+  },
+
+  async updateOntologyRelation(relationId: string, payload: OntologyRelationUpdateRequest): Promise<OntologyRelation> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const graphEntry = Object.entries(mockOntologyGraphStore).find(([, graph]) =>
+        (graph.relations ?? []).some((relation) => relation.id === relationId),
+      );
+
+      if (!graphEntry) {
+        throw new Error("Ontology relation not found");
+      }
+
+      const [versionId, graph] = graphEntry;
+      const currentRelation = (graph.relations ?? []).find((relation) => relation.id === relationId);
+
+      if (!currentRelation) {
+        throw new Error("Ontology relation not found");
+      }
+
+      const nextRelation: OntologyRelation = {
+        ...currentRelation,
+        name: payload.name ?? currentRelation.name,
+        label: payload.label ?? currentRelation.label,
+        description: payload.description === undefined ? currentRelation.description : payload.description,
+        domain_class_id: payload.domain_class_id ?? currentRelation.domain_class_id,
+        range_class_id: payload.range_class_id ?? currentRelation.range_class_id,
+        cardinality: payload.cardinality ?? currentRelation.cardinality,
+        required: payload.required ?? currentRelation.required,
+        status: payload.status ?? currentRelation.status,
+        updated_at: now,
+      };
+
+      mockOntologyGraphStore[versionId] = {
+        ...graph,
+        edges: graph.edges.map((edge) =>
+          edge.relation_id === relationId
+            ? {
+                ...edge,
+                source_class_id: nextRelation.domain_class_id,
+                target_class_id: nextRelation.range_class_id,
+                label: nextRelation.label,
+                cardinality: nextRelation.cardinality,
+                status: nextRelation.status,
+              }
+            : edge,
+        ),
+        relations: (graph.relations ?? []).map((relation) =>
+          relation.id === relationId ? nextRelation : relation,
+        ),
+      };
+
+      return delay(nextRelation);
+    }
+
+    return jsonRequest<OntologyRelation>(`/api/v1/ontology/relations/${relationId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async deleteOntologyRelation(relationId: string): Promise<OntologyRelation> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const graphEntry = Object.entries(mockOntologyGraphStore).find(([, graph]) =>
+        (graph.relations ?? []).some((relation) => relation.id === relationId),
+      );
+
+      if (!graphEntry) {
+        throw new Error("Ontology relation not found");
+      }
+
+      const [versionId, graph] = graphEntry;
+      const currentRelation = (graph.relations ?? []).find((relation) => relation.id === relationId);
+
+      if (!currentRelation) {
+        throw new Error("Ontology relation not found");
+      }
+
+      const deletedRelation: OntologyRelation = {
+        ...currentRelation,
+        status: "DELETED",
+        updated_at: now,
+      };
+
+      mockOntologyGraphStore[versionId] = {
+        ...graph,
+        edges: graph.edges.filter((edge) => edge.relation_id !== relationId),
+        relations: (graph.relations ?? []).filter((relation) => relation.id !== relationId),
+      };
+
+      return delay(deletedRelation);
+    }
+
+    return jsonRequest<OntologyRelation>(`/api/v1/ontology/relations/${relationId}`, {
+      method: "DELETE",
     });
   },
 

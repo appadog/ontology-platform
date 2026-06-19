@@ -1,19 +1,37 @@
-import { PropsWithChildren } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { PropsWithChildren, useEffect, useMemo } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ChevronDown, CircleUserRound } from "lucide-react";
 import styled from "styled-components";
-import { mockProjects } from "../mocks/fixtures";
 import { navigationItems } from "./navigation";
+import { useProjects } from "../api/queries";
 import { HanaBadge, HanaSelect, statusToTone } from "../ui/hana";
 
-const defaultProfileSourceId = "source-policy-csv";
-const defaultChunkSourceId = "source-handbook-pdf";
-const defaultJobId = "job-policy-extraction";
-const defaultEvidenceId = "evidence-policy-row-1";
+const recentProjectStorageKey = "ontology-platform:recent-project-id";
 
 export function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
-  const selectedProject = mockProjects[0];
+  const location = useLocation();
+  const { data: projects = [], isLoading: isProjectsLoading } = useProjects();
+  const routeProjectId = useMemo(() => {
+    const match = location.pathname.match(/^\/projects\/([^/]+)/);
+    return match?.[1] ?? "";
+  }, [location.pathname]);
+  const recentProjectId = typeof window === "undefined" ? "" : window.localStorage.getItem(recentProjectStorageKey) ?? "";
+  const selectedProject =
+    projects.find((project) => project.id === routeProjectId) ??
+    projects.find((project) => project.id === recentProjectId) ??
+    projects[0];
+
+  useEffect(() => {
+    if (routeProjectId) {
+      window.localStorage.setItem(recentProjectStorageKey, routeProjectId);
+      return;
+    }
+
+    if (selectedProject?.id) {
+      window.localStorage.setItem(recentProjectStorageKey, selectedProject.id);
+    }
+  }, [routeProjectId, selectedProject?.id]);
 
   return (
     <Shell>
@@ -24,10 +42,15 @@ export function AppShell({ children }: PropsWithChildren) {
         </Brand>
         <Nav aria-label="Application navigation">
           {navigationItems.map((item) => {
-            const path = resolveNavigationPath(item.path, selectedProject.id);
+            const path = resolveNavigationPath(item.path, selectedProject?.id);
 
             return (
-              <NavLink key={item.path} to={path}>
+              <NavLink
+                key={item.path}
+                to={path}
+                end={item.path === "/dashboard" || item.path === "/projects"}
+                className={({ isActive }) => (isActive || isNavigationItemActive(item.path, location.pathname) ? "active" : undefined)}
+              >
                 <item.icon aria-hidden="true" />
                 {item.label}
               </NavLink>
@@ -42,10 +65,19 @@ export function AppShell({ children }: PropsWithChildren) {
             <SelectWrap>
               <HanaSelect
                 id="project-selector"
-                value={selectedProject.id}
-                onChange={(event) => navigate(`/projects/${event.target.value}`)}
+                value={selectedProject?.id ?? ""}
+                disabled={isProjectsLoading || projects.length === 0}
+                onChange={(event) => {
+                  const nextProjectId = event.target.value;
+                  if (!nextProjectId) {
+                    return;
+                  }
+                  window.localStorage.setItem(recentProjectStorageKey, nextProjectId);
+                  navigate(`/projects/${nextProjectId}`);
+                }}
               >
-                {mockProjects.map((project) => (
+                {projects.length === 0 && <option value="">{isProjectsLoading ? "Loading projects" : "Select project"}</option>}
+                {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
                   </option>
@@ -55,7 +87,7 @@ export function AppShell({ children }: PropsWithChildren) {
             </SelectWrap>
           </ProjectSelector>
           <TopbarRight>
-            <HanaBadge tone={statusToTone(selectedProject.status)}>{selectedProject.status}</HanaBadge>
+            {selectedProject ? <HanaBadge tone={statusToTone(selectedProject.status)}>{selectedProject.status}</HanaBadge> : <HanaBadge tone="neutral">NO_PROJECT</HanaBadge>}
             <UserChip>
               <CircleUserRound aria-hidden="true" />
               dev-admin
@@ -68,27 +100,43 @@ export function AppShell({ children }: PropsWithChildren) {
   );
 }
 
-function resolveNavigationPath(path: string, projectId: string) {
+function resolveNavigationPath(path: string, projectId?: string) {
   switch (path) {
     case "/ontology":
-      return `/projects/${projectId}/ontology`;
+      return projectId ? `/projects/${projectId}/ontology` : "/projects";
     case "/sources":
-      return `/projects/${projectId}/sources`;
-    case "/profile":
-      return `/projects/${projectId}/sources/${defaultProfileSourceId}/profile`;
-    case "/chunks":
-      return `/projects/${projectId}/sources/${defaultChunkSourceId}/chunks`;
-    case "/extraction/new":
-      return `/projects/${projectId}/extraction/new`;
-    case "/extraction-jobs":
-      return `/projects/${projectId}/extraction-jobs`;
+      return projectId ? `/projects/${projectId}/sources` : "/projects";
+    case "/extraction":
+      return projectId ? `/projects/${projectId}/extraction-jobs` : "/projects";
     case "/candidates":
-      return `/extraction-jobs/${defaultJobId}/candidates`;
-    case "/evidence":
-      return `/candidate-evidence/${defaultEvidenceId}`;
+      return projectId ? `/projects/${projectId}/extraction-jobs` : "/projects";
     default:
       return path;
   }
+}
+
+function isNavigationItemActive(path: string, pathname: string) {
+  if (path === "/projects") {
+    return /^\/projects\/[^/]+$/.test(pathname);
+  }
+
+  if (path === "/ontology") {
+    return pathname.includes("/ontology");
+  }
+
+  if (path === "/sources") {
+    return pathname.includes("/sources");
+  }
+
+  if (path === "/extraction") {
+    return pathname.includes("/extraction");
+  }
+
+  if (path === "/candidates") {
+    return pathname.includes("/candidates") || pathname.includes("/candidate-evidence");
+  }
+
+  return false;
 }
 
 const Shell = styled.div`

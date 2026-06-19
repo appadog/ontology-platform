@@ -1,5 +1,6 @@
 import { BarChart3, Play } from "lucide-react";
 import { useParams } from "react-router-dom";
+import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { useRunSourceProfile, useSource, useSourceProfile } from "../shared/api/queries";
 import { HanaBadge, HanaButton, HanaCard } from "../shared/ui/hana";
@@ -37,6 +38,14 @@ export function SourceProfilingPage() {
 
   return (
     <>
+      <Breadcrumbs
+        items={[
+          { label: "Projects", to: "/projects" },
+          { label: "Sources", to: `/projects/${source.project_id}/sources` },
+          { label: source.file_name, to: `/projects/${source.project_id}/sources/${source.id}` },
+          { label: "Profile" },
+        ]}
+      />
       <PageHeader title="Source Profiling" description="CSV/Excel source의 column type, null ratio, distinct count, sample values를 확인합니다.">
         <HanaBadge tone="muted">MVP2 THIN</HanaBadge>
         <HanaButton type="button" onClick={() => runProfile.mutate()} disabled={runProfile.isPending}>

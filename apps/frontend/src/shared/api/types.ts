@@ -133,6 +133,14 @@ export interface OntologyClassCreateRequest {
   position?: Position;
 }
 
+export interface OntologyClassUpdateRequest {
+  name?: string | null;
+  label?: string | null;
+  description?: string | null;
+  status?: OntologyElementStatus | null;
+  position?: Position | null;
+}
+
 export interface OntologyRelation {
   id: string;
   version_id: string;
@@ -173,6 +181,16 @@ export interface OntologyPropertyCreateRequest {
   required?: boolean;
 }
 
+export interface OntologyPropertyUpdateRequest {
+  name?: string | null;
+  label?: string | null;
+  description?: string | null;
+  data_type?: PropertyDataType | null;
+  cardinality?: Cardinality | null;
+  required?: boolean | null;
+  status?: OntologyElementStatus | null;
+}
+
 export interface OntologyRelationCreateRequest {
   name: string;
   label?: string | null;
@@ -181,6 +199,17 @@ export interface OntologyRelationCreateRequest {
   range_class_id: string;
   cardinality?: Cardinality;
   required?: boolean;
+}
+
+export interface OntologyRelationUpdateRequest {
+  name?: string | null;
+  label?: string | null;
+  description?: string | null;
+  domain_class_id?: string | null;
+  range_class_id?: string | null;
+  cardinality?: Cardinality | null;
+  required?: boolean | null;
+  status?: OntologyElementStatus | null;
 }
 
 export interface OntologyGraphNode {

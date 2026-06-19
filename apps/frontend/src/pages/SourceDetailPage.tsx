@@ -2,6 +2,7 @@ import { FileText } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
 import { useSource, useSourcePreview } from "../shared/api/queries";
+import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaCard, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
@@ -31,11 +32,19 @@ export function SourceDetailPage() {
 
   return (
     <>
+      <Breadcrumbs
+        items={[
+          { label: "Projects", to: "/projects" },
+          { label: "Sources", to: `/projects/${source.project_id}/sources` },
+          { label: source.file_name },
+        ]}
+      />
       <PageHeader title={source.file_name} description="업로드 파일의 메타데이터와 샘플 preview를 확인합니다.">
         <HanaBadge tone={statusToTone(source.status)}>{source.status}</HanaBadge>
         <HanaBadge tone={statusToTone(source.preview_status)}>{source.preview_status}</HanaBadge>
         <HeaderLink to={`/projects/${source.project_id}/sources/${source.id}/profile`}>Profile</HeaderLink>
         <HeaderLink to={`/projects/${source.project_id}/sources/${source.id}/chunks`}>Chunks</HeaderLink>
+        <HeaderLink to={`/projects/${source.project_id}/extraction/new`}>Create job</HeaderLink>
       </PageHeader>
       <DetailGrid>
         <HanaCard title="Metadata">

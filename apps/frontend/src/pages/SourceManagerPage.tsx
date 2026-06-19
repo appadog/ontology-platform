@@ -1,19 +1,18 @@
 import { ChangeEvent, useState } from "react";
 import { Upload } from "lucide-react";
 import styled from "styled-components";
-import { Link, useParams } from "react-router-dom";
-import { mockProjects } from "../shared/mocks/fixtures";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useSources, useUploadSource } from "../shared/api/queries";
+import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
 import { formatBytes, formatDateTime } from "../shared/lib/format";
 import { SourceType } from "../shared/api/types";
 
-const currentProjectId = mockProjects[0].id;
-
 export function SourceManagerPage() {
-  const { projectId = currentProjectId } = useParams();
+  const { projectId = "" } = useParams();
+  const navigate = useNavigate();
   const { data: sources, isLoading, isError, refetch } = useSources(projectId);
   const uploadSource = useUploadSource(projectId);
   const [file, setFile] = useState<File | null>(null);
@@ -21,6 +20,18 @@ export function SourceManagerPage() {
   const [displayName, setDisplayName] = useState("");
 
   const canUpload = Boolean(file) && !uploadSource.isPending;
+
+  if (!projectId) {
+    return (
+      <PageState
+        kind="empty"
+        title="Project context가 필요합니다"
+        description="Projects에서 작업할 project를 선택한 뒤 source를 업로드하세요."
+        actionLabel="Go to projects"
+        onAction={() => navigate("/projects")}
+      />
+    );
+  }
 
   function handleUpload() {
     if (!file) {
@@ -60,6 +71,12 @@ export function SourceManagerPage() {
 
   return (
     <>
+      <Breadcrumbs
+        items={[
+          { label: "Projects", to: "/projects" },
+          { label: "Sources" },
+        ]}
+      />
       <PageHeader title="Sources" description="업로드된 CSV, Excel, PDF, TXT 원천 데이터 상태와 preview 준비 상태를 확인합니다.">
         <HanaButton variant="primary" type="button" disabled={!canUpload} onClick={handleUpload}>
           <Upload aria-hidden="true" />
@@ -93,7 +110,13 @@ export function SourceManagerPage() {
         {uploadSource.isError && <InlineError>업로드 요청에 실패했습니다. mock/API boundary와 backend Source API 상태를 확인하세요.</InlineError>}
       </HanaCard>
       {sources.length === 0 ? (
-        <PageState kind="empty" title="업로드된 원천 데이터가 없습니다" description="SourceData를 업로드하면 parse/profile 상태와 preview 링크가 표시됩니다." />
+        <PageState
+          kind="empty"
+          title="업로드된 원천 데이터가 없습니다"
+          description="파일을 업로드하면 detail, profile, chunks, extraction으로 이어집니다."
+          actionLabel="Choose file"
+          onAction={() => document.querySelector<HTMLInputElement>("input[type='file']")?.click()}
+        />
       ) : (
         <HanaCard>
           <TableWrap>

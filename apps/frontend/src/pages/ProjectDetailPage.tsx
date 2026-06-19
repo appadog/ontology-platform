@@ -1,8 +1,9 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
-import { Boxes, Database, Save } from "lucide-react";
+import { Boxes, Database, Save, Sparkles } from "lucide-react";
 import { useProject, useUpdateProject } from "../shared/api/queries";
+import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
@@ -46,6 +47,12 @@ export function ProjectDetailPage() {
 
   return (
     <>
+      <Breadcrumbs
+        items={[
+          { label: "Projects", to: "/projects" },
+          { label: project.name },
+        ]}
+      />
       <PageHeader title={project.name} description={project.description ?? "No description"}>
         <HanaBadge tone={statusToTone(project.status)}>{project.status}</HanaBadge>
       </PageHeader>
@@ -71,6 +78,12 @@ export function ProjectDetailPage() {
           <CardAction to={`/projects/${project.id}/sources`}>
             <Database aria-hidden="true" />
             Manage sources
+          </CardAction>
+        </HanaCard>
+        <HanaCard title="Extraction" description="source와 ontology draft를 묶어 candidate extraction job을 실행합니다.">
+          <CardAction to={`/projects/${project.id}/extraction-jobs`}>
+            <Sparkles aria-hidden="true" />
+            Monitor jobs
           </CardAction>
         </HanaCard>
       </QuickLinks>
@@ -132,7 +145,7 @@ const MetricGrid = styled.div`
 
 const QuickLinks = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 
   @media (max-width: 880px) {

@@ -1,22 +1,27 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { useParams } from "react-router-dom";
-import { useCandidateEntities, useCandidateRelations, useExtractionJob } from "../shared/api/queries";
-import { CandidateListFilters, ValidationStatus } from "../shared/api/types";
+import { useCandidateEntities, useCandidateEvidence, useCandidateRelations, useExtractionJob } from "../shared/api/queries";
+import { CandidateEntity, CandidateListFilters, CandidateRelation, ValidationStatus } from "../shared/api/types";
+import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
-import { HanaBadge, HanaCard, HanaSelect, statusToTone } from "../shared/ui/hana";
+import { HanaBadge, HanaButton, HanaCard, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
 import { PageState } from "../shared/ui/platform/PageState";
 import { formatDateTime } from "../shared/lib/format";
-import { DataLink, Field, FormGrid, InlineList, Mono, MutedText, TableWrap, formatPercent } from "./mvp2Shared";
+import { DataLink, Field, FormGrid, InlineList, KeyValueGrid, Mono, MutedText, TableWrap, formatPercent } from "./mvp2Shared";
 
 type EvidenceFilter = "ALL" | "WITH_EVIDENCE" | "MISSING_EVIDENCE";
 type ValidationFilter = "ALL" | ValidationStatus;
+type CandidateRow =
+  | { key: string; kind: "Entity"; candidate: CandidateEntity }
+  | { key: string; kind: "Relation"; candidate: CandidateRelation };
 
 export function CandidateResultsPage() {
-  const { jobId = "job-policy-extraction" } = useParams();
+  const { jobId = "" } = useParams();
   const [evidenceFilter, setEvidenceFilter] = useState<EvidenceFilter>("ALL");
   const [validationFilter, setValidationFilter] = useState<ValidationFilter>("ALL");
+  const [selectedCandidateKey, setSelectedCandidateKey] = useState("");
   const filters = useMemo<CandidateListFilters>(() => {
     return {
       has_evidence: evidenceFilter === "ALL" ? undefined : evidenceFilter === "WITH_EVIDENCE",
@@ -26,6 +31,34 @@ export function CandidateResultsPage() {
   const jobQuery = useExtractionJob(jobId);
   const entitiesQuery = useCandidateEntities(jobId, filters);
   const relationsQuery = useCandidateRelations(jobId, filters);
+  const candidateRows = useMemo<CandidateRow[]>(() => {
+    const entityRows = (entitiesQuery.data ?? []).map((candidate) => ({
+      key: `entity:${candidate.id}`,
+      kind: "Entity" as const,
+      candidate,
+    }));
+    const relationRows = (relationsQuery.data ?? []).map((candidate) => ({
+      key: `relation:${candidate.id}`,
+      kind: "Relation" as const,
+      candidate,
+    }));
+
+    return [...entityRows, ...relationRows];
+  }, [entitiesQuery.data, relationsQuery.data]);
+  const selectedCandidateRow = candidateRows.find((row) => row.key === selectedCandidateKey) ?? candidateRows[0];
+  const selectedEvidenceId = selectedCandidateRow?.candidate.evidence_ids[0] ?? "";
+  const evidenceQuery = useCandidateEvidence(selectedEvidenceId);
+
+  useEffect(() => {
+    if (!selectedCandidateKey && candidateRows[0]) {
+      setSelectedCandidateKey(candidateRows[0].key);
+      return;
+    }
+
+    if (selectedCandidateKey && !candidateRows.some((row) => row.key === selectedCandidateKey)) {
+      setSelectedCandidateKey(candidateRows[0]?.key ?? "");
+    }
+  }, [candidateRows, selectedCandidateKey]);
 
   if (jobQuery.isLoading || entitiesQuery.isLoading || relationsQuery.isLoading) {
     return <PageState kind="loading" title="Candidate results를 불러오는 중" description="entity, relation candidate와 evidence reference를 조회하고 있습니다." />;
@@ -54,6 +87,14 @@ export function CandidateResultsPage() {
 
   return (
     <>
+      <Breadcrumbs
+        items={[
+          { label: "Projects", to: "/projects" },
+          { label: "Extraction", to: `/projects/${jobQuery.data.project_id}/extraction-jobs` },
+          { label: jobQuery.data.id, to: `/extraction-jobs/${jobQuery.data.id}` },
+          { label: "Candidates" },
+        ]}
+      />
       <PageHeader title="Candidate Results" description="MockProvider가 생성한 entity/relation candidate와 validation, evidence reference를 확인합니다.">
         <HanaBadge tone={statusToTone(jobQuery.data.status)}>{jobQuery.data.status}</HanaBadge>
       </PageHeader>
@@ -69,6 +110,9 @@ export function CandidateResultsPage() {
         </MetricCard>
         <MetricCard label="Missing Evidence" value={missingEvidenceCount}>
           Debug-only candidates stay NOT_PUBLISHED
+        </MetricCard>
+        <MetricCard label="Retry Dedupe" value={jobQuery.data.retry_of_job_id ? "Retry" : "Root"}>
+          List rows are chain-deduped by backend natural key
         </MetricCard>
       </MetricGrid>
       <HanaCard title="Filters" description="Backend actual API mode 전환 지점: GET /api/v1/extraction-jobs/{job_id}/candidates/entities|relations query filters">
@@ -111,6 +155,7 @@ export function CandidateResultsPage() {
                       <th>Validation</th>
                       <th>Evidence</th>
                       <th>Created</th>
+                      <th>Detail</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -137,8 +182,13 @@ export function CandidateResultsPage() {
                             <HanaBadge tone={statusToTone(candidate.publish_status)}>{candidate.publish_status}</HanaBadge>
                           </StatusStack>
                         </td>
-                        <td>{renderEvidenceLinks(candidate.evidence_ids)}</td>
+                        <td>{renderEvidenceLinks(candidate.evidence_ids, candidate, "Entity", jobQuery.data.id)}</td>
                         <td>{formatDateTime(candidate.created_at)}</td>
+                        <td>
+                          <HanaButton type="button" variant="ghost" onClick={() => setSelectedCandidateKey(`entity:${candidate.id}`)}>
+                            Details
+                          </HanaButton>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -160,6 +210,7 @@ export function CandidateResultsPage() {
                       <th>Validation</th>
                       <th>Evidence</th>
                       <th>Created</th>
+                      <th>Detail</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -186,8 +237,13 @@ export function CandidateResultsPage() {
                             <HanaBadge tone={statusToTone(candidate.publish_status)}>{candidate.publish_status}</HanaBadge>
                           </StatusStack>
                         </td>
-                        <td>{renderEvidenceLinks(candidate.evidence_ids)}</td>
+                        <td>{renderEvidenceLinks(candidate.evidence_ids, candidate, "Relation", jobQuery.data.id)}</td>
                         <td>{formatDateTime(candidate.created_at)}</td>
+                        <td>
+                          <HanaButton type="button" variant="ghost" onClick={() => setSelectedCandidateKey(`relation:${candidate.id}`)}>
+                            Details
+                          </HanaButton>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -195,6 +251,92 @@ export function CandidateResultsPage() {
               </TableWrap>
             )}
           </HanaCard>
+          {selectedCandidateRow && (
+            <HanaCard title="Candidate detail" description="Candidate row DTO와 첫 evidence detail을 조합해 표시합니다.">
+              <KeyValueGrid>
+                <dt>Type</dt>
+                <dd>{selectedCandidateRow.kind}</dd>
+                <dt>ID</dt>
+                <dd>
+                  <Mono>{selectedCandidateRow.candidate.id}</Mono>
+                </dd>
+                <dt>Source</dt>
+                <dd>
+                  <Mono>{selectedCandidateRow.candidate.source_id}</Mono>
+                </dd>
+                <dt>Source segment</dt>
+                <dd>{selectedCandidateRow.candidate.source_segment_id ?? "-"}</dd>
+                <dt>Ontology</dt>
+                <dd>
+                  <Mono>{selectedCandidateRow.candidate.ontology_version_id}</Mono>
+                </dd>
+                <dt>Prompt / Model run</dt>
+                <dd>
+                  <Mono>{selectedCandidateRow.candidate.prompt_version_id}</Mono> / <Mono>{selectedCandidateRow.candidate.model_run_id}</Mono>
+                </dd>
+                <dt>Confidence</dt>
+                <dd>{formatPercent(selectedCandidateRow.candidate.confidence)}</dd>
+                <dt>Validation</dt>
+                <dd>
+                  <StatusStack>
+                    <HanaBadge tone={statusToTone(selectedCandidateRow.candidate.validation_status)}>
+                      {selectedCandidateRow.candidate.validation_status}
+                    </HanaBadge>
+                    {selectedCandidateRow.candidate.validation_codes.map((code) => (
+                      <HanaBadge key={code} tone="warning">
+                        {code}
+                      </HanaBadge>
+                    ))}
+                  </StatusStack>
+                </dd>
+                <dt>Review / Publish</dt>
+                <dd>
+                  <StatusStack>
+                    <HanaBadge tone={statusToTone(selectedCandidateRow.candidate.review_status)}>
+                      {selectedCandidateRow.candidate.review_status}
+                    </HanaBadge>
+                    <HanaBadge tone={statusToTone(selectedCandidateRow.candidate.publish_status)}>
+                      {selectedCandidateRow.candidate.publish_status}
+                    </HanaBadge>
+                  </StatusStack>
+                </dd>
+                <dt>Retry dedupe</dt>
+                <dd>{jobQuery.data.retry_of_job_id ? `Retry of ${jobQuery.data.retry_of_job_id}` : "Root chain result"}</dd>
+              </KeyValueGrid>
+              {selectedCandidateRow.candidate.evidence_ids.length === 0 ? (
+                <EvidenceFallback>
+                  <HanaBadge tone="warning">MISSING_EVIDENCE</HanaBadge>
+                  <span>No evidence reference is attached to this candidate.</span>
+                </EvidenceFallback>
+              ) : evidenceQuery.isLoading ? (
+                <PageState kind="loading" title="Evidence detail을 불러오는 중" description="첫 evidence locator를 확인하고 있습니다." />
+              ) : evidenceQuery.isError || !evidenceQuery.data ? (
+                <EvidenceFallback>
+                  <HanaBadge tone="danger">BROKEN_EVIDENCE</HanaBadge>
+                  <span>{selectedEvidenceId}</span>
+                </EvidenceFallback>
+              ) : (
+                <EvidenceSummary>
+                  <strong>{evidenceQuery.data.file_name}</strong>
+                  <span>
+                    {formatEvidenceLocator(evidenceQuery.data.row_index, evidenceQuery.data.column_name, evidenceQuery.data.paragraph_id, evidenceQuery.data.chunk_id)}
+                  </span>
+                  <MutedText>{evidenceQuery.data.evidence_text ?? "No evidence text available."}</MutedText>
+                  <DataLink
+                    to={buildEvidencePath(
+                      evidenceQuery.data.id,
+                      selectedCandidateRow.candidate,
+                      selectedCandidateRow.kind,
+                      jobQuery.data.id,
+                    )}
+                  >
+                    Open evidence viewer
+                  </DataLink>
+                </EvidenceSummary>
+              )}
+              <RawPayload>{JSON.stringify(selectedCandidateRow.candidate.raw_payload, null, 2)}</RawPayload>
+            </HanaCard>
+          )}
         </>
       )}
     </>
@@ -215,7 +357,12 @@ function formatNullable(value: string | null) {
   return value ?? "-";
 }
 
-function renderEvidenceLinks(evidenceIds: string[]) {
+function renderEvidenceLinks(
+  evidenceIds: string[],
+  candidate: CandidateEntity | CandidateRelation,
+  kind: CandidateRow["kind"],
+  jobId: string,
+) {
   if (evidenceIds.length === 0) {
     return (
       <InlineList>
@@ -228,7 +375,7 @@ function renderEvidenceLinks(evidenceIds: string[]) {
   return (
     <InlineList>
       {evidenceIds.map((evidenceId) => (
-        <DataLink key={evidenceId} to={`/candidate-evidence/${evidenceId}`}>
+        <DataLink key={evidenceId} to={buildEvidencePath(evidenceId, candidate, kind, jobId)}>
           {evidenceId}
         </DataLink>
       ))}
@@ -236,9 +383,42 @@ function renderEvidenceLinks(evidenceIds: string[]) {
   );
 }
 
+function buildEvidencePath(
+  evidenceId: string,
+  candidate: CandidateEntity | CandidateRelation,
+  kind: CandidateRow["kind"],
+  jobId: string,
+) {
+  const params = new URLSearchParams({
+    project_id: candidate.project_id,
+    source_id: candidate.source_id,
+    job_id: jobId,
+    candidate_id: candidate.id,
+    candidate_kind: kind,
+    validation_code: candidate.validation_codes[0] ?? candidate.validation_status,
+  });
+
+  if (candidate.source_segment_id) {
+    params.set("source_segment_id", candidate.source_segment_id);
+  }
+
+  return `/candidate-evidence/${evidenceId}?${params.toString()}`;
+}
+
+function formatEvidenceLocator(rowIndex?: number | null, columnName?: string | null, paragraphId?: number | null, chunkId?: number | null) {
+  const parts = [
+    rowIndex !== undefined && rowIndex !== null ? `row=${rowIndex}` : null,
+    columnName ? `cell=${columnName}` : null,
+    paragraphId !== undefined && paragraphId !== null ? `paragraph=${paragraphId}` : null,
+    chunkId !== undefined && chunkId !== null ? `chunk=${chunkId}` : null,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(" · ") : "locator unavailable";
+}
+
 const MetricGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: ${({ theme }) => theme.spacing.lg};
 
   @media (max-width: 1100px) {
@@ -268,4 +448,37 @@ const StatusStack = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const EvidenceFallback = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+  color: ${({ theme }) => theme.color.textMuted};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+`;
+
+const EvidenceSummary = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+
+  span {
+    color: ${({ theme }) => theme.color.textMuted};
+    font-size: ${({ theme }) => theme.typography.fontSize.sm};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  }
+`;
+
+const RawPayload = styled.pre`
+  margin: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) => theme.spacing.md};
+  overflow: auto;
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background: ${({ theme }) => theme.color.surfaceMuted};
+  color: ${({ theme }) => theme.color.text};
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
 `;

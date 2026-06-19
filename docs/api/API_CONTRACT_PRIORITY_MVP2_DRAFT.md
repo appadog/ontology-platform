@@ -6,6 +6,10 @@ This document is still a contract draft, but Wave 5 closed MVP 1 app acceptance 
 
 Wave 7 is a contract sync closeout wave. It keeps backend runtime shape stable and aligns Frontend actual API mode to `docs/api/openapi-mvp2-draft.json`; it does not open candidate detail drawer, evidence highlight, advanced PDF parsing, external LLM provider, review/publish, or RAG scope.
 
+Wave 8 opens only focused UI/contract expansion: retry-chain dedupe, selected/recent navigation, candidate detail drawer/panel, evidence highlight, LNB/drilldown IA, and ontology modeler edit/delete acceptance. It does not add external LLM providers, review/publish workflow, RAG, advanced PDF parsing, or a new candidate detail endpoint unless a later PM decision explicitly changes this draft.
+
+Wave 9 is targeted hardening. It closes ontology class delete orphan behavior, delete confirmation copy/counts, and evidence direct/broken route fallback. It does not add external LLM providers, review/publish workflow, RAG, advanced PDF parsing, a new candidate detail endpoint, or new evidence status enum.
+
 ## MVP 2 API Entry Gate
 
 - MVP 1 `docs/api/openapi-mvp1.json` is fresh and remains the canonical MVP 1 artifact.
@@ -96,6 +100,19 @@ MVP 2에서는 review/publish workflow를 구현하지 않는다. Candidate `rev
 Candidate list endpoints must support `limit`, `offset`, `source_id`, `ontology_version_id`, `validation_status`, and `has_evidence` query filters before the contract is considered ready for FE actual API mode.
 
 Wave 7 keeps candidate list response shape as plain arrays: `CandidateEntity[]` and `CandidateRelation[]`. Do not introduce `CandidateEntityListResponse` or `CandidateRelationListResponse` wrappers in this sync wave. `limit`/`offset` are request parameters only; `total_count` and cursor metadata are deferred until a later pagination hardening wave.
+
+Wave 8 candidate detail drawer/panel uses the existing candidate list DTOs plus `GET /api/v1/candidate-evidence/{evidence_id}`. A dedicated `GET /api/v1/candidates/{candidate_id}` endpoint is not part of Wave 8. Frontend may compose the panel from selected row data, `evidence_ids[]`, evidence detail records, and `GET /api/v1/extraction-jobs/{job_id}` metadata.
+
+Wave 8 evidence highlight must use existing `CandidateEvidence` locators. Structured evidence highlights table row/cell via `row_index` and `column_name`. Text evidence highlights paragraph/chunk/span via `page_number`, `section_title`, `paragraph_id`, `chunk_id`, `start_offset`, and `end_offset`. Missing or broken locators are represented by candidate validation codes, not by a new evidence status enum in Wave 8.
+
+### Wave 9 Ontology / Evidence Hardening Contract Notes
+
+- `DELETE /api/v1/ontology/classes/{class_id}` remains a soft-delete operation.
+- Class soft delete in a draft version must cascade `status=DELETED` to directly owned properties and to relations whose domain/range or source/target references the deleted class.
+- `GET /api/v1/ontology/versions/{version_id}/graph` must not expose deleted classes, deleted properties, deleted relations, or active-looking property/relation records that are connected to a deleted class. This applies to canonical `nodes[]`, `edges[]`, `properties[]` and to optional compatibility fields.
+- Extraction input builders must use the same active-only invariant as graph reads. Deleted ontology classes/properties/relations and records connected to deleted classes must not be sent to candidate generation.
+- Delete confirmation counts are UI acceptance, not a new API response shape in Wave 9. Frontend may compute affected property count and inbound/outbound relation count from the pre-delete graph payload unless Backend already exposes equivalent data through an existing contract.
+- Evidence broken/direct route fallback uses existing `CandidateEvidence` fields and candidate `validation_codes[]`. Product-generated evidence links should preserve parent candidate/job context through route state, query, or contextual navigation. Arbitrary direct URLs without parent context must show a recovery action instead of requiring a reverse evidence lookup endpoint.
 
 ## Key DTO Draft
 
@@ -236,6 +253,7 @@ Retry behavior:
 - If the provider output lacks `client_candidate_id`, MockProvider thin slice derives it from fixture id, candidate kind, and provider output index.
 - Evidence natural key: `retry_root_job_id`, `provider`, `fixture_id`, `source_id`, `source_segment_id`, provider stable `client_evidence_id` or deterministic segment locator.
 - A retry must not create duplicate candidate/evidence records for the same retry-chain natural key. It should reuse or upsert the existing natural key record, or otherwise make duplicates invisible to list responses.
+- Wave 8 list/query behavior must not show duplicate candidate or evidence rows for the same retry-chain natural key. Backend may expose reused/skipped counts later, but Wave 8 does not require a new DTO field for dedupe summary.
 
 ### ModelRun
 
