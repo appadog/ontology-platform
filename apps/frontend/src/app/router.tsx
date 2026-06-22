@@ -1,5 +1,16 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { App } from "./App";
+import {
+  AdminConsolePage,
+  AdminProjectsPage,
+  ProjectAdminApprovalPolicyPage,
+  ProjectAdminCredentialsPage,
+  ProjectAdminImportExportPage,
+  ProjectAdminOperationsPage,
+  ProjectAdminPage,
+  ProjectAdminRetentionBackupPage,
+  ProjectAdminRolesPage,
+} from "../pages/AdminPages";
 import { CandidateResultsPage } from "../pages/CandidateResultsPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DocumentChunkViewerPage } from "../pages/DocumentChunkViewerPage";
@@ -42,6 +53,42 @@ export const router = createBrowserRouter([
       {
         path: "/projects/:projectId",
         element: <ProjectDetailPage />,
+      },
+      {
+        path: "/admin",
+        element: <AdminConsolePage />,
+      },
+      {
+        path: "/admin/projects",
+        element: <AdminProjectsPage />,
+      },
+      {
+        path: "/projects/:projectId/admin",
+        element: <ProjectAdminPage />,
+      },
+      {
+        path: "/projects/:projectId/admin/roles",
+        element: <ProjectAdminRolesPage />,
+      },
+      {
+        path: "/projects/:projectId/admin/credentials",
+        element: <ProjectAdminCredentialsPage />,
+      },
+      {
+        path: "/projects/:projectId/admin/policies/approval",
+        element: <ProjectAdminApprovalPolicyPage />,
+      },
+      {
+        path: "/projects/:projectId/admin/import-export",
+        element: <ProjectAdminImportExportPage />,
+      },
+      {
+        path: "/projects/:projectId/admin/operations",
+        element: <ProjectAdminOperationsPage />,
+      },
+      {
+        path: "/projects/:projectId/admin/retention-backup",
+        element: <ProjectAdminRetentionBackupPage />,
       },
       {
         path: "/projects/:projectId/ontology",

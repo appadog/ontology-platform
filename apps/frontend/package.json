@@ -12,7 +12,11 @@
     "smoke:mvp2:actual": "node scripts/mvp2-actual-api-smoke.mjs",
     "smoke:mvp3:actual": "node scripts/mvp3-actual-api-smoke.mjs",
     "smoke:mvp4:mock": "node scripts/mvp4-mock-route-smoke.mjs",
-    "smoke:mvp4:actual": "node scripts/mvp4-actual-api-smoke.mjs"
+    "smoke:mvp4:actual": "node scripts/mvp4-actual-api-smoke.mjs",
+    "smoke:mvp5:mock": "node scripts/mvp5-mock-route-smoke.mjs",
+    "smoke:mvp5:actual": "node scripts/mvp5-actual-api-smoke.mjs",
+    "smoke:mvp6:mock": "node scripts/mvp6-mock-route-smoke.mjs",
+    "smoke:mvp6:actual": "node scripts/mvp6-actual-api-smoke.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.81.5",

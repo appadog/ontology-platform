@@ -1,0 +1,1871 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP6.2 Active Learning Planning API",
+    "description": "Planning-only OpenAPI artifact for MVP6.2 Active Learning / Continuous Improvement. This artifact is additive and does not replace the MVP6.1 OpenAPI draft.",
+    "version": "0.6.2-draft"
+  },
+  "tags": [
+    {
+      "name": "MVP6.2 Active Learning",
+      "description": "Read-mostly learning signal, correction pattern, prompt suggestion, and preview-only auto-approval contracts."
+    }
+  ],
+  "paths": {
+    "/api/v1/projects/{project_id}/learning-signals/summary": {
+      "get": {
+        "tags": [
+          "MVP6.2 Active Learning"
+        ],
+        "summary": "Get project learning signal summary",
+        "description": "Read-only project summary generated from approved MVP3, MVP4, and MVP6.1 source artifacts. This endpoint must not create or refresh signals as a side effect.",
+        "operationId": "getLearningSignalSummary",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Learning signal summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningSignalSummaryResponse"
+                },
+                "examples": {
+                  "summary": {
+                    "$ref": "#/components/examples/LearningSignalSummaryExample"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/learning-signals/correction-patterns": {
+      "get": {
+        "tags": [
+          "MVP6.2 Active Learning"
+        ],
+        "summary": "List correction patterns",
+        "description": "Read-only list of correction patterns grouped from traceable learning signals. Patterns are advisory and must retain source artifact references.",
+        "operationId": "listCorrectionPatterns",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/SignalTypeFilter"
+          },
+          {
+            "$ref": "#/components/parameters/RiskLabelFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Correction pattern list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrectionPatternListResponse"
+                },
+                "examples": {
+                  "patterns": {
+                    "$ref": "#/components/examples/CorrectionPatternListExample"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/learning-signals/prompt-suggestions": {
+      "get": {
+        "tags": [
+          "MVP6.2 Active Learning"
+        ],
+        "summary": "List prompt improvement suggestions",
+        "description": "Read-only prompt suggestion list. Suggestions may include preview text and structured proposals, but do not create prompt drafts or mutate prompt versions.",
+        "operationId": "listPromptSuggestions",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/SignalTypeFilter"
+          },
+          {
+            "$ref": "#/components/parameters/RiskLabelFilter"
+          },
+          {
+            "$ref": "#/components/parameters/PromptVersionIdFilter"
+          },
+          {
+            "$ref": "#/components/parameters/PromptSuggestionStateFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt suggestion list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptSuggestionListResponse"
+                },
+                "examples": {
+                  "suggestions": {
+                    "$ref": "#/components/examples/PromptSuggestionListExample"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/learning-signals/auto-approval-candidates": {
+      "get": {
+        "tags": [
+          "MVP6.2 Active Learning"
+        ],
+        "summary": "List preview-only auto-approval candidates",
+        "description": "Read-only recommendation previews. These candidates are not enforced and cannot create, update, enable, or execute auto-approval policies.",
+        "operationId": "listAutoApprovalCandidatePreviews",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/SignalTypeFilter"
+          },
+          {
+            "$ref": "#/components/parameters/RiskLabelFilter"
+          },
+          {
+            "$ref": "#/components/parameters/PromptVersionIdFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Auto-approval candidate preview list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoApprovalCandidatePreviewListResponse"
+                },
+                "examples": {
+                  "candidates": {
+                    "$ref": "#/components/examples/AutoApprovalCandidatePreviewListExample"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/learning-signal-suggestions/{suggestion_id}/decisions": {
+      "post": {
+        "tags": [
+          "MVP6.2 Active Learning"
+        ],
+        "summary": "Record prompt suggestion decision audit note",
+        "description": "Creates a human accept or dismiss decision audit note only. This endpoint must not mutate prompt versions, candidates, published graph data, extraction jobs, evaluation runs, model runs, or auto-approval policies.",
+        "operationId": "createPromptSuggestionDecision",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SuggestionId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionDecisionRequest"
+              },
+              "examples": {
+                "dismiss": {
+                  "$ref": "#/components/examples/SuggestionDecisionRequestExample"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Decision audit note created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionDecisionResponse"
+                },
+                "examples": {
+                  "decision": {
+                    "$ref": "#/components/examples/SuggestionDecisionResponseExample"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ProjectId": {
+        "name": "project_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "SuggestionId": {
+        "name": "suggestion_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 50
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "SignalTypeFilter": {
+        "name": "signal_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/LearningSignalType"
+        }
+      },
+      "RiskLabelFilter": {
+        "name": "risk_label",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/LearningRiskLabel"
+        }
+      },
+      "PromptVersionIdFilter": {
+        "name": "prompt_version_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "PromptSuggestionStateFilter": {
+        "name": "state",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/PromptSuggestionState"
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Permission denied",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Resource state conflict",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "LearningSignalType": {
+        "type": "string",
+        "enum": [
+          "RELATION_DIRECTION_CORRECTION",
+          "CLASS_CONFUSION",
+          "RELATION_TYPE_CONFUSION",
+          "EVIDENCE_MISSING",
+          "EVIDENCE_MISMATCH",
+          "REPEATED_VALIDATION_FAILURE",
+          "LOW_BENCHMARK_METRIC_CLUSTER"
+        ]
+      },
+      "LearningSourceArtifactType": {
+        "type": "string",
+        "enum": [
+          "REVIEW_DECISION",
+          "REVIEW_CORRECTION",
+          "VALIDATION_RESULT",
+          "QUALITY_METRIC",
+          "QUALITY_DRILLDOWN",
+          "EVALUATION_RUN",
+          "EVALUATION_METRIC",
+          "EVALUATION_ERROR_CASE"
+        ]
+      },
+      "LearningConfidenceLabel": {
+        "type": "string",
+        "enum": [
+          "LOW",
+          "MEDIUM",
+          "HIGH"
+        ]
+      },
+      "LearningRiskLabel": {
+        "type": "string",
+        "enum": [
+          "LOW",
+          "MEDIUM",
+          "HIGH"
+        ]
+      },
+      "PromptSuggestionKind": {
+        "type": "string",
+        "enum": [
+          "ADD_RELATION_DIRECTION_EXAMPLE",
+          "CLARIFY_CLASS_BOUNDARY",
+          "CLARIFY_RELATION_TYPE_BOUNDARY",
+          "ADD_EVIDENCE_REQUIREMENT",
+          "ADD_NEGATIVE_EXAMPLE",
+          "ADD_VALIDATION_FAILURE_GUIDANCE",
+          "INVESTIGATE_LOW_METRIC_CLUSTER"
+        ]
+      },
+      "PromptSuggestionState": {
+        "type": "string",
+        "enum": [
+          "SUGGESTED",
+          "ACCEPTED",
+          "DISMISSED",
+          "SUPERSEDED"
+        ]
+      },
+      "SuggestionDecisionType": {
+        "type": "string",
+        "enum": [
+          "ACCEPT",
+          "DISMISS"
+        ]
+      },
+      "SuggestionDismissReasonCode": {
+        "type": "string",
+        "enum": [
+          "NOT_RELEVANT",
+          "INSUFFICIENT_EVIDENCE",
+          "DUPLICATE",
+          "OUT_OF_SCOPE",
+          "RISK_TOO_HIGH",
+          "OTHER"
+        ]
+      },
+      "SuggestionIntendedNextAction": {
+        "type": "string",
+        "enum": [
+          "USE_IN_NEXT_PROMPT_DRAFT",
+          "DISCUSS_WITH_ONTOLOGY_OWNER",
+          "MONITOR_FOR_MORE_EVIDENCE",
+          "NO_ACTION"
+        ]
+      },
+      "AutoApprovalPreviewStatus": {
+        "type": "string",
+        "enum": [
+          "RECOMMENDATION_ONLY",
+          "NOT_ENFORCED",
+          "REQUIRES_POLICY_APPROVAL"
+        ]
+      },
+      "AutoApprovalHistoricalMatchOutcome": {
+        "type": "string",
+        "enum": [
+          "WOULD_MATCH",
+          "WOULD_NOT_MATCH",
+          "BLOCKED_BY_SAFETY_RULE",
+          "INSUFFICIENT_EVIDENCE"
+        ]
+      },
+      "CandidateKind": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "ENTITY",
+          "RELATION",
+          null
+        ]
+      },
+      "LearningWindow": {
+        "type": "object",
+        "required": [
+          "label",
+          "started_at",
+          "ended_at"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ended_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LearningSignalTypeCount": {
+        "type": "object",
+        "required": [
+          "signal_type",
+          "count",
+          "high_risk_count",
+          "latest_observed_at"
+        ],
+        "properties": {
+          "signal_type": {
+            "$ref": "#/components/schemas/LearningSignalType"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "high_risk_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "latest_observed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "LearningPatternSummary": {
+        "type": "object",
+        "required": [
+          "pattern_id",
+          "primary_signal_type",
+          "title",
+          "support_count",
+          "risk_label"
+        ],
+        "properties": {
+          "pattern_id": {
+            "type": "string"
+          },
+          "primary_signal_type": {
+            "$ref": "#/components/schemas/LearningSignalType"
+          },
+          "title": {
+            "type": "string"
+          },
+          "support_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "risk_label": {
+            "$ref": "#/components/schemas/LearningRiskLabel"
+          }
+        }
+      },
+      "LearningSignalSummaryResponse": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "generated_at",
+          "window",
+          "source_artifact_scope",
+          "total_signal_count",
+          "signal_counts",
+          "open_prompt_suggestion_count",
+          "accepted_prompt_suggestion_count",
+          "dismissed_prompt_suggestion_count",
+          "superseded_prompt_suggestion_count",
+          "high_risk_prompt_suggestion_count",
+          "auto_approval_preview_count",
+          "top_patterns",
+          "safety_notes"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "window": {
+            "$ref": "#/components/schemas/LearningWindow"
+          },
+          "source_artifact_scope": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearningSourceArtifactType"
+            }
+          },
+          "total_signal_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "signal_counts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearningSignalTypeCount"
+            }
+          },
+          "open_prompt_suggestion_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "accepted_prompt_suggestion_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dismissed_prompt_suggestion_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "superseded_prompt_suggestion_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "high_risk_prompt_suggestion_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "auto_approval_preview_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "top_patterns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearningPatternSummary"
+            }
+          },
+          "safety_notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "LearningEvidenceRef": {
+        "type": "object",
+        "required": [
+          "source_id",
+          "source_segment_id",
+          "locator",
+          "quote"
+        ],
+        "properties": {
+          "source_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_segment_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locator": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "LearningSourceArtifactRef": {
+        "type": "object",
+        "required": [
+          "artifact_type",
+          "artifact_id",
+          "project_id",
+          "candidate_id",
+          "candidate_kind",
+          "review_task_id",
+          "review_decision_id",
+          "validation_result_id",
+          "quality_metric_id",
+          "evaluation_run_id",
+          "evaluation_error_case_id",
+          "ontology_version_id",
+          "prompt_version_id",
+          "model_run_id",
+          "evidence_refs",
+          "observed_at"
+        ],
+        "properties": {
+          "artifact_type": {
+            "$ref": "#/components/schemas/LearningSourceArtifactType"
+          },
+          "artifact_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "candidate_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "candidate_kind": {
+            "$ref": "#/components/schemas/CandidateKind"
+          },
+          "review_task_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "review_decision_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "validation_result_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quality_metric_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evaluation_run_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evaluation_error_case_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ontology_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prompt_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_run_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearningEvidenceRef"
+            }
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OntologyClassRef": {
+        "type": "object",
+        "required": [
+          "ontology_class_id",
+          "label"
+        ],
+        "properties": {
+          "ontology_class_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "OntologyRelationRef": {
+        "type": "object",
+        "required": [
+          "ontology_relation_id",
+          "label"
+        ],
+        "properties": {
+          "ontology_relation_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "CorrectionPatternExample": {
+        "type": "object",
+        "required": [
+          "example_id",
+          "before",
+          "after",
+          "source_artifact_id"
+        ],
+        "properties": {
+          "example_id": {
+            "type": "string"
+          },
+          "before": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "after": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_artifact_id": {
+            "type": "string"
+          }
+        }
+      },
+      "CorrectionPattern": {
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "primary_signal_type",
+          "related_signal_types",
+          "title",
+          "affected_classes",
+          "affected_relations",
+          "support_count",
+          "denominator",
+          "confidence_label",
+          "risk_label",
+          "first_seen_at",
+          "last_seen_at",
+          "explanation",
+          "representative_examples",
+          "source_learning_signal_ids",
+          "source_artifacts",
+          "safety_note",
+          "prompt_suggestion_ids"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "primary_signal_type": {
+            "$ref": "#/components/schemas/LearningSignalType"
+          },
+          "related_signal_types": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearningSignalType"
+            }
+          },
+          "title": {
+            "type": "string"
+          },
+          "affected_classes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OntologyClassRef"
+            }
+          },
+          "affected_relations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OntologyRelationRef"
+            }
+          },
+          "support_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "denominator": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "confidence_label": {
+            "$ref": "#/components/schemas/LearningConfidenceLabel"
+          },
+          "risk_label": {
+            "$ref": "#/components/schemas/LearningRiskLabel"
+          },
+          "first_seen_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_seen_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "representative_examples": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CorrectionPatternExample"
+            }
+          },
+          "source_learning_signal_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearningSourceArtifactRef"
+            }
+          },
+          "safety_note": {
+            "type": "string"
+          },
+          "prompt_suggestion_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CorrectionPatternListResponse": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "items",
+          "next_cursor",
+          "total_count"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CorrectionPattern"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "PromptSuggestion": {
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "target_prompt_version_id",
+          "suggestion_kind",
+          "state",
+          "title",
+          "rationale",
+          "expected_impact",
+          "preview_text",
+          "structured_proposal",
+          "source_learning_signal_ids",
+          "correction_pattern_ids",
+          "source_artifacts",
+          "confidence_label",
+          "risk_label",
+          "created_at",
+          "updated_at",
+          "decision_audit_note",
+          "safety_note"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "target_prompt_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suggestion_kind": {
+            "$ref": "#/components/schemas/PromptSuggestionKind"
+          },
+          "state": {
+            "$ref": "#/components/schemas/PromptSuggestionState"
+          },
+          "title": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "expected_impact": {
+            "type": "string"
+          },
+          "preview_text": {
+            "type": "string"
+          },
+          "structured_proposal": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "source_learning_signal_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "correction_pattern_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearningSourceArtifactRef"
+            }
+          },
+          "confidence_label": {
+            "$ref": "#/components/schemas/LearningConfidenceLabel"
+          },
+          "risk_label": {
+            "$ref": "#/components/schemas/LearningRiskLabel"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decision_audit_note": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SuggestionDecisionAuditNote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "safety_note": {
+            "type": "string"
+          }
+        }
+      },
+      "PromptSuggestionListResponse": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "items",
+          "next_cursor",
+          "total_count"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptSuggestion"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "AutoApprovalRulePreview": {
+        "type": "object",
+        "required": [
+          "candidate_kind",
+          "conditions"
+        ],
+        "properties": {
+          "candidate_kind": {
+            "type": "string",
+            "enum": [
+              "ENTITY",
+              "RELATION"
+            ]
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AutoApprovalPreviewMetric": {
+        "type": "object",
+        "required": [
+          "metric_name",
+          "value",
+          "numerator",
+          "denominator"
+        ],
+        "properties": {
+          "metric_name": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "numerator": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "denominator": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      },
+      "AutoApprovalHistoricalOutcomeItem": {
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "outcome",
+          "reason"
+        ],
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/AutoApprovalHistoricalMatchOutcome"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "AutoApprovalHistoricalMatchPreview": {
+        "type": "object",
+        "required": [
+          "total_examined",
+          "would_match_count",
+          "blocked_count",
+          "outcomes"
+        ],
+        "properties": {
+          "total_examined": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "would_match_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "blocked_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "outcomes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutoApprovalHistoricalOutcomeItem"
+            }
+          }
+        }
+      },
+      "AutoApprovalCandidatePreview": {
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "title",
+          "preview_status",
+          "recommendation_only",
+          "not_enforced",
+          "requires_later_policy_approval",
+          "rule_preview",
+          "supporting_metrics",
+          "historical_match_preview",
+          "source_learning_signal_ids",
+          "correction_pattern_ids",
+          "source_artifacts",
+          "confidence_label",
+          "risk_label",
+          "safety_note",
+          "blocked_actions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "preview_status": {
+            "$ref": "#/components/schemas/AutoApprovalPreviewStatus"
+          },
+          "recommendation_only": {
+            "type": "boolean",
+            "const": true
+          },
+          "not_enforced": {
+            "type": "boolean",
+            "const": true
+          },
+          "requires_later_policy_approval": {
+            "type": "boolean",
+            "const": true
+          },
+          "rule_preview": {
+            "$ref": "#/components/schemas/AutoApprovalRulePreview"
+          },
+          "supporting_metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutoApprovalPreviewMetric"
+            }
+          },
+          "historical_match_preview": {
+            "$ref": "#/components/schemas/AutoApprovalHistoricalMatchPreview"
+          },
+          "source_learning_signal_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "correction_pattern_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearningSourceArtifactRef"
+            }
+          },
+          "confidence_label": {
+            "$ref": "#/components/schemas/LearningConfidenceLabel"
+          },
+          "risk_label": {
+            "$ref": "#/components/schemas/LearningRiskLabel"
+          },
+          "safety_note": {
+            "type": "string"
+          },
+          "blocked_actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AutoApprovalCandidatePreviewListResponse": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "items",
+          "next_cursor",
+          "total_count"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutoApprovalCandidatePreview"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "SuggestionDecisionRequest": {
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/SuggestionDecisionType"
+          },
+          "dismiss_reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SuggestionDismissReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "intended_next_action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SuggestionIntendedNextAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "client_request_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SuggestionSnapshot": {
+        "type": "object",
+        "required": [
+          "suggestion_kind",
+          "title",
+          "preview_text"
+        ],
+        "properties": {
+          "suggestion_kind": {
+            "$ref": "#/components/schemas/PromptSuggestionKind"
+          },
+          "title": {
+            "type": "string"
+          },
+          "preview_text": {
+            "type": "string"
+          }
+        }
+      },
+      "MutationGuard": {
+        "type": "object",
+        "required": [
+          "prompt_version_mutated",
+          "candidate_graph_mutated",
+          "published_graph_mutated",
+          "auto_approval_policy_mutated",
+          "extraction_job_started",
+          "evaluation_run_started"
+        ],
+        "properties": {
+          "prompt_version_mutated": {
+            "type": "boolean",
+            "const": false
+          },
+          "candidate_graph_mutated": {
+            "type": "boolean",
+            "const": false
+          },
+          "published_graph_mutated": {
+            "type": "boolean",
+            "const": false
+          },
+          "auto_approval_policy_mutated": {
+            "type": "boolean",
+            "const": false
+          },
+          "extraction_job_started": {
+            "type": "boolean",
+            "const": false
+          },
+          "evaluation_run_started": {
+            "type": "boolean",
+            "const": false
+          }
+        }
+      },
+      "SuggestionDecisionAuditNote": {
+        "type": "object",
+        "required": [
+          "id",
+          "suggestion_id",
+          "project_id",
+          "actor_id",
+          "actor_role",
+          "decision",
+          "dismiss_reason_code",
+          "note",
+          "intended_next_action",
+          "decided_at",
+          "source_learning_signal_ids",
+          "target_prompt_version_id",
+          "suggestion_snapshot",
+          "mutation_guard"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "suggestion_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "actor_id": {
+            "type": "string"
+          },
+          "actor_role": {
+            "type": "string"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/SuggestionDecisionType"
+          },
+          "dismiss_reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SuggestionDismissReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "intended_next_action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SuggestionIntendedNextAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decided_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source_learning_signal_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "target_prompt_version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suggestion_snapshot": {
+            "$ref": "#/components/schemas/SuggestionSnapshot"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/MutationGuard"
+          }
+        }
+      },
+      "SuggestionDecisionResponse": {
+        "type": "object",
+        "required": [
+          "suggestion_id",
+          "project_id",
+          "previous_state",
+          "new_state",
+          "decision_audit_note"
+        ],
+        "properties": {
+          "suggestion_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "previous_state": {
+            "$ref": "#/components/schemas/PromptSuggestionState"
+          },
+          "new_state": {
+            "$ref": "#/components/schemas/PromptSuggestionState"
+          },
+          "decision_audit_note": {
+            "$ref": "#/components/schemas/SuggestionDecisionAuditNote"
+          }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "details"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "PROJECT_NOT_FOUND",
+              "LEARNING_SIGNAL_SOURCE_SCOPE_INVALID",
+              "SUGGESTION_NOT_FOUND",
+              "SUGGESTION_STATE_CONFLICT",
+              "DISMISS_REASON_REQUIRED",
+              "DISMISS_REASON_NOT_ALLOWED",
+              "DECISION_NOTE_REQUIRED",
+              "PERMISSION_DENIED"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "examples": {
+      "LearningSignalSummaryExample": {
+        "value": {
+          "project_id": "project-insurance-demo",
+          "generated_at": "2026-06-22T09:00:00Z",
+          "window": {
+            "label": "Last 30 days",
+            "started_at": "2026-05-23T00:00:00Z",
+            "ended_at": "2026-06-22T00:00:00Z"
+          },
+          "source_artifact_scope": [
+            "REVIEW_CORRECTION",
+            "QUALITY_METRIC",
+            "EVALUATION_ERROR_CASE"
+          ],
+          "total_signal_count": 47,
+          "signal_counts": [
+            {
+              "signal_type": "RELATION_DIRECTION_CORRECTION",
+              "count": 12,
+              "high_risk_count": 2,
+              "latest_observed_at": "2026-06-21T15:10:00Z"
+            }
+          ],
+          "open_prompt_suggestion_count": 4,
+          "accepted_prompt_suggestion_count": 1,
+          "dismissed_prompt_suggestion_count": 2,
+          "superseded_prompt_suggestion_count": 1,
+          "high_risk_prompt_suggestion_count": 2,
+          "auto_approval_preview_count": 3,
+          "top_patterns": [
+            {
+              "pattern_id": "pattern-relation-direction-contains-001",
+              "primary_signal_type": "RELATION_DIRECTION_CORRECTION",
+              "title": "Relation direction errors for includes",
+              "support_count": 12,
+              "risk_label": "MEDIUM"
+            }
+          ],
+          "safety_notes": [
+            "Summary is advisory and does not mutate prompts, candidates, policies, or published graph data."
+          ]
+        }
+      },
+      "CorrectionPatternListExample": {
+        "value": {
+          "project_id": "project-insurance-demo",
+          "items": [
+            {
+              "id": "pattern-relation-direction-contains-001",
+              "project_id": "project-insurance-demo",
+              "primary_signal_type": "RELATION_DIRECTION_CORRECTION",
+              "related_signal_types": [
+                "LOW_BENCHMARK_METRIC_CLUSTER"
+              ],
+              "title": "Relation direction errors for includes",
+              "affected_classes": [
+                {
+                  "ontology_class_id": "class-insurance-product",
+                  "label": "InsuranceProduct"
+                },
+                {
+                  "ontology_class_id": "class-rider",
+                  "label": "Rider"
+                }
+              ],
+              "affected_relations": [
+                {
+                  "ontology_relation_id": "relation-includes",
+                  "label": "includes"
+                }
+              ],
+              "support_count": 12,
+              "denominator": 31,
+              "confidence_label": "MEDIUM",
+              "risk_label": "MEDIUM",
+              "first_seen_at": "2026-06-01T10:00:00Z",
+              "last_seen_at": "2026-06-21T15:10:00Z",
+              "explanation": "Observed repeated source/target reversal for the includes relation in review corrections and evaluation error cases.",
+              "representative_examples": [
+                {
+                  "example_id": "example-001",
+                  "before": "Rider - includes -> InsuranceProduct",
+                  "after": "InsuranceProduct - includes -> Rider",
+                  "source_artifact_id": "error-case-101"
+                }
+              ],
+              "source_learning_signal_ids": [
+                "signal-001",
+                "signal-002"
+              ],
+              "source_artifacts": [
+                {
+                  "artifact_type": "EVALUATION_ERROR_CASE",
+                  "artifact_id": "error-case-101",
+                  "project_id": "project-insurance-demo",
+                  "candidate_id": "candidate-relation-778",
+                  "candidate_kind": "RELATION",
+                  "review_task_id": null,
+                  "review_decision_id": null,
+                  "validation_result_id": null,
+                  "quality_metric_id": null,
+                  "evaluation_run_id": "eval-run-20260622-001",
+                  "evaluation_error_case_id": "error-case-101",
+                  "ontology_version_id": "ontology-v7",
+                  "prompt_version_id": "prompt-v12",
+                  "model_run_id": "model-run-982",
+                  "evidence_refs": [],
+                  "observed_at": "2026-06-21T15:10:00Z"
+                }
+              ],
+              "safety_note": "Pattern is advisory. It correlates observed review corrections and benchmark errors; it does not prove the prompt is the only cause.",
+              "prompt_suggestion_ids": [
+                "suggestion-direction-example-001"
+              ]
+            }
+          ],
+          "next_cursor": null,
+          "total_count": 1
+        }
+      },
+      "PromptSuggestionListExample": {
+        "value": {
+          "project_id": "project-insurance-demo",
+          "items": [
+            {
+              "id": "suggestion-direction-example-001",
+              "project_id": "project-insurance-demo",
+              "target_prompt_version_id": "prompt-v12",
+              "suggestion_kind": "ADD_RELATION_DIRECTION_EXAMPLE",
+              "state": "SUGGESTED",
+              "title": "Add direction example for InsuranceProduct includes Rider",
+              "rationale": "Twelve recent artifacts show reversed direction for the includes relation.",
+              "expected_impact": "May reduce relation direction errors for product-rider extraction in the next prompt draft.",
+              "preview_text": "When extracting includes, use InsuranceProduct as source and Rider as target. Example: InsuranceProduct - includes -> Rider.",
+              "structured_proposal": {
+                "section": "relation_direction_examples",
+                "operation": "ADD_EXAMPLE",
+                "example_text": "InsuranceProduct - includes -> Rider"
+              },
+              "source_learning_signal_ids": [
+                "signal-001",
+                "signal-002"
+              ],
+              "correction_pattern_ids": [
+                "pattern-relation-direction-contains-001"
+              ],
+              "source_artifacts": [],
+              "confidence_label": "MEDIUM",
+              "risk_label": "MEDIUM",
+              "created_at": "2026-06-22T09:00:00Z",
+              "updated_at": "2026-06-22T09:00:00Z",
+              "decision_audit_note": null,
+              "safety_note": "Accepting this suggestion records human intent only. It does not edit prompt-v12 or create a new prompt version."
+            }
+          ],
+          "next_cursor": null,
+          "total_count": 1
+        }
+      },
+      "AutoApprovalCandidatePreviewListExample": {
+        "value": {
+          "project_id": "project-insurance-demo",
+          "items": [
+            {
+              "id": "auto-preview-evidence-complete-001",
+              "project_id": "project-insurance-demo",
+              "title": "Possible approval preview for high-confidence evidence-complete Product includes Rider relations",
+              "preview_status": "RECOMMENDATION_ONLY",
+              "recommendation_only": true,
+              "not_enforced": true,
+              "requires_later_policy_approval": true,
+              "rule_preview": {
+                "candidate_kind": "RELATION",
+                "conditions": [
+                  "ontology_relation_id == relation-includes",
+                  "evidence_match_rate >= 0.95",
+                  "validation_failed_count == 0",
+                  "reviewed_sample_size >= 25"
+                ]
+              },
+              "supporting_metrics": [
+                {
+                  "metric_name": "EVIDENCE_MATCH_RATE",
+                  "value": 0.97,
+                  "numerator": 29,
+                  "denominator": 30
+                }
+              ],
+              "historical_match_preview": {
+                "total_examined": 30,
+                "would_match_count": 18,
+                "blocked_count": 12,
+                "outcomes": [
+                  {
+                    "artifact_id": "review-decision-777",
+                    "outcome": "WOULD_MATCH",
+                    "reason": "Evidence complete and no failed validation"
+                  }
+                ]
+              },
+              "source_learning_signal_ids": [
+                "signal-077"
+              ],
+              "correction_pattern_ids": [],
+              "source_artifacts": [],
+              "confidence_label": "LOW",
+              "risk_label": "HIGH",
+              "safety_note": "Recommendation only. Not enforced. Requires later policy approval before any policy is created or enabled.",
+              "blocked_actions": [
+                "CREATE_POLICY",
+                "ENABLE_POLICY",
+                "APPROVE_CANDIDATE",
+                "PUBLISH_GRAPH"
+              ]
+            }
+          ],
+          "next_cursor": null,
+          "total_count": 1
+        }
+      },
+      "SuggestionDecisionRequestExample": {
+        "value": {
+          "decision": "DISMISS",
+          "dismiss_reason_code": "INSUFFICIENT_EVIDENCE",
+          "note": "The pattern mixes two source types; wait for more review evidence.",
+          "intended_next_action": "MONITOR_FOR_MORE_EVIDENCE",
+          "client_request_id": "decision-req-20260622-001"
+        }
+      },
+      "SuggestionDecisionResponseExample": {
+        "value": {
+          "suggestion_id": "suggestion-direction-example-001",
+          "project_id": "project-insurance-demo",
+          "previous_state": "SUGGESTED",
+          "new_state": "DISMISSED",
+          "decision_audit_note": {
+            "id": "suggestion-decision-001",
+            "suggestion_id": "suggestion-direction-example-001",
+            "project_id": "project-insurance-demo",
+            "actor_id": "user-123",
+            "actor_role": "PROJECT_ADMIN",
+            "decision": "DISMISS",
+            "dismiss_reason_code": "INSUFFICIENT_EVIDENCE",
+            "note": "The pattern mixes two source types; wait for more review evidence.",
+            "intended_next_action": "MONITOR_FOR_MORE_EVIDENCE",
+            "decided_at": "2026-06-22T09:20:00Z",
+            "source_learning_signal_ids": [
+              "signal-001",
+              "signal-002"
+            ],
+            "target_prompt_version_id": "prompt-v12",
+            "suggestion_snapshot": {
+              "suggestion_kind": "ADD_RELATION_DIRECTION_EXAMPLE",
+              "title": "Add direction example for InsuranceProduct includes Rider",
+              "preview_text": "When extracting includes, use InsuranceProduct as source and Rider as target."
+            },
+            "mutation_guard": {
+              "prompt_version_mutated": false,
+              "candidate_graph_mutated": false,
+              "published_graph_mutated": false,
+              "auto_approval_policy_mutated": false,
+              "extraction_job_started": false,
+              "evaluation_run_started": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

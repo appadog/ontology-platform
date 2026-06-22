@@ -136,6 +136,10 @@ function isNavigationItemActive(path: string, pathname: string) {
     return pathname.includes("/candidates") || pathname.includes("/candidate-evidence");
   }
 
+  if (path === "/admin") {
+    return pathname.startsWith("/admin") || pathname.includes("/admin");
+  }
+
   return false;
 }
 

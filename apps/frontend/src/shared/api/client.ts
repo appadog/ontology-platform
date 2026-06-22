@@ -40,22 +40,79 @@ import {
   mockMvp4VectorStatus,
 } from "../mocks/mvp4Fixtures";
 import {
+  buildMockCredentialCreateResponse,
+  buildMockMvp5PermissionCheck,
+  buildMockRestoreDryRun,
+  mockMvp5AuditEvents,
+  mockMvp5AutomaticApprovalPolicy,
+  mockMvp5Backups,
+  mockMvp5Credentials,
+  mockMvp5DeletionDryRun,
+  mockMvp5EnforcePreview,
+  mockMvp5ExportDownload,
+  mockMvp5ExportJobs,
+  mockMvp5ImportDryRun,
+  mockMvp5OperationsDashboard,
+  mockMvp5OrganizationSummary,
+  mockMvp5PolicyDiff,
+  mockMvp5PolicyEvaluation,
+  mockMvp5ProjectSummaries,
+  mockMvp5RetentionPolicy,
+  mockMvp5RoleAssignments,
+  MVP5_ORGANIZATION_ID,
+  MVP5_PROJECT_ID,
+} from "../mocks/mvp5Fixtures";
+import {
+  buildMockMvp6EvaluationRun,
+  mockMvp6Datasets,
+  mockMvp6ErrorCases,
+  mockMvp6EvaluationRuns,
+  mockMvp6GoldEntities,
+  mockMvp6GoldRelations,
+  mockMvp6Metrics,
+  mockMvp6Samples,
+} from "../mocks/mvp6Fixtures";
+import {
+  AuditEvent,
+  AutomaticApprovalPolicyDocument,
+  BackupSnapshot,
   CandidateEntity,
   CandidateListFilters,
   CandidateEvidence,
   CandidateRelation,
+  CredentialCreateResponse,
+  CredentialKind,
+  CredentialView,
   DashboardSummary,
+  EnforcePreviewResponse,
   EvaluationDataset,
+  EvaluationDatasetCreateRequest,
   EvaluationDatasetVersion,
+  EvaluationErrorCase,
+  EvaluationMetric,
   EvaluationRun,
+  EvaluationRunCreateRequest,
+  EvaluationSample,
+  EvaluationSampleCreateRequest,
   ExternalApiDocsSurface,
   ExtractionJob,
   ExtractionJobCreateRequest,
   ExtractionJobDetail,
+  GoldEntity,
+  GoldEntityCreateRequest,
+  GoldRelation,
+  GoldRelationCreateRequest,
   GoldenSetItem,
   GraphExploreRequest,
   GraphExploreResponse,
   ModelRun,
+  OperationsDashboardResponse,
+  OrganizationAdminSummary,
+  OntologyExportDownload,
+  OntologyExportJob,
+  OntologyImportCreateRequest,
+  OntologyImportDryRunJob,
+  OntologyPackageMetadata,
   OntologyGraph,
   OntologyClass,
   OntologyClassCreateRequest,
@@ -68,6 +125,12 @@ import {
   OntologyRelationUpdateRequest,
   OntologyVersion,
   OntologyVersionCreateRequest,
+  OperationEventSeverity,
+  PermissionCheckRequest,
+  PermissionCheckResponse,
+  PolicyDiffResponse,
+  PolicyEvaluationResponse,
+  ProjectAdminSummary,
   ProjectCreateRequest,
   ProjectDetail,
   ProjectSummary,
@@ -85,6 +148,10 @@ import {
   ReviewTaskDetail,
   ReviewTaskListFilters,
   ReviewTaskListResponse,
+  RestoreDryRunResponse,
+  RetentionDeletionDryRunResponse,
+  RetentionPolicy,
+  RoleAssignment,
   SearchRequest,
   SearchResponse,
   SimilarEvidenceRequest,
@@ -102,6 +169,7 @@ import {
 
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== "false";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const DEFAULT_MVP5_ORGANIZATION_ID = import.meta.env.VITE_MVP5_ORGANIZATION_ID ?? MVP5_ORGANIZATION_ID;
 let mockProjectStore: ProjectDetail[] = mockProjects.map((project) => ({
   ...project,
   current_ontology_version_id: project.id === "project-corp-knowledge" ? "onto-v1-draft" : null,
@@ -126,6 +194,12 @@ let mockModelRunStore: ModelRun[] = [...mockModelRuns];
 let mockCandidateEntityStore: CandidateEntity[] = [...mockCandidateEntities];
 let mockCandidateRelationStore: CandidateRelation[] = [...mockCandidateRelations];
 let mockCandidateEvidenceStore: Record<string, CandidateEvidence> = { ...mockCandidateEvidences };
+let mockMvp6DatasetStore: EvaluationDataset[] = [...mockMvp6Datasets];
+let mockMvp6SampleStore: EvaluationSample[] = [...mockMvp6Samples];
+let mockMvp6GoldEntityStore: GoldEntity[] = [...mockMvp6GoldEntities];
+let mockMvp6GoldRelationStore: GoldRelation[] = [...mockMvp6GoldRelations];
+let mockMvp6EvaluationRunStore: EvaluationRun[] = [...mockMvp6EvaluationRuns];
+let mockMvp6RunCounter = 1;
 
 async function delay<T>(value: T): Promise<T> {
   await new Promise((resolve) => globalThis.setTimeout(resolve, 180));
@@ -181,6 +255,494 @@ async function uploadRequest<T>(path: string, formData: FormData): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+function unwrapItems<T>(payload: T[] | { items?: T[] }): T[] {
+  return Array.isArray(payload) ? payload : payload.items ?? [];
+}
+
+function normalizeAdminSummary(payload: Record<string, unknown>): OrganizationAdminSummary {
+  return {
+    ...payload,
+    organization_name: String(payload.organization_name ?? payload.name ?? payload.organization_id),
+  } as OrganizationAdminSummary;
+}
+
+function normalizeProjectAdminSummary(payload: Record<string, unknown>): ProjectAdminSummary {
+  return {
+    ...payload,
+    project_name: String(payload.project_name ?? payload.name ?? payload.project_id),
+    project_status: payload.project_status ?? payload.status,
+    selected_ontology_version_id: payload.selected_ontology_version_id ?? payload.current_ontology_version_id,
+    credential_count: payload.credential_count ?? payload.active_credential_count,
+    automatic_approval_policy_ref: payload.automatic_approval_policy_ref ?? payload.policy_mode,
+    latest_audit_events: payload.latest_audit_events ?? payload.audit_event_refs,
+  } as ProjectAdminSummary;
+}
+
+function normalizeRoleAssignment(payload: Record<string, unknown>): RoleAssignment {
+  return {
+    ...payload,
+    assignment_id: String(payload.assignment_id ?? payload.id),
+    organization_id:
+      payload.organization_id ??
+      (payload.scope_type === "ORGANIZATION" ? payload.scope_id : undefined),
+    project_id:
+      payload.project_id ??
+      (payload.scope_type === "PROJECT" ? payload.scope_id : undefined),
+  } as RoleAssignment;
+}
+
+function normalizeCredential(payload: Record<string, unknown>): CredentialView {
+  const quota = payload.quota as Record<string, unknown> | null | undefined;
+
+  return {
+    ...payload,
+    credential_id: String(payload.credential_id ?? payload.id),
+    credential_kind: (payload.credential_kind ?? payload.kind) as CredentialKind,
+    quota: quota
+      ? {
+          ...quota,
+          monthly_requests_used: quota.monthly_requests_used ?? quota.current_month_requests,
+          status: quota.status ?? "WITHIN_LIMIT",
+        }
+      : null,
+  } as CredentialView;
+}
+
+function normalizePolicy(payload: Record<string, unknown>): AutomaticApprovalPolicyDocument {
+  const conditions = (payload.conditions ?? {}) as Record<string, unknown>;
+
+  return {
+    ...payload,
+    policy_id: String(payload.policy_id ?? payload.id),
+    conditions: {
+      ...conditions,
+      confidence_threshold: conditions.confidence_threshold ?? conditions.min_confidence,
+      require_validation_passed:
+        conditions.require_validation_passed ?? conditions.require_validation_pass,
+    },
+  } as AutomaticApprovalPolicyDocument;
+}
+
+function normalizePolicyEvaluation(payload: Record<string, unknown>): PolicyEvaluationResponse {
+  const rows: Array<Record<string, unknown>> = Array.isArray(payload.rows)
+    ? (payload.rows as Array<Record<string, unknown>>).map((row) => {
+        const gateStatus = (row.gate_status ?? {}) as Record<string, unknown>;
+
+        return {
+          ...row,
+          row_id: String(row.row_id ?? row.candidate_id),
+          candidate_label: String(row.candidate_label ?? row.candidate_id),
+          block_reasons: row.block_reasons ?? row.blocked_reasons ?? [],
+          evidence_state: row.evidence_state ?? (gateStatus.evidence === false ? "BLOCKED" : "PASS"),
+          validation_state: row.validation_state ?? (gateStatus.validation === false ? "BLOCKED" : "PASS"),
+          version_state: row.version_state ?? (gateStatus.version === false ? "STALE_ONTOLOGY_VERSION" : "CURRENT"),
+        };
+      })
+    : [];
+
+  return {
+    ...payload,
+    status: payload.status ?? (rows.some((row) => row.status === "BLOCKED") ? "BLOCKED" : "WOULD_APPROVE"),
+    rows,
+  } as unknown as PolicyEvaluationResponse;
+}
+
+function normalizePolicyDiff(payload: Record<string, unknown>): PolicyDiffResponse {
+  const before = (payload.before ?? {}) as Record<string, unknown>;
+  const after = (payload.after ?? {}) as Record<string, unknown>;
+  const changedFields = Array.isArray(payload.changed_fields)
+    ? (payload.changed_fields as unknown[]).map(String)
+    : [];
+
+  return {
+    ...payload,
+    mode_change:
+      payload.mode_change ??
+      (before.mode || after.mode ? `${String(before.mode ?? "unknown")} -> ${String(after.mode ?? "unknown")}` : "No mode change"),
+    condition_changes: payload.condition_changes ?? changedFields,
+    action_changes: payload.action_changes ?? [],
+    destructive_or_sensitive_changes: payload.destructive_or_sensitive_changes ?? [],
+  } as PolicyDiffResponse;
+}
+
+function normalizeEnforcePreview(payload: Record<string, unknown>): EnforcePreviewResponse {
+  return {
+    ...payload,
+    requested_mode: payload.requested_mode ?? payload.target_mode,
+    gate_status: payload.gate_status ?? (payload.can_enforce ? "PASS" : "BLOCKED"),
+    gate_reasons: payload.gate_reasons ?? payload.blocked_reasons ?? [],
+    requires_confirmation:
+      payload.requires_confirmation ?? Boolean(payload.required_confirmation) ?? true,
+    affected_candidate_count: payload.affected_candidate_count ?? payload.affected_count ?? 0,
+  } as unknown as EnforcePreviewResponse;
+}
+
+function numberFrom(value: unknown, fallback = 0): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizePackageMetadata(payload: Record<string, unknown> | null | undefined): OntologyPackageMetadata | null {
+  if (!payload) {
+    return null;
+  }
+
+  const contentsSummary = (payload.contents_summary ?? {}) as Record<string, unknown>;
+  const counts = (payload.counts ?? contentsSummary) as Record<string, unknown>;
+  const schemaVersion = String(payload.schema_version ?? payload.package_schema_version ?? "ontology-package.v1");
+  const generatedAt = String(payload.generated_at ?? payload.created_at ?? new Date().toISOString());
+
+  return {
+    ...payload,
+    package_id: String(payload.package_id ?? payload.id ?? "pkg-preview"),
+    schema_version: schemaVersion,
+    package_schema_version: String(payload.package_schema_version ?? schemaVersion),
+    format: "JSON",
+    project_id: String(payload.project_id ?? MVP5_PROJECT_ID),
+    ontology_version_id: String(payload.ontology_version_id ?? payload.version_id ?? "unknown-ontology-version"),
+    generated_at: generatedAt,
+    created_at: payload.created_at ? String(payload.created_at) : generatedAt,
+    counts: {
+      class_count: numberFrom(counts.class_count ?? counts.classes ?? contentsSummary.class_count ?? contentsSummary.classes),
+      property_count: numberFrom(counts.property_count ?? counts.properties ?? contentsSummary.property_count ?? contentsSummary.properties),
+      relation_count: numberFrom(counts.relation_count ?? counts.relations ?? contentsSummary.relation_count ?? contentsSummary.relations),
+    },
+    compatibility_notes: Array.isArray(payload.compatibility_notes)
+      ? (payload.compatibility_notes as unknown[]).map(String)
+      : payload.compatibility_note
+        ? [String(payload.compatibility_note)]
+        : ["JSON P0 package"],
+    audit_event_ref: (payload.audit_event_ref ?? null) as OntologyPackageMetadata["audit_event_ref"],
+  } as OntologyPackageMetadata;
+}
+
+function normalizeExportJob(payload: Record<string, unknown>): OntologyExportJob {
+  const metadata = normalizePackageMetadata(
+    (payload.package_metadata ?? payload.metadata ?? (payload.package_id || payload.schema_version ? payload : payload.package)) as Record<string, unknown> | null,
+  );
+  const download = (payload.download ?? {}) as Record<string, unknown>;
+
+  return {
+    ...payload,
+    job_id: String(payload.job_id ?? payload.id),
+    project_id: String(payload.project_id ?? metadata?.project_id ?? MVP5_PROJECT_ID),
+    status: String(payload.status ?? (payload.completed_at ? "SUCCEEDED" : "RUNNING")) as OntologyExportJob["status"],
+    format: "JSON",
+    package_metadata: metadata,
+    download_url: (payload.download_url ?? download.download_url ?? payload.download_ref ?? null) as string | null,
+    file_name: (payload.file_name ?? download.file_name ?? payload.filename ?? null) as string | null,
+    checksum: (payload.checksum ?? download.checksum ?? metadata?.checksum ?? null) as string | null,
+    expires_at: (payload.expires_at ?? download.expires_at ?? null) as string | null,
+    audit_event_ref: (payload.audit_event_ref ?? metadata?.audit_event_ref ?? null) as OntologyExportJob["audit_event_ref"],
+  } as OntologyExportJob;
+}
+
+function buildDefaultOntologyPackage(projectId: string): Record<string, unknown> {
+  return {
+    package_id: "ontology-package-wave25-frontend-dry-run",
+    schema_version: "ontology-package.v1",
+    project_id: projectId,
+    ontology_version_id: "ontology-version-mvp5-current",
+    published_graph_version_id: "published-graph-version-mvp5-current",
+    generated_at: "2026-06-19T09:00:00Z",
+    classes: [
+      { stable_id: "class-customer-imported-other", name: "Customer", description: "Conflicting Customer identifier." },
+      { stable_id: "class-account", name: "Account", description: "Financial account." },
+    ],
+    properties: [
+      { stable_id: "property-customer-email", class_stable_id: "class-customer-imported-other", name: "email", data_type: "STRING" },
+      { stable_id: "property-customer-tier", class_stable_id: "class-customer-imported-other", name: "tier", data_type: "STRING" },
+      { stable_id: "property-account-status", class_stable_id: "class-account", name: "status", data_type: "STRING" },
+    ],
+    relations: [
+      {
+        stable_id: "relation-customer-owns-account",
+        name: "OWNS_ACCOUNT",
+        source_class_stable_id: "class-customer-imported-other",
+        target_class_stable_id: "class-account",
+      },
+      {
+        stable_id: "relation-customer-reviewed-by-account",
+        name: "REVIEWED_BY",
+        source_class_stable_id: "class-customer-imported-other",
+        target_class_stable_id: "class-account",
+      },
+    ],
+  };
+}
+
+function normalizeImportRow(
+  row: Record<string, unknown> | string,
+  index: number,
+  rowType: "CONFLICT" | "WARNING" | "DESTRUCTIVE" | "INVALID",
+) {
+  if (typeof row === "string") {
+    return {
+      row_id: `${rowType.toLowerCase()}-${index + 1}`,
+      row_type: rowType,
+      conflict_type: rowType === "WARNING" ? "NO_OP" : "UNKNOWN",
+      severity: rowType === "WARNING" ? "WARNING" : "BLOCKING",
+      blocking: rowType !== "WARNING",
+      path: "package",
+      message: row,
+    } as const;
+  }
+
+  const severity = String(row.severity ?? (row.blocking === false ? "WARNING" : rowType === "WARNING" ? "WARNING" : "BLOCKING"));
+
+  return {
+    ...row,
+    row_id: String(row.row_id ?? row.id ?? `${rowType.toLowerCase()}-${index + 1}`),
+    row_type: rowType,
+    conflict_type: String(row.conflict_type ?? row.type ?? (rowType === "WARNING" ? "NO_OP" : "UNKNOWN")),
+    severity,
+    blocking: row.blocking !== undefined ? Boolean(row.blocking) : severity === "BLOCKING" || rowType === "DESTRUCTIVE" || rowType === "INVALID",
+    path: String(row.path ?? row.resource_path ?? "package"),
+    message: String(row.message ?? row.impact ?? "Import dry-run row"),
+    local_ref: (row.local_ref ?? row.local_object_ref ?? null) as string | null,
+    package_ref: (row.package_ref ?? row.package_object_ref ?? null) as string | null,
+    affected_lineage_ref: (row.affected_lineage_ref ?? row.lineage_ref ?? null) as string | null,
+    proposed_resolution: (row.proposed_resolution ?? row.resolution ?? null) as string | null,
+  };
+}
+
+function normalizeImportDryRun(payload: Record<string, unknown>, fallbackPackage?: Record<string, unknown>): OntologyImportDryRunJob {
+  const metadata = normalizePackageMetadata(
+    (payload.package_metadata ?? payload.metadata ?? (payload.package_id || payload.schema_version ? payload : payload.package) ?? fallbackPackage) as Record<string, unknown> | null,
+  );
+  const summary = (payload.summary ?? {}) as Record<string, unknown>;
+  const rawConflicts = Array.isArray(payload.conflicts) ? (payload.conflicts as Array<Record<string, unknown>>) : [];
+  const rawWarnings = Array.isArray(payload.warnings) ? (payload.warnings as Array<Record<string, unknown> | string>) : [];
+  const destructiveImpact = (payload.destructive_impact ?? {}) as Record<string, unknown>;
+  const rawDestructiveRows = Array.isArray(payload.destructive_impact_rows)
+    ? (payload.destructive_impact_rows as Array<Record<string, unknown>>)
+    : Array.isArray(payload.destructive_impacts)
+      ? (payload.destructive_impacts as Array<Record<string, unknown>>)
+    : [];
+  const conflicts = rawConflicts.map((row, index) =>
+    normalizeImportRow(row, index, row.severity === "DESTRUCTIVE" ? "DESTRUCTIVE" : "CONFLICT"),
+  );
+  const warnings = rawWarnings.map((row, index) => normalizeImportRow(row, index, "WARNING"));
+  const destructiveRows = rawDestructiveRows.length
+    ? rawDestructiveRows.map((row, index) => ({
+        row_id: String(row.row_id ?? row.id ?? `destructive-${index + 1}`),
+        resource_type: String(row.resource_type ?? "UNKNOWN"),
+        resource_id: (row.resource_id ?? null) as string | null,
+        impact: String(row.impact ?? row.message ?? "Destructive impact preview"),
+        blocked: row.blocked !== undefined ? Boolean(row.blocked) : true,
+        lineage_ref: (row.lineage_ref ?? null) as string | null,
+      }))
+    : [
+        {
+          row_id: "destructive-summary",
+          resource_type: "PUBLISHED_GRAPH_REF",
+          resource_id: null,
+          impact: `${numberFrom(destructiveImpact.published_graph_refs_affected)} published graph refs affected`,
+          blocked: numberFrom(destructiveImpact.published_graph_refs_affected) > 0,
+          lineage_ref: null,
+        },
+      ];
+  const computedDestructiveImpact = {
+    would_delete_classes: numberFrom(destructiveImpact.would_delete_classes),
+    would_delete_properties: numberFrom(destructiveImpact.would_delete_properties),
+    would_delete_relations: numberFrom(destructiveImpact.would_delete_relations),
+    published_graph_refs_affected: numberFrom(destructiveImpact.published_graph_refs_affected),
+  };
+  if (
+    !computedDestructiveImpact.would_delete_classes &&
+    !computedDestructiveImpact.would_delete_properties &&
+    !computedDestructiveImpact.would_delete_relations &&
+    rawDestructiveRows.length
+  ) {
+    computedDestructiveImpact.would_delete_classes = rawDestructiveRows.filter((row) => row.resource_type === "CLASS").length;
+    computedDestructiveImpact.would_delete_properties = rawDestructiveRows.filter((row) => row.resource_type === "PROPERTY").length;
+    computedDestructiveImpact.would_delete_relations = rawDestructiveRows.filter((row) => row.resource_type === "RELATION").length;
+    computedDestructiveImpact.published_graph_refs_affected = rawDestructiveRows.filter((row) => row.lineage_ref || row.affected_lineage_ref).length;
+  }
+  const rawCompatibilityStatus = String(
+    payload.compatibility_status ??
+      (payload.status === "BLOCKED"
+        ? computedDestructiveImpact.published_graph_refs_affected > 0 || destructiveRows.some((row) => row.blocked)
+          ? "DESTRUCTIVE_BLOCKED"
+          : "CONFLICT_BLOCKED"
+        : warnings.length > 0
+          ? "WARNING_COMPATIBLE"
+          : "COMPATIBLE"),
+  );
+  const compatibilityStatus =
+    rawCompatibilityStatus === "WARNING"
+      ? "WARNING_COMPATIBLE"
+      : rawCompatibilityStatus === "BLOCKED"
+        ? destructiveRows.some((row) => row.blocked)
+          ? "DESTRUCTIVE_BLOCKED"
+          : "CONFLICT_BLOCKED"
+        : rawCompatibilityStatus;
+
+  return {
+    ...payload,
+    job_id: String(payload.job_id ?? payload.id),
+    project_id: String(payload.project_id ?? metadata?.project_id ?? MVP5_PROJECT_ID),
+    status: String(payload.status ?? "BLOCKED") as OntologyImportDryRunJob["status"],
+    format: "JSON",
+    compatibility_status: compatibilityStatus as OntologyImportDryRunJob["compatibility_status"],
+    package_metadata: metadata,
+    summary: {
+      create_count: numberFrom(summary.create_count),
+      update_count: numberFrom(summary.update_count),
+      delete_count: numberFrom(summary.delete_count),
+      no_op_count: numberFrom(summary.no_op_count ?? summary.noop_count),
+      conflict_count: numberFrom(summary.conflict_count ?? conflicts.length, conflicts.length),
+      warning_count: numberFrom(summary.warning_count ?? warnings.length, warnings.length),
+    },
+    conflicts,
+    warnings,
+    destructive_impact: computedDestructiveImpact,
+    destructive_impact_rows: destructiveRows,
+    rollback_guidance: Array.isArray(payload.rollback_guidance)
+      ? (payload.rollback_guidance as unknown[]).map(String)
+      : ["Dry-run only; no ontology mutation was applied."],
+    requires_confirmation: payload.requires_confirmation !== undefined ? Boolean(payload.requires_confirmation) : payload.confirmation_required !== undefined ? Boolean(payload.confirmation_required) : true,
+    confirmation_text: (payload.confirmation_text ?? payload.confirmation_required_text ?? "Confirmation is recorded as future-gated evidence only.") as string,
+    audit_preview: (payload.audit_preview ?? (payload.audit_event_ref ? { audit_event_ref: payload.audit_event_ref } : null)) as OntologyImportDryRunJob["audit_preview"],
+    audit_event_ref: (payload.audit_event_ref ?? null) as OntologyImportDryRunJob["audit_event_ref"],
+    dry_run_only: true,
+    mutation_applied: false,
+  } as OntologyImportDryRunJob;
+}
+
+function normalizeOperationsDashboard(payload: Record<string, unknown>): OperationsDashboardResponse {
+  const healthRows = Array.isArray(payload.health)
+    ? (payload.health as Array<Record<string, unknown>>)
+    : [];
+  const jobs: Array<Record<string, unknown>> = Array.isArray(payload.jobs)
+    ? (payload.jobs as Array<Record<string, unknown>>).map((job) => ({
+        ...job,
+        job_id: String(job.job_id ?? job.id),
+        attempts: job.attempts ?? job.retry_count ?? 0,
+        max_attempts: job.max_attempts ?? 3,
+      }))
+    : [];
+  const dlqRows = Array.isArray(payload.dlq_rows)
+    ? (payload.dlq_rows as Array<Record<string, unknown>>).map((row) => ({
+        ...row,
+        dlq_id: String(row.dlq_id ?? row.id),
+        failure_code: row.failure_code ?? row.reason,
+        blocked_reasons: row.blocked_reasons ?? (row.reason ? [String(row.reason)] : []),
+      }))
+    : [];
+  const costBudget = (payload.cost_budget ?? {}) as Record<string, unknown>;
+  const observability = (payload.observability ?? {}) as Record<string, unknown>;
+
+  return {
+    ...payload,
+    project_id: String(payload.project_id ?? MVP5_PROJECT_ID),
+    job_health: {
+      failed_count: healthRows.reduce((sum, row) => sum + Number(row.failed_count ?? 0), 0),
+      retrying_count: jobs.filter((job) => job.status === "RETRYING").length,
+      dlq_count: dlqRows.length,
+      healthy_count: jobs.filter((job) => job.status === "SUCCEEDED").length,
+    },
+    jobs,
+    dlq_rows: dlqRows,
+    cost_budget: {
+      ...costBudget,
+      budget_status: costBudget.budget_status ?? costBudget.status ?? "DISABLED",
+      budget_amount: costBudget.budget_amount ?? costBudget.monthly_budget_usd,
+      estimated_spend: costBudget.estimated_spend ?? costBudget.current_spend_usd,
+      token_limit: costBudget.token_limit ?? costBudget.token_budget,
+      tokens_used: costBudget.tokens_used ?? costBudget.current_tokens,
+    },
+    observability: {
+      ...observability,
+      traces: observability.traces ?? observability.tracing ?? "NOT_CONFIGURED",
+      logs: observability.logs ?? observability.logging ?? "UNAVAILABLE",
+      structured_events: observability.structured_events ?? "AVAILABLE",
+    },
+    recent_events: payload.recent_events ?? [],
+  } as unknown as OperationsDashboardResponse;
+}
+
+function normalizeBackup(payload: Record<string, unknown>): BackupSnapshot {
+  return {
+    ...payload,
+    snapshot_id: String(payload.snapshot_id ?? payload.id),
+    restore_eligibility: payload.restore_eligibility ?? {
+      eligible: payload.restore_eligible,
+      block_reasons: payload.restore_block_reason ? [String(payload.restore_block_reason)] : [],
+    },
+  } as BackupSnapshot;
+}
+
+function normalizeRetentionPolicy(payload: Record<string, unknown>): RetentionPolicy {
+  const rules: Array<Record<string, unknown>> = Array.isArray(payload.rules)
+    ? (payload.rules as Array<Record<string, unknown>>).map((rule, index) => ({
+        ...rule,
+        rule_id: String(rule.rule_id ?? `${payload.project_id ?? "project"}-retention-rule-${index + 1}`),
+        mode: rule.mode ?? rule.action_mode,
+      }))
+    : [];
+
+  return {
+    ...payload,
+    legal_hold_enabled:
+      payload.legal_hold_enabled ?? rules.some((rule) => Boolean(rule.legal_hold)),
+    rules,
+  } as unknown as RetentionPolicy;
+}
+
+function normalizeRetentionDeletionDryRun(payload: Record<string, unknown>): RetentionDeletionDryRunResponse {
+  const impactSummary = (payload.impact_summary ?? {}) as Record<string, unknown>;
+  const lineageRows = Array.isArray(payload.lineage_impact)
+    ? (payload.lineage_impact as Array<Record<string, unknown>>)
+    : Array.isArray(payload.lineage_impacts)
+      ? (payload.lineage_impacts as Array<Record<string, unknown>>).map((impact) => ({
+          ...impact,
+          resource_type: impact.resource_type ?? payload.requested_resource_type ?? "SOURCE",
+          impact:
+            impact.impact ??
+            `published ${Array.isArray(impact.published_graph_version_ids) ? impact.published_graph_version_ids.length : 0}, candidates ${
+              Array.isArray(impact.candidate_ids) ? impact.candidate_ids.length : 0
+            }, evidence ${Array.isArray(impact.evidence_ids) ? impact.evidence_ids.length : 0}`,
+          blocked: impact.blocked ?? impact.blocked_by_lineage ?? false,
+        }))
+      : [];
+
+  return {
+    ...payload,
+    requested_resource_type: payload.requested_resource_type ?? "SOURCE",
+    lineage_impact: lineageRows,
+    impact_summary: {
+      ...impactSummary,
+      affected_count: impactSummary.affected_count ?? impactSummary.requested_count ?? 0,
+      irreversible_count: impactSummary.irreversible_count ?? 0,
+      destructive: impactSummary.destructive ?? Boolean(impactSummary.blocked_count),
+    },
+    requires_confirmation: payload.requires_confirmation ?? impactSummary.requires_confirmation ?? true,
+  } as unknown as RetentionDeletionDryRunResponse;
+}
+
+function normalizeRestoreDryRun(payload: Record<string, unknown>): RestoreDryRunResponse {
+  return {
+    ...payload,
+    status:
+      payload.status ??
+      (payload.eligible ? "RESTORE_DRY_RUN_AVAILABLE" : "RESTORE_BLOCKED"),
+    block_reasons: payload.block_reasons ?? payload.blocked_reasons ?? [],
+    restore_impact: payload.restore_impact ?? payload.impacted_resources ?? {},
+  } as RestoreDryRunResponse;
+}
+
+function normalizeAuditEvent(payload: Record<string, unknown>): AuditEvent {
+  return {
+    ...payload,
+    audit_event_id: String(payload.audit_event_id ?? payload.id),
+    event_type: String(payload.event_type ?? payload.action ?? payload.category),
+    severity: (payload.severity ?? "INFO") as OperationEventSeverity,
+    actor: payload.actor ?? { principal_id: payload.actor_id },
+    target: payload.target ?? { target_type: payload.target_type, target_id: payload.target_id },
+  } as AuditEvent;
 }
 
 function createMockPreview(source: SourceData): SourcePreview {
@@ -1739,15 +2301,47 @@ export const apiClient = {
   async listEvaluationDatasets(projectId: string): Promise<EvaluationDataset[]> {
     if (USE_MOCK_API) {
       assertMvp4Project(projectId);
-      return delay(mockMvp4Datasets.filter((dataset) => dataset.project_id === projectId));
+      return delay(mockMvp6DatasetStore.filter((dataset) => dataset.project_id === projectId));
     }
 
-    return request<EvaluationDataset[]>(`/api/v1/projects/${projectId}/evaluation-datasets`);
+    const payload = await request<EvaluationDataset[] | { items?: EvaluationDataset[] }>(`/api/v1/projects/${projectId}/evaluation-datasets`);
+    return unwrapItems(payload);
+  },
+
+  async createEvaluationDataset(projectId: string, payload: EvaluationDatasetCreateRequest): Promise<EvaluationDataset> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      const now = new Date().toISOString();
+      const dataset: EvaluationDataset = {
+        id: `eval-dataset-mvp6-${mockMvp6DatasetStore.length + 1}`,
+        project_id: projectId,
+        name: payload.name,
+        description: payload.description ?? null,
+        status: "DRAFT",
+        sample_count: 0,
+        gold_entity_count: 0,
+        gold_relation_count: 0,
+        owner_id: "qa-owner",
+        active_version_id: null,
+        created_at: now,
+        updated_at: now,
+        notes: "Created in mock mode for MVP6.1 evaluation workflow.",
+      };
+      mockMvp6DatasetStore = [dataset, ...mockMvp6DatasetStore];
+      return delay(dataset);
+    }
+
+    return jsonRequest<EvaluationDataset>(`/api/v1/projects/${projectId}/evaluation-datasets`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   async getEvaluationDataset(datasetId: string): Promise<EvaluationDataset> {
     if (USE_MOCK_API) {
-      const dataset = mockMvp4Datasets.find((item) => item.id === datasetId);
+      const dataset =
+        mockMvp6DatasetStore.find((item) => item.id === datasetId) ??
+        mockMvp4Datasets.find((item) => item.id === datasetId);
 
       if (!dataset) {
         throw new Error("Evaluation dataset fixture not found");
@@ -1757,6 +2351,131 @@ export const apiClient = {
     }
 
     return request<EvaluationDataset>(`/api/v1/evaluation-datasets/${datasetId}`);
+  },
+
+  async listEvaluationSamples(datasetId: string): Promise<EvaluationSample[]> {
+    if (USE_MOCK_API) {
+      return delay(mockMvp6SampleStore.filter((sample) => sample.dataset_id === datasetId));
+    }
+
+    const payload = await request<EvaluationSample[] | { items?: EvaluationSample[] }>(`/api/v1/evaluation-datasets/${datasetId}/samples`);
+    return unwrapItems(payload);
+  },
+
+  async createEvaluationSample(datasetId: string, payload: EvaluationSampleCreateRequest): Promise<EvaluationSample> {
+    if (USE_MOCK_API) {
+      const dataset = mockMvp6DatasetStore.find((item) => item.id === datasetId);
+
+      if (!dataset) {
+        throw new Error("Evaluation dataset fixture not found");
+      }
+
+      const sample: EvaluationSample = {
+        id: `eval-sample-mvp6-${mockMvp6SampleStore.length + 1}`,
+        project_id: dataset.project_id,
+        dataset_id: dataset.id,
+        sample_kind: payload.sample_kind,
+        source_id: payload.source_id ?? null,
+        source_segment_id: payload.source_segment_id ?? null,
+        source_locator: payload.source_locator ?? null,
+        title: payload.title,
+        content_text: payload.content_text ?? null,
+        metadata: payload.metadata ?? {},
+        created_at: new Date().toISOString(),
+      };
+      mockMvp6SampleStore = [sample, ...mockMvp6SampleStore];
+      mockMvp6DatasetStore = mockMvp6DatasetStore.map((item) =>
+        item.id === dataset.id ? { ...item, sample_count: (item.sample_count ?? 0) + 1, updated_at: sample.created_at } : item,
+      );
+      return delay(sample);
+    }
+
+    return jsonRequest<EvaluationSample>(`/api/v1/evaluation-datasets/${datasetId}/samples`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async listGoldEntities(datasetId: string): Promise<GoldEntity[]> {
+    if (USE_MOCK_API) {
+      return delay(mockMvp6GoldEntityStore.filter((entity) => entity.dataset_id === datasetId));
+    }
+
+    const payload = await request<GoldEntity[] | { items?: GoldEntity[] }>(`/api/v1/evaluation-datasets/${datasetId}/gold-entities`);
+    return unwrapItems(payload);
+  },
+
+  async createGoldEntity(datasetId: string, payload: GoldEntityCreateRequest): Promise<GoldEntity> {
+    if (USE_MOCK_API) {
+      const dataset = mockMvp6DatasetStore.find((item) => item.id === datasetId);
+
+      if (!dataset) {
+        throw new Error("Evaluation dataset fixture not found");
+      }
+
+      const entity: GoldEntity = {
+        id: `gold-entity-mvp6-${mockMvp6GoldEntityStore.length + 1}`,
+        project_id: dataset.project_id,
+        dataset_id: dataset.id,
+        sample_id: payload.sample_id,
+        ontology_class_id: payload.ontology_class_id,
+        label: payload.label,
+        normalized_value: payload.normalized_value ?? null,
+        evidence: payload.evidence,
+        created_at: new Date().toISOString(),
+      };
+      mockMvp6GoldEntityStore = [entity, ...mockMvp6GoldEntityStore];
+      mockMvp6DatasetStore = mockMvp6DatasetStore.map((item) =>
+        item.id === dataset.id ? { ...item, gold_entity_count: (item.gold_entity_count ?? 0) + 1, updated_at: entity.created_at } : item,
+      );
+      return delay(entity);
+    }
+
+    return jsonRequest<GoldEntity>(`/api/v1/evaluation-datasets/${datasetId}/gold-entities`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async listGoldRelations(datasetId: string): Promise<GoldRelation[]> {
+    if (USE_MOCK_API) {
+      return delay(mockMvp6GoldRelationStore.filter((relation) => relation.dataset_id === datasetId));
+    }
+
+    const payload = await request<GoldRelation[] | { items?: GoldRelation[] }>(`/api/v1/evaluation-datasets/${datasetId}/gold-relations`);
+    return unwrapItems(payload);
+  },
+
+  async createGoldRelation(datasetId: string, payload: GoldRelationCreateRequest): Promise<GoldRelation> {
+    if (USE_MOCK_API) {
+      const dataset = mockMvp6DatasetStore.find((item) => item.id === datasetId);
+
+      if (!dataset) {
+        throw new Error("Evaluation dataset fixture not found");
+      }
+
+      const relation: GoldRelation = {
+        id: `gold-relation-mvp6-${mockMvp6GoldRelationStore.length + 1}`,
+        project_id: dataset.project_id,
+        dataset_id: dataset.id,
+        sample_id: payload.sample_id,
+        ontology_relation_id: payload.ontology_relation_id,
+        source_gold_entity_id: payload.source_gold_entity_id,
+        target_gold_entity_id: payload.target_gold_entity_id,
+        evidence: payload.evidence,
+        created_at: new Date().toISOString(),
+      };
+      mockMvp6GoldRelationStore = [relation, ...mockMvp6GoldRelationStore];
+      mockMvp6DatasetStore = mockMvp6DatasetStore.map((item) =>
+        item.id === dataset.id ? { ...item, gold_relation_count: (item.gold_relation_count ?? 0) + 1, updated_at: relation.created_at } : item,
+      );
+      return delay(relation);
+    }
+
+    return jsonRequest<GoldRelation>(`/api/v1/evaluation-datasets/${datasetId}/gold-relations`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   async listEvaluationDatasetVersions(datasetId: string): Promise<EvaluationDatasetVersion[]> {
@@ -1810,10 +2529,91 @@ export const apiClient = {
   async listEvaluationRuns(projectId: string): Promise<EvaluationRun[]> {
     if (USE_MOCK_API) {
       assertMvp4Project(projectId);
-      return delay(mockMvp4EvaluationRuns.filter((run) => run.project_id === projectId));
+      return delay(mockMvp6EvaluationRunStore.filter((run) => run.project_id === projectId));
     }
 
-    return request<EvaluationRun[]>(`/api/v1/projects/${projectId}/evaluation-runs`);
+    const payload = await request<EvaluationRun[] | { items?: EvaluationRun[] }>(`/api/v1/projects/${projectId}/evaluation-runs`);
+    return unwrapItems(payload);
+  },
+
+  async createEvaluationRun(projectId: string, payload: EvaluationRunCreateRequest): Promise<EvaluationRun> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      const run = buildMockMvp6EvaluationRun(projectId, payload, `eval-run-mvp6-deterministic-${mockMvp6RunCounter}`);
+      mockMvp6RunCounter += 1;
+      mockMvp6EvaluationRunStore = [run, ...mockMvp6EvaluationRunStore];
+      return delay(run);
+    }
+
+    return jsonRequest<EvaluationRun>(`/api/v1/projects/${projectId}/evaluation-runs`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getEvaluationRun(runId: string): Promise<EvaluationRun> {
+    if (USE_MOCK_API) {
+      const run = mockMvp6EvaluationRunStore.find((item) => item.id === runId) ?? mockMvp4EvaluationRuns.find((item) => item.id === runId);
+
+      if (!run) {
+        throw new Error("Evaluation run fixture not found");
+      }
+
+      return delay(run);
+    }
+
+    return request<EvaluationRun>(`/api/v1/evaluation-runs/${runId}`);
+  },
+
+  async listEvaluationMetrics(runId: string): Promise<EvaluationMetric[]> {
+    if (USE_MOCK_API) {
+      const run = mockMvp6EvaluationRunStore.find((item) => item.id === runId);
+
+      if (!run) {
+        return delay([]);
+      }
+
+      return delay(mockMvp6Metrics.map((metric) => ({ ...metric, run_id: run.id })));
+    }
+
+    const payload = await request<EvaluationMetric[] | { items?: EvaluationMetric[] }>(`/api/v1/evaluation-runs/${runId}/metrics`);
+    return unwrapItems(payload);
+  },
+
+  async listEvaluationErrorCases(runId: string): Promise<EvaluationErrorCase[]> {
+    if (USE_MOCK_API) {
+      const run = mockMvp6EvaluationRunStore.find((item) => item.id === runId);
+
+      if (!run) {
+        return delay([]);
+      }
+
+      return delay(
+        mockMvp6ErrorCases.map((errorCase) => ({
+          ...errorCase,
+          run_id: run.id,
+          project_id: run.project_id,
+          dataset_id: run.dataset_id ?? errorCase.dataset_id,
+        })),
+      );
+    }
+
+    const payload = await request<EvaluationErrorCase[] | { items?: EvaluationErrorCase[] }>(`/api/v1/evaluation-runs/${runId}/errors`);
+    return unwrapItems(payload);
+  },
+
+  async getEvaluationErrorCase(errorCaseId: string): Promise<EvaluationErrorCase> {
+    if (USE_MOCK_API) {
+      const errorCase = mockMvp6ErrorCases.find((item) => item.id === errorCaseId);
+
+      if (!errorCase) {
+        throw new Error("Evaluation error case fixture not found");
+      }
+
+      return delay(errorCase);
+    }
+
+    return request<EvaluationErrorCase>(`/api/v1/evaluation-error-cases/${errorCaseId}`);
   },
 
   async searchProject(projectId: string, filters: SearchRequest = {}): Promise<SearchResponse> {
@@ -1893,6 +2693,351 @@ export const apiClient = {
       dev_auth_missing: false,
       endpoints: mockMvp4ExternalApiDocs.endpoints,
     };
+  },
+
+  async getAdminOrganizationSummary(organizationId = DEFAULT_MVP5_ORGANIZATION_ID): Promise<OrganizationAdminSummary> {
+    if (USE_MOCK_API) {
+      if (organizationId !== mockMvp5OrganizationSummary.organization_id) {
+        throw new Error("MVP5 organization admin fixture not found");
+      }
+
+      return delay(mockMvp5OrganizationSummary);
+    }
+
+    const payload = await request<Record<string, unknown>>(`/api/v1/admin/organizations/${organizationId}/summary`);
+    return normalizeAdminSummary(payload);
+  },
+
+  async listAdminProjectSummaries(): Promise<ProjectAdminSummary[]> {
+    if (USE_MOCK_API) {
+      return delay(mockMvp5ProjectSummaries);
+    }
+
+    const organization = await this.getAdminOrganizationSummary();
+    const projects = await request<ProjectSummary[]>("/api/v1/projects");
+    const summaries = await Promise.all(
+      projects.map(async (project) => {
+        const payload = await request<Record<string, unknown>>(`/api/v1/admin/projects/${project.id}/summary`);
+        return normalizeProjectAdminSummary(payload);
+      }),
+    );
+    return summaries.filter((summary) => summary.organization_id === organization.organization_id);
+  },
+
+  async getAdminProjectSummary(projectId = MVP5_PROJECT_ID): Promise<ProjectAdminSummary> {
+    if (USE_MOCK_API) {
+      const project = mockMvp5ProjectSummaries.find((item) => item.project_id === projectId);
+
+      if (!project) {
+        throw new Error("MVP5 project admin fixture not found");
+      }
+
+      return delay(project);
+    }
+
+    const payload = await request<Record<string, unknown>>(`/api/v1/admin/projects/${projectId}/summary`);
+    return normalizeProjectAdminSummary(payload);
+  },
+
+  async listAdminRoleAssignments(projectId: string): Promise<RoleAssignment[]> {
+    if (USE_MOCK_API) {
+      return delay(mockMvp5RoleAssignments.filter((assignment) => !assignment.project_id || assignment.project_id === projectId));
+    }
+
+    const payload = await request<RoleAssignment[] | { items?: RoleAssignment[] }>(
+      `/api/v1/admin/projects/${projectId}/role-assignments`,
+    );
+    return unwrapItems(payload).map((item) => normalizeRoleAssignment(item as unknown as Record<string, unknown>));
+  },
+
+  async checkAdminPermission(payload: PermissionCheckRequest): Promise<PermissionCheckResponse> {
+    if (USE_MOCK_API) {
+      return delay(buildMockMvp5PermissionCheck(payload));
+    }
+
+    return jsonRequest<PermissionCheckResponse>("/api/v1/admin/permission-checks", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async listAdminCredentials(projectId: string): Promise<CredentialView[]> {
+    if (USE_MOCK_API) {
+      return delay(mockMvp5Credentials.filter((credential) => credential.project_id === projectId));
+    }
+
+    const [serviceAccountsPayload, apiKeysPayload] = await Promise.all([
+      request<CredentialView[] | { items?: CredentialView[] }>(`/api/v1/admin/projects/${projectId}/service-accounts`),
+      request<CredentialView[] | { items?: CredentialView[] }>(`/api/v1/admin/projects/${projectId}/api-keys`),
+    ]);
+    const serviceAccounts = unwrapItems(serviceAccountsPayload).map((item) => normalizeCredential(item as unknown as Record<string, unknown>));
+    const apiKeys = unwrapItems(apiKeysPayload).map((item) => normalizeCredential(item as unknown as Record<string, unknown>));
+    return [...serviceAccounts, ...apiKeys];
+  },
+
+  async createAdminServiceAccount(projectId: string): Promise<CredentialCreateResponse> {
+    if (USE_MOCK_API) {
+      return delay(buildMockCredentialCreateResponse(projectId));
+    }
+
+    const payload = await jsonRequest<CredentialCreateResponse>(`/api/v1/admin/projects/${projectId}/service-accounts`, {
+      method: "POST",
+      body: JSON.stringify({
+        name: "New dry-run service account",
+        scopes: ["PROJECT_ADMIN_READ", "QUALITY_READ"],
+        reason: "Wave24 frontend smoke create assertion",
+      }),
+    });
+    return {
+      ...payload,
+      credential: normalizeCredential(payload.credential as unknown as Record<string, unknown>),
+    };
+  },
+
+  async revokeAdminCredential(credentialId: string, reason: string): Promise<CredentialView> {
+    if (USE_MOCK_API) {
+      const credential = mockMvp5Credentials.find((item) => item.credential_id === credentialId) ?? mockMvp5Credentials[0];
+      return delay({
+        ...credential,
+        status: "REVOKED",
+        revoked_at: "2026-06-19T09:05:00.000Z",
+        audit_event_refs: [...(credential.audit_event_refs ?? []), { audit_event_id: "audit-credential-revoke-confirm", event_type: "credential.revoked" }],
+      });
+    }
+
+    const kindPath = credentialId.includes("service") ? "service-accounts" : "api-keys";
+    const payload = await jsonRequest<CredentialView>(`/api/v1/admin/${kindPath}/${credentialId}/revoke`, {
+      method: "POST",
+      body: JSON.stringify({ reason, confirmation: "REVOKE" }),
+    });
+    return normalizeCredential(payload as unknown as Record<string, unknown>);
+  },
+
+  async getAutomaticApprovalPolicy(projectId: string): Promise<AutomaticApprovalPolicyDocument> {
+    if (USE_MOCK_API) {
+      if (projectId !== mockMvp5AutomaticApprovalPolicy.project_id) {
+        throw new Error("MVP5 automatic approval policy fixture not found");
+      }
+
+      return delay(mockMvp5AutomaticApprovalPolicy);
+    }
+
+    const payload = await request<AutomaticApprovalPolicyDocument[] | { items?: AutomaticApprovalPolicyDocument[] }>(
+      `/api/v1/admin/projects/${projectId}/automatic-approval-policies`,
+    );
+    const policy = unwrapItems(payload)[0];
+
+    if (!policy) {
+      throw new Error("No automatic approval policy returned by API");
+    }
+
+    return normalizePolicy(policy as unknown as Record<string, unknown>);
+  },
+
+  async evaluateAutomaticApprovalPolicy(policyId: string): Promise<PolicyEvaluationResponse> {
+    if (USE_MOCK_API) {
+      return delay({ ...mockMvp5PolicyEvaluation, policy_id: policyId });
+    }
+
+    const payload = await jsonRequest<PolicyEvaluationResponse>(`/api/v1/admin/automatic-approval-policies/${policyId}/evaluate`, {
+      method: "POST",
+      body: JSON.stringify({ mode: "DRY_RUN" }),
+    });
+    return normalizePolicyEvaluation(payload as unknown as Record<string, unknown>);
+  },
+
+  async diffAutomaticApprovalPolicy(policyId: string): Promise<PolicyDiffResponse> {
+    if (USE_MOCK_API) {
+      return delay({ ...mockMvp5PolicyDiff, policy_id: policyId });
+    }
+
+    const payload = await jsonRequest<PolicyDiffResponse>(`/api/v1/admin/automatic-approval-policies/${policyId}/diff`, {
+      method: "POST",
+      body: JSON.stringify({ target_mode: "DRY_RUN", reason: "Wave24 frontend dry-run diff preview" }),
+    });
+    return normalizePolicyDiff(payload as unknown as Record<string, unknown>);
+  },
+
+  async previewAutomaticApprovalEnforce(policyId: string): Promise<EnforcePreviewResponse> {
+    if (USE_MOCK_API) {
+      return delay({ ...mockMvp5EnforcePreview, policy_id: policyId });
+    }
+
+    const payload = await jsonRequest<EnforcePreviewResponse>(`/api/v1/admin/automatic-approval-policies/${policyId}/enforce-preview`, {
+      method: "POST",
+      body: JSON.stringify({
+        target_mode: "ENFORCE",
+        reason: "Wave24 gated preview",
+        confirmation: "PREVIEW_ENFORCE",
+      }),
+    });
+    return normalizeEnforcePreview(payload as unknown as Record<string, unknown>);
+  },
+
+  async createOntologyExport(projectId: string): Promise<OntologyExportJob> {
+    if (USE_MOCK_API) {
+      return delay({ ...mockMvp5ExportJobs[0], project_id: projectId });
+    }
+
+    const requestInit = {
+      method: "POST",
+      body: JSON.stringify({
+        format: "JSON",
+        include_published_graph_refs: true,
+      }),
+    };
+    const payload = await jsonRequest<Record<string, unknown>>(`/api/v1/admin/projects/${projectId}/ontology-export`, requestInit).catch(() =>
+      jsonRequest<Record<string, unknown>>(`/api/v1/admin/projects/${projectId}/ontology-exports`, requestInit),
+    );
+    return normalizeExportJob(payload);
+  },
+
+  async getOntologyExport(jobId: string): Promise<OntologyExportJob> {
+    if (USE_MOCK_API) {
+      const job = mockMvp5ExportJobs.find((item) => item.job_id === jobId) ?? mockMvp5ExportJobs[0];
+      return delay(job);
+    }
+
+    const payload = await request<Record<string, unknown>>(`/api/v1/admin/ontology-exports/${jobId}`);
+    return normalizeExportJob(payload);
+  },
+
+  async listOntologyExports(projectId: string): Promise<OntologyExportJob[]> {
+    if (USE_MOCK_API) {
+      return delay(mockMvp5ExportJobs.filter((job) => job.project_id === projectId));
+    }
+
+    const payload = await request<Record<string, unknown>>(`/api/v1/admin/projects/${projectId}/ontology-export`);
+    const job = normalizeExportJob(payload);
+    return [job];
+  },
+
+  async getOntologyExportDownload(jobId: string): Promise<OntologyExportDownload> {
+    if (USE_MOCK_API) {
+      return delay({ ...mockMvp5ExportDownload, job_id: jobId });
+    }
+
+    const payload = await request<Record<string, unknown>>(`/api/v1/admin/ontology-exports/${jobId}/download`).catch(() =>
+      request<Record<string, unknown>>(`/api/v1/admin/ontology-exports/${jobId}`),
+    );
+    const metadata = normalizePackageMetadata((payload.package_metadata ?? payload.metadata) as Record<string, unknown> | null);
+
+    if (!metadata) {
+      throw new Error("Ontology export download metadata missing package metadata.");
+    }
+
+    return {
+      ...payload,
+      job_id: String(payload.job_id ?? jobId),
+      download_url: (payload.download_url ?? payload.download_ref ?? null) as string | null,
+      expires_at: (payload.expires_at ?? null) as string | null,
+      content_type: String(payload.content_type ?? "application/json"),
+      file_name: (payload.file_name ?? payload.filename ?? null) as string | null,
+      checksum: (payload.checksum ?? metadata.checksum ?? null) as string | null,
+      package_metadata: metadata,
+    };
+  },
+
+  async createOntologyImportDryRun(projectId: string, payload: OntologyImportCreateRequest = { format: "JSON", mode: "DRY_RUN" }): Promise<OntologyImportDryRunJob> {
+    if (USE_MOCK_API) {
+      return delay({ ...mockMvp5ImportDryRun, project_id: projectId });
+    }
+
+    const packagePayload = payload.package_payload ?? buildDefaultOntologyPackage(projectId);
+    const requestBody = JSON.stringify({
+      mode: "DRY_RUN",
+      package: packagePayload,
+    });
+    const response = await jsonRequest<Record<string, unknown>>(`/api/v1/admin/projects/${projectId}/ontology-import/dry-run`, {
+      method: "POST",
+      body: requestBody,
+    });
+    return normalizeImportDryRun(response, packagePayload);
+  },
+
+  async getOntologyImportDryRun(jobId: string): Promise<OntologyImportDryRunJob> {
+    if (USE_MOCK_API) {
+      return delay({ ...mockMvp5ImportDryRun, job_id: jobId });
+    }
+
+    const payload = await request<Record<string, unknown>>(`/api/v1/admin/ontology-imports/${jobId}`);
+    return normalizeImportDryRun(payload);
+  },
+
+  async getOperationsDashboard(projectId: string): Promise<OperationsDashboardResponse> {
+    if (USE_MOCK_API) {
+      if (projectId !== mockMvp5OperationsDashboard.project_id) {
+        throw new Error("MVP5 operations fixture not found");
+      }
+
+      return delay(mockMvp5OperationsDashboard);
+    }
+
+    const payload = await request<Record<string, unknown>>(`/api/v1/admin/projects/${projectId}/operations/dashboard`);
+    return normalizeOperationsDashboard(payload);
+  },
+
+  async getRetentionPolicy(projectId: string): Promise<RetentionPolicy> {
+    if (USE_MOCK_API) {
+      if (projectId !== mockMvp5RetentionPolicy.project_id) {
+        throw new Error("MVP5 retention policy fixture not found");
+      }
+
+      return delay(mockMvp5RetentionPolicy);
+    }
+
+    const payload = await request<Record<string, unknown>>(`/api/v1/admin/projects/${projectId}/retention-policy`);
+    return normalizeRetentionPolicy(payload);
+  },
+
+  async runRetentionDeletionDryRun(projectId: string): Promise<RetentionDeletionDryRunResponse> {
+    if (USE_MOCK_API) {
+      return delay({ ...mockMvp5DeletionDryRun, project_id: projectId });
+    }
+
+    const payload = await jsonRequest<RetentionDeletionDryRunResponse>(`/api/v1/admin/projects/${projectId}/retention/deletion-dry-run`, {
+      method: "POST",
+      body: JSON.stringify({
+        resource_type: "SOURCE",
+        resource_ids: ["source-security-policy"],
+        reason: "Wave24 deletion dry-run preview",
+      }),
+    });
+    return normalizeRetentionDeletionDryRun(payload as unknown as Record<string, unknown>);
+  },
+
+  async listBackupSnapshots(projectId: string): Promise<BackupSnapshot[]> {
+    if (USE_MOCK_API) {
+      return delay(mockMvp5Backups.filter((backup) => backup.project_id === projectId));
+    }
+
+    const payload = await request<BackupSnapshot[] | { items?: BackupSnapshot[] }>(
+      `/api/v1/admin/projects/${projectId}/backup-snapshots`,
+    );
+    return unwrapItems(payload).map((item) => normalizeBackup(item as unknown as Record<string, unknown>));
+  },
+
+  async runBackupRestoreDryRun(snapshotId: string): Promise<RestoreDryRunResponse> {
+    if (USE_MOCK_API) {
+      return delay(buildMockRestoreDryRun(snapshotId));
+    }
+
+    const payload = await jsonRequest<RestoreDryRunResponse>(`/api/v1/admin/backup-snapshots/${snapshotId}/restore-dry-run`, {
+      method: "POST",
+      body: JSON.stringify({ reason: "Wave24 restore dry-run preview" }),
+    });
+    return normalizeRestoreDryRun(payload as unknown as Record<string, unknown>);
+  },
+
+  async listAdminAuditEvents(projectId: string): Promise<AuditEvent[]> {
+    if (USE_MOCK_API) {
+      return delay(mockMvp5AuditEvents.filter((event) => event.project_id === projectId));
+    }
+
+    const payload = await request<AuditEvent[] | { items?: AuditEvent[] }>(
+      `/api/v1/admin/projects/${projectId}/audit-events`,
+    );
+    return unwrapItems(payload).map((item) => normalizeAuditEvent(item as unknown as Record<string, unknown>));
   },
 
   async listModelRuns(jobId: string): Promise<ModelRun[]> {

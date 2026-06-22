@@ -118,7 +118,7 @@ export function PromptPerformancePage() {
                     <Activity aria-hidden="true" size={16} />
                     <strong>{run.id}</strong>
                   </StateWithIcon>
-                  <StateBadge state={run.status} />
+                  <StateBadge state={run.status === "SUCCEEDED" ? "SUCCESS" : run.status} />
                 </ExperimentHeader>
                 <KeyValue>
                   <dt>Dataset version</dt>

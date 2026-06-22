@@ -1,0 +1,4535 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP5 API Contract Draft",
+    "version": "0.5.0-draft",
+    "description": "Wave23 contract-first planning artifact for MVP5 enterprise governance APIs. Runtime endpoints are not implemented by this artifact."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Admin Governance"
+    },
+    {
+      "name": "RBAC"
+    },
+    {
+      "name": "Credentials"
+    },
+    {
+      "name": "Automatic Approval"
+    },
+    {
+      "name": "Ontology Import Export"
+    },
+    {
+      "name": "Operations"
+    },
+    {
+      "name": "Retention Backup"
+    },
+    {
+      "name": "Audit"
+    }
+  ],
+  "paths": {
+    "/api/v1/admin/organizations/{organization_id}/summary": {
+      "get": {
+        "tags": [
+          "Admin Governance"
+        ],
+        "operationId": "getOrganizationAdminSummary",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization admin summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationAdminSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/organizations/{organization_id}/settings": {
+      "get": {
+        "tags": [
+          "Admin Governance"
+        ],
+        "operationId": "getOrganizationSettings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Admin Governance"
+        ],
+        "operationId": "updateOrganizationSettings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/AdminSettingsPatch"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AdminSettingsResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/organizations/{organization_id}/membership": {
+      "get": {
+        "tags": [
+          "Admin Governance"
+        ],
+        "operationId": "listOrganizationMembership",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization membership",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/summary": {
+      "get": {
+        "tags": [
+          "Admin Governance"
+        ],
+        "operationId": "getProjectAdminSummary",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project admin summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectAdminSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/settings": {
+      "get": {
+        "tags": [
+          "Admin Governance"
+        ],
+        "operationId": "getProjectSettings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AdminSettingsResponse"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Admin Governance"
+        ],
+        "operationId": "updateProjectSettings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/AdminSettingsPatch"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AdminSettingsResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/membership": {
+      "get": {
+        "tags": [
+          "Admin Governance"
+        ],
+        "operationId": "listProjectMembership",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project membership",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/role-assignments": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "operationId": "listRoleAssignments",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role assignments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "RBAC"
+        ],
+        "operationId": "createRoleAssignment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleAssignmentCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created role assignment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignment"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/role-assignments/{assignment_id}": {
+      "delete": {
+        "tags": [
+          "RBAC"
+        ],
+        "operationId": "revokeRoleAssignment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AssignmentId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revoked role assignment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignment"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/permission-checks": {
+      "post": {
+        "tags": [
+          "RBAC"
+        ],
+        "operationId": "checkPermission",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermissionCheckRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Permission decision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionCheckResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/service-accounts": {
+      "get": {
+        "tags": [
+          "Credentials"
+        ],
+        "operationId": "listServiceAccounts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CredentialListResponse"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Credentials"
+        ],
+        "operationId": "createServiceAccount",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CredentialCreate"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CredentialCreateResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/api-keys": {
+      "get": {
+        "tags": [
+          "Credentials"
+        ],
+        "operationId": "listApiKeys",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CredentialListResponse"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Credentials"
+        ],
+        "operationId": "createApiKey",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CredentialCreate"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CredentialCreateResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/service-accounts/{credential_id}": {
+      "get": {
+        "tags": [
+          "Credentials"
+        ],
+        "operationId": "getServiceAccount",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CredentialViewResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/service-accounts/{credential_id}/revoke": {
+      "post": {
+        "tags": [
+          "Credentials"
+        ],
+        "operationId": "revokeServiceAccount",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CredentialRevoke"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CredentialViewResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/api-keys/{credential_id}": {
+      "get": {
+        "tags": [
+          "Credentials"
+        ],
+        "operationId": "getApiKey",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CredentialViewResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/api-keys/{credential_id}/revoke": {
+      "post": {
+        "tags": [
+          "Credentials"
+        ],
+        "operationId": "revokeApiKey",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CredentialRevoke"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CredentialViewResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/automatic-approval-policies": {
+      "get": {
+        "tags": [
+          "Automatic Approval"
+        ],
+        "operationId": "listAutomaticApprovalPolicies",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Automatic approval policies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomaticApprovalPolicyListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Automatic Approval"
+        ],
+        "operationId": "createAutomaticApprovalPolicy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomaticApprovalPolicyDocument"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/AutomaticApprovalPolicyResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/automatic-approval-policies/{policy_id}": {
+      "get": {
+        "tags": [
+          "Automatic Approval"
+        ],
+        "operationId": "getAutomaticApprovalPolicy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PolicyId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AutomaticApprovalPolicyResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/automatic-approval-policies/{policy_id}/evaluate": {
+      "post": {
+        "tags": [
+          "Automatic Approval"
+        ],
+        "operationId": "evaluateAutomaticApprovalPolicy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PolicyId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyEvaluationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dry-run policy evaluation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyEvaluationResponse"
+                },
+                "examples": {
+                  "blockedAutomaticApproval": {
+                    "$ref": "#/components/examples/BlockedAutomaticApproval"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/automatic-approval-policies/{policy_id}/diff": {
+      "post": {
+        "tags": [
+          "Automatic Approval"
+        ],
+        "operationId": "diffAutomaticApprovalPolicy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PolicyId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyDiffRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Policy diff",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyDiffResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/automatic-approval-policies/{policy_id}/enforce-preview": {
+      "post": {
+        "tags": [
+          "Automatic Approval"
+        ],
+        "operationId": "previewAutomaticApprovalEnforce",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PolicyId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnforcePreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enforce gate and audit preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnforcePreviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/ontology-exports": {
+      "post": {
+        "tags": [
+          "Ontology Import Export"
+        ],
+        "operationId": "createOntologyExportJob",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OntologyExportCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ontology export job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyExportJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ontology-exports/{job_id}": {
+      "get": {
+        "tags": [
+          "Ontology Import Export"
+        ],
+        "operationId": "getOntologyExportJob",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ontology export job status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyExportJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ontology-exports/{job_id}/download": {
+      "get": {
+        "tags": [
+          "Ontology Import Export"
+        ],
+        "operationId": "getOntologyExportDownload",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Export download metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyExportDownload"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/ontology-imports": {
+      "post": {
+        "tags": [
+          "Ontology Import Export"
+        ],
+        "operationId": "createOntologyImportDryRunJob",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OntologyImportCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ontology import dry-run job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyImportDryRunJob"
+                },
+                "examples": {
+                  "importConflict": {
+                    "$ref": "#/components/examples/ImportDryRunConflict"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ontology-imports/{job_id}": {
+      "get": {
+        "tags": [
+          "Ontology Import Export"
+        ],
+        "operationId": "getOntologyImportDryRunJob",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ontology import dry-run job status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyImportDryRunJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/operations/dashboard": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "getOperationsDashboard",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operations dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsDashboardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/operations/jobs": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "listOperationJobs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation jobs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationJobListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/operations/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "getOperationJob",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation job detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/operations/jobs/{job_id}/retry": {
+      "post": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "retryOperationJob",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Retry queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationActionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/operations/dlq": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "listDlqRows",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DLQ rows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlqListResponse"
+                },
+                "examples": {
+                  "dlqRow": {
+                    "$ref": "#/components/examples/DlqRowExample"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/operations/dlq/{dlq_id}": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "getDlqRow",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DlqId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DLQ detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlqRow"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/operations/dlq/{dlq_id}/retry": {
+      "post": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "retryDlqRow",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DlqId"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "DLQ retry queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationActionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/operations/dlq/{dlq_id}/acknowledge": {
+      "post": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "acknowledgeDlqRow",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DlqId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DLQ acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationActionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/operations/cost-budget": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "getCostBudget",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cost budget summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostBudgetSummary"
+                },
+                "examples": {
+                  "nearLimit": {
+                    "$ref": "#/components/examples/CostBudgetNearLimit"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "updateCostBudget",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CostBudgetUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated cost budget",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostBudgetSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/operations/events": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "listStructuredOperationEvents",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Structured operation events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StructuredEventListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/operations/observability": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "getObservabilityAvailability",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Observability availability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservabilityAvailability"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/retention-policy": {
+      "get": {
+        "tags": [
+          "Retention Backup"
+        ],
+        "operationId": "getRetentionPolicy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retention policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPolicy"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Retention Backup"
+        ],
+        "operationId": "updateRetentionPolicy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionPolicyUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated retention policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPolicy"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/retention/deletion-dry-run": {
+      "post": {
+        "tags": [
+          "Retention Backup"
+        ],
+        "operationId": "createRetentionDeletionDryRun",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionDeletionDryRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Retention deletion dry-run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionDeletionDryRunResponse"
+                },
+                "examples": {
+                  "blockedByLineage": {
+                    "$ref": "#/components/examples/RetentionDeletionDryRun"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/backup-snapshots": {
+      "get": {
+        "tags": [
+          "Retention Backup"
+        ],
+        "operationId": "listBackupSnapshots",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Backup snapshots",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupSnapshotListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/backup-snapshots/{snapshot_id}": {
+      "get": {
+        "tags": [
+          "Retention Backup"
+        ],
+        "operationId": "getBackupSnapshot",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SnapshotId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Backup snapshot detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupSnapshot"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/backup-snapshots/{snapshot_id}/restore-dry-run": {
+      "post": {
+        "tags": [
+          "Retention Backup"
+        ],
+        "operationId": "createRestoreDryRun",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SnapshotId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Restore dry-run eligibility",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreDryRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/audit-events": {
+      "get": {
+        "tags": [
+          "Audit"
+        ],
+        "operationId": "listProjectAuditEvents",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditEventListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/organizations/{organization_id}/security-events": {
+      "get": {
+        "tags": [
+          "Audit"
+        ],
+        "operationId": "listOrganizationSecurityEvents",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization security events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditEventListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/ontology-export": {
+      "get": {
+        "tags": [
+          "MVP5 Admin"
+        ],
+        "summary": "Get MVP5 project ontology JSON export package",
+        "operationId": "get_ontology_export_api_v1_admin_projects__project_id__ontology_export_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "MVP5 Admin"
+        ],
+        "summary": "Create MVP5 project ontology JSON export package",
+        "operationId": "create_ontology_export_api_v1_admin_projects__project_id__ontology_export_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/ontology-import/dry-run": {
+      "post": {
+        "tags": [
+          "MVP5 Admin"
+        ],
+        "summary": "Run MVP5 ontology JSON import dry-run",
+        "operationId": "run_ontology_import_dry_run_api_v1_admin_projects__project_id__ontology_import_dry_run_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OntologyImportDryRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyImportDryRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "OrganizationId": {
+        "name": "organization_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ProjectId": {
+        "name": "project_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "AssignmentId": {
+        "name": "assignment_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CredentialId": {
+        "name": "credential_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "PolicyId": {
+        "name": "policy_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "JobId": {
+        "name": "job_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "DlqId": {
+        "name": "dlq_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "SnapshotId": {
+        "name": "snapshot_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "requestBodies": {
+      "AdminSettingsPatch": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AdminSettingsUpdateRequest"
+            }
+          }
+        }
+      },
+      "CredentialCreate": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CredentialCreateRequest"
+            }
+          }
+        }
+      },
+      "CredentialRevoke": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CredentialRevokeRequest"
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "AdminSettingsResponse": {
+        "description": "Admin settings",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AdminSettings"
+            }
+          }
+        }
+      },
+      "CredentialListResponse": {
+        "description": "Credential list with masked secrets only",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CredentialListResponse"
+            }
+          }
+        }
+      },
+      "CredentialCreateResponse": {
+        "description": "Credential create response with one-time raw secret",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CredentialCreateResponse"
+            },
+            "examples": {
+              "oneTimeSecret": {
+                "$ref": "#/components/examples/OneTimeSecretReveal"
+              }
+            }
+          }
+        }
+      },
+      "CredentialViewResponse": {
+        "description": "Credential detail with masked secret only",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CredentialView"
+            },
+            "examples": {
+              "maskedSecret": {
+                "$ref": "#/components/examples/MaskedSecretView"
+              }
+            }
+          }
+        }
+      },
+      "AutomaticApprovalPolicyResponse": {
+        "description": "Automatic approval policy",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AutomaticApprovalPolicyDocument"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "EnterpriseRole": {
+        "type": "string",
+        "enum": [
+          "ORGANIZATION_ADMIN",
+          "PROJECT_ADMIN",
+          "ONTOLOGY_EDITOR",
+          "SOURCE_MANAGER",
+          "REVIEWER",
+          "PUBLISHER",
+          "ANALYST_VIEWER",
+          "EXTERNAL_API_CONSUMER",
+          "SERVICE_ACCOUNT"
+        ]
+      },
+      "PrincipalType": {
+        "type": "string",
+        "enum": [
+          "HUMAN_USER",
+          "SERVICE_ACCOUNT",
+          "API_KEY",
+          "SYSTEM"
+        ]
+      },
+      "AssignmentScopeType": {
+        "type": "string",
+        "enum": [
+          "ORGANIZATION",
+          "PROJECT",
+          "ONTOLOGY_VERSION",
+          "SOURCE",
+          "PUBLISHED_GRAPH"
+        ]
+      },
+      "RoleAssignmentStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "EXPIRED",
+          "REVOKED",
+          "PENDING"
+        ]
+      },
+      "PermissionResourceType": {
+        "type": "string",
+        "enum": [
+          "ORGANIZATION",
+          "PROJECT",
+          "ONTOLOGY_VERSION",
+          "SOURCE",
+          "CANDIDATE",
+          "REVIEW_TASK",
+          "PUBLISH_JOB",
+          "PUBLISHED_GRAPH",
+          "POLICY",
+          "API_CREDENTIAL",
+          "IMPORT_JOB",
+          "EXPORT_JOB",
+          "OPERATION_EVENT",
+          "BACKUP_SNAPSHOT",
+          "RETENTION_POLICY",
+          "AUDIT_EVENT"
+        ]
+      },
+      "PermissionAction": {
+        "type": "string",
+        "enum": [
+          "READ",
+          "CREATE",
+          "UPDATE",
+          "DELETE",
+          "ASSIGN_ROLE",
+          "PREVIEW_POLICY",
+          "ENFORCE_POLICY",
+          "APPROVE",
+          "PUBLISH",
+          "IMPORT",
+          "EXPORT",
+          "RETRY_JOB",
+          "ACKNOWLEDGE_DLQ",
+          "REVOKE_CREDENTIAL",
+          "RESTORE_DRY_RUN"
+        ]
+      },
+      "PermissionDecision": {
+        "type": "string",
+        "enum": [
+          "ALLOW",
+          "DENY",
+          "CONDITIONAL"
+        ]
+      },
+      "PermissionDenyReason": {
+        "type": "string",
+        "enum": [
+          "MISSING_ROLE",
+          "SCOPE_MISMATCH",
+          "RESOURCE_STATE_BLOCKED",
+          "VERSION_CONTEXT_REQUIRED",
+          "SENSITIVITY_RESTRICTED",
+          "ENVIRONMENT_RESTRICTED",
+          "CREDENTIAL_REVOKED",
+          "POLICY_DISABLED"
+        ]
+      },
+      "PolicyMode": {
+        "type": "string",
+        "enum": [
+          "DISABLED",
+          "DRY_RUN",
+          "ENFORCE"
+        ]
+      },
+      "PolicyEvaluationStatus": {
+        "type": "string",
+        "enum": [
+          "WOULD_APPROVE",
+          "WOULD_ENQUEUE_PUBLISH",
+          "BLOCKED",
+          "REQUIRES_MANUAL_REVIEW",
+          "SKIPPED",
+          "ERROR"
+        ]
+      },
+      "PolicyBlockReason": {
+        "type": "string",
+        "enum": [
+          "MISSING_EVIDENCE",
+          "FAILED_VALIDATION",
+          "WARNING_REQUIRES_REVIEWER_REASON",
+          "STALE_ONTOLOGY_VERSION",
+          "CANDIDATE_STATUS_NOT_ELIGIBLE",
+          "UNSAFE_RELATION_TYPE",
+          "CONFIDENCE_BELOW_THRESHOLD",
+          "POLICY_MODE_DISABLED",
+          "PUBLISH_GATE_NOT_SATISFIED",
+          "AUDIT_PREVIEW_REQUIRED"
+        ]
+      },
+      "CredentialKind": {
+        "type": "string",
+        "enum": [
+          "SERVICE_ACCOUNT",
+          "API_KEY"
+        ]
+      },
+      "CredentialStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "DISABLED",
+          "EXPIRED",
+          "REVOKED",
+          "PENDING"
+        ]
+      },
+      "CredentialScope": {
+        "type": "string",
+        "enum": [
+          "EXTERNAL_READ",
+          "PROJECT_ADMIN_READ",
+          "QUALITY_READ",
+          "PUBLISHED_GRAPH_READ",
+          "RAG_READ",
+          "SEARCH_READ",
+          "IMPORT_EXPORT_MANAGE",
+          "OPERATIONS_READ"
+        ]
+      },
+      "GovernanceJobStatus": {
+        "type": "string",
+        "enum": [
+          "QUEUED",
+          "RUNNING",
+          "SUCCEEDED",
+          "FAILED",
+          "BLOCKED",
+          "CANCELLED"
+        ],
+        "title": "GovernanceJobStatus"
+      },
+      "ImportConflictType": {
+        "type": "string",
+        "enum": [
+          "NAME_COLLISION",
+          "SCHEMA_VERSION_INCOMPATIBLE",
+          "DESTRUCTIVE_DELETE",
+          "RELATION_RANGE_MISMATCH",
+          "PROPERTY_TYPE_MISMATCH",
+          "PUBLISHED_VERSION_CONFLICT"
+        ],
+        "title": "ImportConflictType"
+      },
+      "ImportConflictSeverity": {
+        "type": "string",
+        "enum": [
+          "INFO",
+          "WARNING",
+          "BLOCKING"
+        ],
+        "title": "ImportConflictSeverity"
+      },
+      "OperationJobType": {
+        "type": "string",
+        "enum": [
+          "SOURCE_PARSE",
+          "EXTRACTION",
+          "VALIDATION",
+          "PUBLISH",
+          "QUALITY_RECOMPUTE",
+          "IMPORT",
+          "EXPORT",
+          "POLICY_EVALUATION",
+          "BACKUP",
+          "RETENTION_DELETE"
+        ]
+      },
+      "OperationJobStatus": {
+        "type": "string",
+        "enum": [
+          "QUEUED",
+          "RUNNING",
+          "SUCCEEDED",
+          "FAILED",
+          "RETRYING",
+          "DEAD_LETTERED",
+          "CANCELLED"
+        ]
+      },
+      "OperationEventSeverity": {
+        "type": "string",
+        "enum": [
+          "INFO",
+          "WARNING",
+          "ERROR",
+          "CRITICAL",
+          "SECURITY"
+        ]
+      },
+      "BudgetStatus": {
+        "type": "string",
+        "enum": [
+          "WITHIN_LIMIT",
+          "NEAR_LIMIT",
+          "EXCEEDED",
+          "DISABLED"
+        ]
+      },
+      "ObservabilityAvailabilityStatus": {
+        "type": "string",
+        "enum": [
+          "AVAILABLE",
+          "PARTIAL",
+          "NOT_CONFIGURED",
+          "UNAVAILABLE"
+        ]
+      },
+      "RetentionActionMode": {
+        "type": "string",
+        "enum": [
+          "READ_ONLY",
+          "DRY_RUN",
+          "CONFIRM_REQUIRED",
+          "EXECUTE"
+        ]
+      },
+      "RetentionResourceType": {
+        "type": "string",
+        "enum": [
+          "SOURCE",
+          "EVIDENCE",
+          "CANDIDATE",
+          "AUDIT_EVENT",
+          "PUBLISHED_GRAPH_SNAPSHOT",
+          "OPERATION_EVENT"
+        ]
+      },
+      "BackupStatus": {
+        "type": "string",
+        "enum": [
+          "AVAILABLE",
+          "RUNNING",
+          "FAILED",
+          "EXPIRED",
+          "RESTORE_DRY_RUN_AVAILABLE",
+          "RESTORE_BLOCKED"
+        ]
+      },
+      "AuditEventCategory": {
+        "type": "string",
+        "enum": [
+          "ROLE",
+          "CREDENTIAL",
+          "POLICY",
+          "IMPORT_EXPORT",
+          "DLQ",
+          "RETENTION",
+          "BACKUP",
+          "DESTRUCTIVE_ACTION",
+          "SECURITY"
+        ]
+      },
+      "AuditEventRef": {
+        "type": "object",
+        "required": [
+          "audit_event_id",
+          "category"
+        ],
+        "properties": {
+          "audit_event_id": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/AuditEventCategory"
+          }
+        }
+      },
+      "AuditPreview": {
+        "type": "object",
+        "required": [
+          "category",
+          "would_create_event"
+        ],
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/AuditEventCategory"
+          },
+          "would_create_event": {
+            "type": "boolean"
+          },
+          "reason_required": {
+            "type": "boolean"
+          },
+          "diff_summary": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AdminSettings": {
+        "type": "object",
+        "properties": {
+          "scope_id": {
+            "type": "string"
+          },
+          "scope_type": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "auth_mode": {
+            "type": "string",
+            "enum": [
+              "DEV_AUTH"
+            ]
+          },
+          "policy_defaults": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "audit_event_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRef"
+            }
+          }
+        }
+      },
+      "AdminSettingsUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "policy_defaults": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "OrganizationAdminSummary": {
+        "type": "object",
+        "required": [
+          "organization_id",
+          "organization_name",
+          "auth_mode"
+        ],
+        "properties": {
+          "organization_id": {
+            "type": "string"
+          },
+          "organization_name": {
+            "type": "string"
+          },
+          "environment": {
+            "type": "string"
+          },
+          "auth_mode": {
+            "type": "string",
+            "enum": [
+              "DEV_AUTH"
+            ]
+          },
+          "project_count": {
+            "type": "integer"
+          },
+          "active_member_count": {
+            "type": "integer"
+          },
+          "service_account_count": {
+            "type": "integer"
+          },
+          "policy_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "operations_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "retention_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "backup_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "latest_audit_events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRef"
+            }
+          }
+        }
+      },
+      "ProjectAdminSummary": {
+        "type": "object",
+        "required": [
+          "project_id",
+          "organization_id",
+          "project_name"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "organization_id": {
+            "type": "string"
+          },
+          "project_name": {
+            "type": "string"
+          },
+          "selected_ontology_version_id": {
+            "type": "string"
+          },
+          "current_published_graph_version_id": {
+            "type": "string"
+          },
+          "member_count": {
+            "type": "integer"
+          },
+          "role_assignment_count": {
+            "type": "integer"
+          },
+          "credential_count": {
+            "type": "integer"
+          },
+          "automatic_approval_policy_ref": {
+            "type": "string"
+          },
+          "operation_health": {
+            "$ref": "#/components/schemas/OperationHealthSummary"
+          },
+          "cost_budget": {
+            "$ref": "#/components/schemas/CostBudgetSummary"
+          },
+          "retention_policy_ref": {
+            "type": "string"
+          },
+          "backup_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "latest_audit_events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRef"
+            }
+          }
+        }
+      },
+      "MembershipMember": {
+        "type": "object",
+        "properties": {
+          "principal_id": {
+            "type": "string"
+          },
+          "principal_type": {
+            "$ref": "#/components/schemas/PrincipalType"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "service_account_name": {
+            "type": "string"
+          },
+          "assignment_status": {
+            "$ref": "#/components/schemas/RoleAssignmentStatus"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnterpriseRole"
+            }
+          },
+          "last_active_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MembershipListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MembershipMember"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "RoleAssignment": {
+        "type": "object",
+        "required": [
+          "assignment_id",
+          "principal_id",
+          "principal_type",
+          "scope_type",
+          "role",
+          "status"
+        ],
+        "properties": {
+          "assignment_id": {
+            "type": "string"
+          },
+          "principal_id": {
+            "type": "string"
+          },
+          "principal_type": {
+            "$ref": "#/components/schemas/PrincipalType"
+          },
+          "principal_display_name": {
+            "type": "string"
+          },
+          "scope_type": {
+            "$ref": "#/components/schemas/AssignmentScopeType"
+          },
+          "organization_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/EnterpriseRole"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RoleAssignmentStatus"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revoked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "audit_event_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRef"
+            }
+          }
+        }
+      },
+      "RoleAssignmentCreateRequest": {
+        "type": "object",
+        "required": [
+          "principal_id",
+          "principal_type",
+          "scope_type",
+          "role"
+        ],
+        "properties": {
+          "principal_id": {
+            "type": "string"
+          },
+          "principal_type": {
+            "$ref": "#/components/schemas/PrincipalType"
+          },
+          "scope_type": {
+            "$ref": "#/components/schemas/AssignmentScopeType"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/EnterpriseRole"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "RoleAssignmentListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoleAssignment"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "PermissionCheckRequest": {
+        "type": "object",
+        "required": [
+          "principal_id",
+          "principal_type",
+          "resource_type",
+          "action"
+        ],
+        "properties": {
+          "principal_id": {
+            "type": "string"
+          },
+          "principal_type": {
+            "$ref": "#/components/schemas/PrincipalType"
+          },
+          "organization_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "resource_type": {
+            "$ref": "#/components/schemas/PermissionResourceType"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "action": {
+            "$ref": "#/components/schemas/PermissionAction"
+          },
+          "data_state": {
+            "type": "string"
+          },
+          "version_context": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "sensitivity": {
+            "type": "string"
+          },
+          "environment": {
+            "type": "string"
+          }
+        }
+      },
+      "PermissionCheckResponse": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/PermissionDecision"
+          },
+          "allowed": {
+            "type": "boolean"
+          },
+          "deny_reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PermissionDenyReason"
+            }
+          },
+          "matched_roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnterpriseRole"
+            }
+          },
+          "required_roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnterpriseRole"
+            }
+          },
+          "policy_version_id": {
+            "type": "string"
+          },
+          "audit_preview": {
+            "$ref": "#/components/schemas/AuditPreview"
+          }
+        }
+      },
+      "CredentialRoleBinding": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/EnterpriseRole"
+          },
+          "scope_type": {
+            "$ref": "#/components/schemas/AssignmentScopeType"
+          },
+          "project_id": {
+            "type": "string"
+          }
+        }
+      },
+      "CredentialQuota": {
+        "type": "object",
+        "properties": {
+          "requests_per_day": {
+            "type": "integer"
+          },
+          "tokens_per_day": {
+            "type": "integer"
+          }
+        }
+      },
+      "CredentialCreateRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "credential_kind",
+          "scopes"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "credential_kind": {
+            "$ref": "#/components/schemas/CredentialKind"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialScope"
+            }
+          },
+          "role_bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialRoleBinding"
+            }
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "quota": {
+            "$ref": "#/components/schemas/CredentialQuota"
+          }
+        }
+      },
+      "CredentialView": {
+        "type": "object",
+        "required": [
+          "credential_id",
+          "credential_kind",
+          "status",
+          "masked_secret"
+        ],
+        "properties": {
+          "credential_id": {
+            "type": "string"
+          },
+          "credential_kind": {
+            "$ref": "#/components/schemas/CredentialKind"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CredentialStatus"
+          },
+          "masked_secret": {
+            "type": "string",
+            "description": "Masked secret only. Raw secret is never returned by list or detail endpoints."
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialScope"
+            }
+          },
+          "role_bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialRoleBinding"
+            }
+          },
+          "quota": {
+            "$ref": "#/components/schemas/CredentialQuota"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_used_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revoked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "audit_event_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRef"
+            }
+          }
+        }
+      },
+      "CredentialSecretReveal": {
+        "type": "object",
+        "properties": {
+          "reveal_type": {
+            "type": "string",
+            "enum": [
+              "ONE_TIME_CREATE_RESPONSE"
+            ]
+          },
+          "shown_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "repeat_display_allowed": {
+            "type": "boolean",
+            "const": false
+          }
+        }
+      },
+      "CredentialCreateResponse": {
+        "type": "object",
+        "required": [
+          "credential",
+          "raw_secret",
+          "secret_reveal",
+          "audit_event_ref"
+        ],
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/CredentialView"
+          },
+          "raw_secret": {
+            "type": "string",
+            "description": "Returned only once in the create response. Must not appear in list/detail/audit/log/report/fixture views."
+          },
+          "secret_reveal": {
+            "$ref": "#/components/schemas/CredentialSecretReveal"
+          },
+          "audit_event_ref": {
+            "$ref": "#/components/schemas/AuditEventRef"
+          }
+        }
+      },
+      "CredentialListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialView"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "CredentialRevokeRequest": {
+        "type": "object",
+        "required": [
+          "reason",
+          "confirmation_text"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "confirmation_text": {
+            "type": "string"
+          }
+        }
+      },
+      "PolicyConditionSet": {
+        "type": "object",
+        "properties": {
+          "candidate_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "min_confidence": {
+            "type": "number"
+          },
+          "allowed_validation_severities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "FAILED"
+              ]
+            }
+          },
+          "require_evidence": {
+            "type": "boolean"
+          },
+          "require_current_ontology_version": {
+            "type": "boolean"
+          },
+          "allowed_source_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "low_risk_relation_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reviewer_pattern": {
+            "type": "string"
+          }
+        }
+      },
+      "AutomaticApprovalPolicyDocument": {
+        "type": "object",
+        "required": [
+          "policy_id",
+          "project_id",
+          "name",
+          "mode",
+          "version",
+          "conditions"
+        ],
+        "properties": {
+          "policy_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/PolicyMode"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "conditions": {
+            "$ref": "#/components/schemas/PolicyConditionSet"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "APPROVE",
+                "ENQUEUE_PUBLISH"
+              ]
+            }
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_evaluated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "audit_event_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRef"
+            }
+          }
+        }
+      },
+      "AutomaticApprovalPolicyListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomaticApprovalPolicyDocument"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "PolicyEvaluationRequest": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/PolicyMode"
+          },
+          "candidate_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ontology_version_id": {
+            "type": "string"
+          },
+          "published_graph_version_id": {
+            "type": "string"
+          },
+          "include_audit_preview": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PolicyEvaluationSummary": {
+        "type": "object",
+        "properties": {
+          "evaluated_count": {
+            "type": "integer"
+          },
+          "would_approve_count": {
+            "type": "integer"
+          },
+          "blocked_count": {
+            "type": "integer"
+          },
+          "requires_manual_review_count": {
+            "type": "integer"
+          }
+        }
+      },
+      "PolicyEvaluationRow": {
+        "type": "object",
+        "properties": {
+          "candidate_id": {
+            "type": "string"
+          },
+          "candidate_type": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PolicyEvaluationStatus"
+          },
+          "block_reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PolicyBlockReason"
+            }
+          },
+          "evidence_count": {
+            "type": "integer"
+          },
+          "validation_severity": {
+            "type": "string",
+            "enum": [
+              "INFO",
+              "WARNING",
+              "FAILED"
+            ]
+          },
+          "ontology_version_id": {
+            "type": "string"
+          }
+        }
+      },
+      "PolicyEvaluationResponse": {
+        "type": "object",
+        "properties": {
+          "policy_id": {
+            "type": "string"
+          },
+          "policy_version": {
+            "type": "integer"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/PolicyMode"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PolicyEvaluationStatus"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/PolicyEvaluationSummary"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PolicyEvaluationRow"
+            }
+          },
+          "audit_preview": {
+            "$ref": "#/components/schemas/AuditPreview"
+          }
+        }
+      },
+      "PolicyDiffRequest": {
+        "type": "object",
+        "properties": {
+          "from_version": {
+            "type": "integer"
+          },
+          "to_version": {
+            "type": "integer"
+          }
+        }
+      },
+      "PolicyDiffResponse": {
+        "type": "object",
+        "properties": {
+          "policy_id": {
+            "type": "string"
+          },
+          "from_version": {
+            "type": "integer"
+          },
+          "to_version": {
+            "type": "integer"
+          },
+          "mode_change": {
+            "type": "string"
+          },
+          "condition_changes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "action_changes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "destructive_or_sensitive_changes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "audit_preview": {
+            "$ref": "#/components/schemas/AuditPreview"
+          }
+        }
+      },
+      "EnforcePreviewRequest": {
+        "type": "object",
+        "properties": {
+          "target_mode": {
+            "type": "string",
+            "const": "ENFORCE"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "EnforcePreviewResponse": {
+        "type": "object",
+        "properties": {
+          "policy_id": {
+            "type": "string"
+          },
+          "policy_version": {
+            "type": "integer"
+          },
+          "requested_mode": {
+            "$ref": "#/components/schemas/PolicyMode"
+          },
+          "gate_status": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "BLOCKED"
+            ]
+          },
+          "gate_reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PolicyBlockReason"
+            }
+          },
+          "requires_confirmation": {
+            "type": "boolean"
+          },
+          "audit_preview": {
+            "$ref": "#/components/schemas/AuditPreview"
+          },
+          "affected_candidate_count": {
+            "type": "integer"
+          }
+        }
+      },
+      "OntologyPackageMetadata": {
+        "type": "object",
+        "properties": {
+          "package_id": {
+            "type": "string"
+          },
+          "package_schema_version": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "JSON"
+            ]
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "ontology_id": {
+            "type": "string"
+          },
+          "ontology_version_id": {
+            "type": "string"
+          },
+          "published_graph_version_id": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "contents_summary": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "OntologyExportCreateRequest": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "JSON"
+            ]
+          },
+          "ontology_version_id": {
+            "type": "string"
+          },
+          "include_published_graph_refs": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OntologyExportJob": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/GovernanceJobStatus"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "JSON"
+            ]
+          },
+          "package_metadata": {
+            "$ref": "#/components/schemas/OntologyPackageMetadata"
+          },
+          "download_url": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "audit_event_ref": {
+            "$ref": "#/components/schemas/AuditEventRef"
+          }
+        }
+      },
+      "OntologyExportDownload": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "download_url": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "package_metadata": {
+            "$ref": "#/components/schemas/OntologyPackageMetadata"
+          }
+        }
+      },
+      "OntologyImportCreateRequest": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "JSON"
+            ]
+          },
+          "package_ref": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "DRY_RUN"
+            ]
+          }
+        }
+      },
+      "ImportDryRunSummary": {
+        "properties": {
+          "create_count": {
+            "type": "integer",
+            "title": "Create Count"
+          },
+          "update_count": {
+            "type": "integer",
+            "title": "Update Count"
+          },
+          "delete_count": {
+            "type": "integer",
+            "title": "Delete Count"
+          },
+          "no_op_count": {
+            "type": "integer",
+            "title": "No Op Count"
+          },
+          "conflict_count": {
+            "type": "integer",
+            "title": "Conflict Count"
+          },
+          "warning_count": {
+            "type": "integer",
+            "title": "Warning Count"
+          },
+          "destructive_impact_count": {
+            "type": "integer",
+            "title": "Destructive Impact Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "create_count",
+          "update_count",
+          "delete_count",
+          "no_op_count",
+          "conflict_count",
+          "warning_count",
+          "destructive_impact_count"
+        ],
+        "title": "ImportDryRunSummary"
+      },
+      "ImportConflict": {
+        "properties": {
+          "conflict_type": {
+            "$ref": "#/components/schemas/ImportConflictType"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/ImportConflictSeverity"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conflict_type",
+          "severity",
+          "path",
+          "message"
+        ],
+        "title": "ImportConflict"
+      },
+      "DestructiveImpactSummary": {
+        "type": "object",
+        "properties": {
+          "would_delete_classes": {
+            "type": "integer"
+          },
+          "would_delete_properties": {
+            "type": "integer"
+          },
+          "would_delete_relations": {
+            "type": "integer"
+          },
+          "published_graph_refs_affected": {
+            "type": "integer"
+          }
+        }
+      },
+      "OntologyImportDryRunJob": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/GovernanceJobStatus"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "JSON"
+            ]
+          },
+          "package_metadata": {
+            "$ref": "#/components/schemas/OntologyPackageMetadata"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ImportDryRunSummary"
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportConflict"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "destructive_impact": {
+            "$ref": "#/components/schemas/DestructiveImpactSummary"
+          },
+          "rollback_guidance": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "audit_event_ref": {
+            "$ref": "#/components/schemas/AuditEventRef"
+          }
+        }
+      },
+      "OperationHealthSummary": {
+        "type": "object",
+        "properties": {
+          "healthy_count": {
+            "type": "integer"
+          },
+          "failed_count": {
+            "type": "integer"
+          },
+          "retrying_count": {
+            "type": "integer"
+          },
+          "dead_lettered_count": {
+            "type": "integer"
+          }
+        }
+      },
+      "OperationJob": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "job_type": {
+            "$ref": "#/components/schemas/OperationJobType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OperationJobStatus"
+          },
+          "attempt": {
+            "type": "integer"
+          },
+          "max_attempts": {
+            "type": "integer"
+          },
+          "last_error_code": {
+            "type": "string"
+          },
+          "last_error_message": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "next_retry_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "audit_event_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRef"
+            }
+          }
+        }
+      },
+      "OperationJobListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OperationJob"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "DlqRow": {
+        "type": "object",
+        "properties": {
+          "dlq_id": {
+            "type": "string"
+          },
+          "job_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "job_type": {
+            "$ref": "#/components/schemas/OperationJobType"
+          },
+          "failure_code": {
+            "type": "string"
+          },
+          "failure_message": {
+            "type": "string"
+          },
+          "payload_ref": {
+            "type": "string"
+          },
+          "redacted_payload_preview": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "retry_count": {
+            "type": "integer"
+          },
+          "first_failed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_failed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "acknowledged_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "audit_event_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRef"
+            }
+          }
+        }
+      },
+      "DlqListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DlqRow"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "OperationActionResponse": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "audit_event_ref": {
+            "$ref": "#/components/schemas/AuditEventRef"
+          }
+        }
+      },
+      "CostBudgetSummary": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "period_start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period_end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "budget_status": {
+            "$ref": "#/components/schemas/BudgetStatus"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "budget_amount": {
+            "type": "number"
+          },
+          "estimated_spend": {
+            "type": "number"
+          },
+          "token_limit": {
+            "type": "integer"
+          },
+          "tokens_used": {
+            "type": "integer"
+          },
+          "near_limit_threshold": {
+            "type": "number"
+          },
+          "last_updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CostBudgetUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "budget_amount": {
+            "type": "number"
+          },
+          "token_limit": {
+            "type": "integer"
+          },
+          "near_limit_threshold": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "StructuredEvent": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/OperationEventSeverity"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "StructuredEventListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StructuredEvent"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "ObservabilityAvailability": {
+        "type": "object",
+        "properties": {
+          "metrics_status": {
+            "$ref": "#/components/schemas/ObservabilityAvailabilityStatus"
+          },
+          "tracing_status": {
+            "$ref": "#/components/schemas/ObservabilityAvailabilityStatus"
+          },
+          "logging_status": {
+            "$ref": "#/components/schemas/ObservabilityAvailabilityStatus"
+          },
+          "message": {
+            "type": "string"
+          },
+          "available_links": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "OperationsDashboardResponse": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "job_health": {
+            "$ref": "#/components/schemas/OperationHealthSummary"
+          },
+          "dlq_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "cost_budget": {
+            "$ref": "#/components/schemas/CostBudgetSummary"
+          },
+          "observability": {
+            "$ref": "#/components/schemas/ObservabilityAvailability"
+          },
+          "recent_events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StructuredEvent"
+            }
+          }
+        }
+      },
+      "RetentionRule": {
+        "type": "object",
+        "properties": {
+          "resource_type": {
+            "$ref": "#/components/schemas/RetentionResourceType"
+          },
+          "retention_days": {
+            "type": "integer"
+          },
+          "action_mode": {
+            "$ref": "#/components/schemas/RetentionActionMode"
+          },
+          "include_deleted": {
+            "type": "boolean"
+          },
+          "minimum_audit_retention_days": {
+            "type": "integer"
+          }
+        }
+      },
+      "RetentionPolicy": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/RetentionActionMode"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetentionRule"
+            }
+          },
+          "legal_hold_enabled": {
+            "type": "boolean"
+          },
+          "updated_by": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "audit_event_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRef"
+            }
+          }
+        }
+      },
+      "RetentionPolicyUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetentionRule"
+            }
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "RetentionDeletionDryRunRequest": {
+        "type": "object",
+        "properties": {
+          "resource_type": {
+            "$ref": "#/components/schemas/RetentionResourceType"
+          },
+          "older_than": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mode": {
+            "type": "string",
+            "const": "DRY_RUN"
+          }
+        }
+      },
+      "RetentionDeletionImpactSummary": {
+        "type": "object",
+        "properties": {
+          "source_count": {
+            "type": "integer"
+          },
+          "evidence_count": {
+            "type": "integer"
+          },
+          "candidate_count": {
+            "type": "integer"
+          },
+          "published_graph_refs_affected": {
+            "type": "integer"
+          },
+          "audit_events_retained": {
+            "type": "integer"
+          }
+        }
+      },
+      "RetentionLineageImpact": {
+        "type": "object",
+        "properties": {
+          "source_id": {
+            "type": "string"
+          },
+          "evidence_count": {
+            "type": "integer"
+          },
+          "candidate_count": {
+            "type": "integer"
+          },
+          "published_graph_version_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "blocked": {
+            "type": "boolean"
+          },
+          "block_reason": {
+            "type": "string"
+          }
+        }
+      },
+      "RetentionDeletionDryRunResponse": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "requested_resource_type": {
+            "$ref": "#/components/schemas/RetentionResourceType"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/RetentionActionMode"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "impact_summary": {
+            "$ref": "#/components/schemas/RetentionDeletionImpactSummary"
+          },
+          "lineage_impact": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetentionLineageImpact"
+            }
+          },
+          "requires_confirmation": {
+            "type": "boolean"
+          },
+          "confirmation_text": {
+            "type": "string"
+          },
+          "audit_preview": {
+            "$ref": "#/components/schemas/AuditPreview"
+          }
+        }
+      },
+      "BackupSnapshot": {
+        "type": "object",
+        "properties": {
+          "snapshot_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BackupStatus"
+          },
+          "snapshot_type": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "storage_ref": {
+            "type": "string"
+          },
+          "contents_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "restore_eligibility": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "audit_event_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventRef"
+            }
+          }
+        }
+      },
+      "BackupSnapshotListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BackupSnapshot"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "RestoreDryRunResponse": {
+        "type": "object",
+        "properties": {
+          "snapshot_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "eligible": {
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BackupStatus"
+          },
+          "block_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "restore_impact": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "requires_confirmation": {
+            "type": "boolean"
+          },
+          "audit_preview": {
+            "$ref": "#/components/schemas/AuditPreview"
+          }
+        }
+      },
+      "AuditEvent": {
+        "type": "object",
+        "properties": {
+          "audit_event_id": {
+            "type": "string"
+          },
+          "organization_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/AuditEventCategory"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/OperationEventSeverity"
+          },
+          "actor": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "target": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "reason": {
+            "type": "string"
+          },
+          "before_ref": {
+            "type": "string"
+          },
+          "after_ref": {
+            "type": "string"
+          },
+          "diff_summary": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AuditEventListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEvent"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "ImportCompatibilityStatus": {
+        "type": "string",
+        "enum": [
+          "COMPATIBLE",
+          "WARNING",
+          "BLOCKED"
+        ],
+        "title": "ImportCompatibilityStatus"
+      },
+      "OntologyPackageClass": {
+        "properties": {
+          "stable_id": {
+            "type": "string",
+            "title": "Stable Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stable_id",
+          "name"
+        ],
+        "title": "OntologyPackageClass"
+      },
+      "OntologyPackageProperty": {
+        "properties": {
+          "stable_id": {
+            "type": "string",
+            "title": "Stable Id"
+          },
+          "class_stable_id": {
+            "type": "string",
+            "title": "Class Stable Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "data_type": {
+            "type": "string",
+            "title": "Data Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stable_id",
+          "class_stable_id",
+          "name",
+          "data_type"
+        ],
+        "title": "OntologyPackageProperty"
+      },
+      "OntologyPackageRelation": {
+        "properties": {
+          "stable_id": {
+            "type": "string",
+            "title": "Stable Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source_class_stable_id": {
+            "type": "string",
+            "title": "Source Class Stable Id"
+          },
+          "target_class_stable_id": {
+            "type": "string",
+            "title": "Target Class Stable Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stable_id",
+          "name",
+          "source_class_stable_id",
+          "target_class_stable_id"
+        ],
+        "title": "OntologyPackageRelation"
+      },
+      "OntologyPackageCounts": {
+        "properties": {
+          "classes": {
+            "type": "integer",
+            "title": "Classes"
+          },
+          "properties": {
+            "type": "integer",
+            "title": "Properties"
+          },
+          "relations": {
+            "type": "integer",
+            "title": "Relations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "classes",
+          "properties",
+          "relations"
+        ],
+        "title": "OntologyPackageCounts"
+      },
+      "OntologyPackagePayload": {
+        "properties": {
+          "package_id": {
+            "type": "string",
+            "title": "Package Id"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "title": "Ontology Version Id"
+          },
+          "published_graph_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published Graph Version Id"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "classes": {
+            "items": {
+              "$ref": "#/components/schemas/OntologyPackageClass"
+            },
+            "type": "array",
+            "title": "Classes"
+          },
+          "properties": {
+            "items": {
+              "$ref": "#/components/schemas/OntologyPackageProperty"
+            },
+            "type": "array",
+            "title": "Properties"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/OntologyPackageRelation"
+            },
+            "type": "array",
+            "title": "Relations"
+          },
+          "compatibility_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Compatibility Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package_id",
+          "schema_version",
+          "project_id",
+          "ontology_version_id",
+          "generated_at"
+        ],
+        "title": "OntologyPackagePayload"
+      },
+      "OntologyExportDownloadMetadata": {
+        "properties": {
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type",
+            "default": "application/json"
+          },
+          "checksum_sha256": {
+            "type": "string",
+            "title": "Checksum Sha256"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "inline_package_available": {
+            "type": "boolean",
+            "title": "Inline Package Available",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "checksum_sha256",
+          "expires_at"
+        ],
+        "title": "OntologyExportDownloadMetadata"
+      },
+      "OntologyExportResponse": {
+        "properties": {
+          "package_id": {
+            "type": "string",
+            "title": "Package Id"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "title": "Ontology Version Id"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/OntologyPackageCounts"
+          },
+          "compatibility_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Compatibility Notes"
+          },
+          "package": {
+            "$ref": "#/components/schemas/OntologyPackagePayload"
+          },
+          "download": {
+            "$ref": "#/components/schemas/OntologyExportDownloadMetadata"
+          },
+          "audit_event_ref": {
+            "$ref": "#/components/schemas/AuditEventRef"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package_id",
+          "schema_version",
+          "project_id",
+          "ontology_version_id",
+          "generated_at",
+          "counts",
+          "compatibility_notes",
+          "package",
+          "download",
+          "audit_event_ref"
+        ],
+        "title": "OntologyExportResponse"
+      },
+      "OntologyImportDryRunRequest": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "DRY_RUN",
+            "title": "Mode",
+            "default": "DRY_RUN"
+          },
+          "package": {
+            "$ref": "#/components/schemas/OntologyPackagePayload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package"
+        ],
+        "title": "OntologyImportDryRunRequest"
+      },
+      "ImportWarning": {
+        "properties": {
+          "severity": {
+            "$ref": "#/components/schemas/ImportConflictSeverity",
+            "default": "WARNING"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "message"
+        ],
+        "title": "ImportWarning"
+      },
+      "DestructiveImpactRow": {
+        "properties": {
+          "resource_type": {
+            "type": "string",
+            "title": "Resource Type"
+          },
+          "resource_id": {
+            "type": "string",
+            "title": "Resource Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "published_graph_refs_affected": {
+            "type": "integer",
+            "title": "Published Graph Refs Affected",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource_type",
+          "resource_id",
+          "action",
+          "reason"
+        ],
+        "title": "DestructiveImpactRow"
+      },
+      "OntologyImportDryRunResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "default": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/GovernanceJobStatus"
+          },
+          "compatibility_status": {
+            "$ref": "#/components/schemas/ImportCompatibilityStatus"
+          },
+          "package_id": {
+            "type": "string",
+            "title": "Package Id"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version"
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "title": "Ontology Version Id"
+          },
+          "parsed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Parsed At"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ImportDryRunSummary"
+          },
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/ImportConflict"
+            },
+            "type": "array",
+            "title": "Conflicts"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/ImportWarning"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "destructive_impacts": {
+            "items": {
+              "$ref": "#/components/schemas/DestructiveImpactRow"
+            },
+            "type": "array",
+            "title": "Destructive Impacts"
+          },
+          "rollback_guidance": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Rollback Guidance"
+          },
+          "confirmation_required": {
+            "type": "boolean",
+            "title": "Confirmation Required"
+          },
+          "audit_preview": {
+            "$ref": "#/components/schemas/AuditPreview"
+          },
+          "audit_event_ref": {
+            "$ref": "#/components/schemas/AuditEventRef"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "project_id",
+          "status",
+          "compatibility_status",
+          "package_id",
+          "schema_version",
+          "ontology_version_id",
+          "parsed_at",
+          "summary",
+          "conflicts",
+          "warnings",
+          "destructive_impacts",
+          "rollback_guidance",
+          "confirmation_required",
+          "audit_preview",
+          "audit_event_ref"
+        ],
+        "title": "OntologyImportDryRunResponse"
+      }
+    },
+    "examples": {
+      "OneTimeSecretReveal": {
+        "summary": "Create response with one-time raw secret",
+        "value": {
+          "credential": {
+            "credential_id": "cred_demo_service_account",
+            "credential_kind": "SERVICE_ACCOUNT",
+            "project_id": "mvp5-demo-project",
+            "name": "MVP5 Demo Export Bot",
+            "status": "ACTIVE",
+            "masked_secret": "MASKED_API_KEY_...9F2A",
+            "scopes": [
+              "EXTERNAL_READ",
+              "PUBLISHED_GRAPH_READ",
+              "OPERATIONS_READ"
+            ],
+            "role_bindings": [
+              {
+                "role": "SERVICE_ACCOUNT",
+                "scope_type": "PROJECT",
+                "project_id": "mvp5-demo-project"
+              }
+            ],
+            "expires_at": "2026-07-19T00:00:00Z"
+          },
+          "raw_secret": "ONE_TIME_SECRET_PLACEHOLDER_NOT_A_REAL_SECRET",
+          "secret_reveal": {
+            "reveal_type": "ONE_TIME_CREATE_RESPONSE",
+            "shown_at": "2026-06-19T09:00:00Z",
+            "repeat_display_allowed": false
+          },
+          "audit_event_ref": {
+            "audit_event_id": "audit_cred_create_001",
+            "category": "CREDENTIAL"
+          }
+        }
+      },
+      "MaskedSecretView": {
+        "summary": "Future credential views are masked only",
+        "value": {
+          "credential_id": "cred_demo_service_account",
+          "credential_kind": "SERVICE_ACCOUNT",
+          "project_id": "mvp5-demo-project",
+          "name": "MVP5 Demo Export Bot",
+          "status": "ACTIVE",
+          "masked_secret": "MASKED_API_KEY_...9F2A",
+          "scopes": [
+            "EXTERNAL_READ",
+            "PUBLISHED_GRAPH_READ",
+            "OPERATIONS_READ"
+          ],
+          "audit_event_refs": [
+            {
+              "audit_event_id": "audit_cred_create_001",
+              "category": "CREDENTIAL"
+            }
+          ]
+        }
+      },
+      "BlockedAutomaticApproval": {
+        "summary": "Dry-run automatic approval blocked by safety gates",
+        "value": {
+          "policy_id": "policy_auto_approval_demo",
+          "policy_version": 3,
+          "mode": "DRY_RUN",
+          "status": "BLOCKED",
+          "evaluated_at": "2026-06-19T09:10:00Z",
+          "summary": {
+            "evaluated_count": 4,
+            "would_approve_count": 1,
+            "blocked_count": 3,
+            "requires_manual_review_count": 0
+          },
+          "rows": [
+            {
+              "candidate_id": "cand_missing_evidence",
+              "candidate_type": "ENTITY",
+              "status": "BLOCKED",
+              "block_reasons": [
+                "MISSING_EVIDENCE"
+              ],
+              "evidence_count": 0,
+              "validation_severity": "INFO",
+              "ontology_version_id": "ov_current"
+            },
+            {
+              "candidate_id": "cand_failed_validation",
+              "candidate_type": "RELATION",
+              "status": "BLOCKED",
+              "block_reasons": [
+                "FAILED_VALIDATION"
+              ],
+              "evidence_count": 2,
+              "validation_severity": "FAILED",
+              "ontology_version_id": "ov_current"
+            },
+            {
+              "candidate_id": "cand_stale_version",
+              "candidate_type": "PROPERTY_VALUE",
+              "status": "BLOCKED",
+              "block_reasons": [
+                "STALE_ONTOLOGY_VERSION"
+              ],
+              "evidence_count": 1,
+              "validation_severity": "INFO",
+              "ontology_version_id": "ov_previous"
+            }
+          ],
+          "audit_preview": {
+            "category": "POLICY",
+            "would_create_event": true,
+            "reason_required": true
+          }
+        }
+      },
+      "ImportDryRunConflict": {
+        "summary": "JSON import dry-run with blocking conflicts",
+        "value": {
+          "job_id": "import_dry_run_001",
+          "project_id": "mvp5-demo-project",
+          "status": "BLOCKED",
+          "format": "JSON",
+          "package_metadata": {
+            "package_schema_version": "ontology-package.v1",
+            "ontology_version_id": "ov_import_candidate",
+            "created_at": "2026-06-19T08:45:00Z"
+          },
+          "summary": {
+            "create_count": 2,
+            "update_count": 3,
+            "delete_count": 1,
+            "conflict_count": 2,
+            "warning_count": 1
+          },
+          "conflicts": [
+            {
+              "conflict_type": "NAME_COLLISION",
+              "severity": "BLOCKING",
+              "path": "classes[Customer]",
+              "message": "Class name already exists with a different stable identifier."
+            },
+            {
+              "conflict_type": "DESTRUCTIVE_DELETE",
+              "severity": "BLOCKING",
+              "path": "relations[ownsAccount]",
+              "message": "Package would remove a relation used by the current published graph."
+            }
+          ],
+          "destructive_impact": {
+            "would_delete_classes": 0,
+            "would_delete_properties": 1,
+            "would_delete_relations": 1,
+            "published_graph_refs_affected": 4
+          }
+        }
+      },
+      "DlqRowExample": {
+        "summary": "DLQ row with redacted payload preview",
+        "value": {
+          "items": [
+            {
+              "dlq_id": "dlq_import_001",
+              "job_id": "import_dry_run_001",
+              "project_id": "mvp5-demo-project",
+              "job_type": "IMPORT",
+              "failure_code": "SCHEMA_VERSION_INCOMPATIBLE",
+              "failure_message": "Package schema ontology-package.v9 is not supported by P0 importer.",
+              "payload_ref": "minio://ops-payloads/import_dry_run_001.redacted.json",
+              "redacted_payload_preview": {
+                "package_schema_version": "ontology-package.v9",
+                "raw_secret_present": false
+              },
+              "retry_count": 2,
+              "audit_event_refs": [
+                {
+                  "audit_event_id": "audit_dlq_001",
+                  "category": "DLQ"
+                }
+              ]
+            }
+          ],
+          "total": 1
+        }
+      },
+      "CostBudgetNearLimit": {
+        "summary": "Cost budget near limit",
+        "value": {
+          "project_id": "mvp5-demo-project",
+          "budget_status": "NEAR_LIMIT",
+          "currency": "USD",
+          "budget_amount": 100.0,
+          "estimated_spend": 82.4,
+          "token_limit": 1000000,
+          "tokens_used": 845120,
+          "near_limit_threshold": 0.8
+        }
+      },
+      "RetentionDeletionDryRun": {
+        "summary": "Retention deletion dry-run blocked by lineage",
+        "value": {
+          "project_id": "mvp5-demo-project",
+          "requested_resource_type": "SOURCE",
+          "mode": "DRY_RUN",
+          "impact_summary": {
+            "source_count": 3,
+            "evidence_count": 28,
+            "candidate_count": 14,
+            "published_graph_refs_affected": 5,
+            "audit_events_retained": 41
+          },
+          "lineage_impact": [
+            {
+              "source_id": "source_old_csv",
+              "evidence_count": 9,
+              "candidate_count": 4,
+              "published_graph_version_ids": [
+                "pgv_current"
+              ],
+              "blocked": true,
+              "block_reason": "PUBLISHED_GRAPH_LINEAGE_REFERENCES_SOURCE"
+            }
+          ],
+          "requires_confirmation": true,
+          "confirmation_text": "DELETE SOURCE PREVIEW ONLY"
+        }
+      }
+    }
+  }
+}

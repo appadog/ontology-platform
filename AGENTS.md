@@ -5,6 +5,7 @@
 ## Source of Truth
 
 - 제품/로드맵: `00_PROJECT_ROADMAP_MVP_1_TO_5.md`
+- MVP 6 제품화/고도화 확장 로드맵: `04_MVP6_PRODUCTIZATION_AND_ADVANCED_KNOWLEDGE_OPS.md`
 - PM 운영: `03_PM_AGENT_SKILL.md`
 - 백엔드 운영: `01_BACKEND_AGENT_SKILL.md`
 - 프론트엔드 운영: `02_FRONTEND_AGENT_SKILL.md`
@@ -22,6 +23,7 @@
 4. ontology version, prompt version, model run, review decision, audit log가 후속 MVP에서 연결될 수 있게 확장 가능한 모델을 잡는다.
 5. MVP 1에서는 실제 LLM 추출, 전문가 검수, RAG, 실사용 SSO/RBAC를 구현하지 않는다.
 6. 모든 주요 기능은 로컬 실행, 더미 데이터, API 문서, 기본 UI 상태를 고려한다.
+7. MVP 6 이후 기능은 평가, 학습, 거버넌스, 에이전트, 생태계 확장을 목표로 하되 후보/게시 그래프 분리와 evidence 보존 원칙을 절대 깨지 않는다.
 
 ## Collaboration Flow
 

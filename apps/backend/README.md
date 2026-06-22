@@ -214,6 +214,22 @@ cd apps/backend
 cmp -s /tmp/openapi-mvp3.json ../../docs/api/openapi-mvp3-draft.json
 ```
 
+## MVP 5 Seed and Thin Runtime Smoke
+
+MVP 5 deterministic seed support extends the MVP4 seed with the admin/operator
+governance thin slice plus Wave25 ontology JSON export/import dry-run fixtures.
+The seed output records stable IDs and confirms one-time create response support
+without writing raw credential secrets.
+
+```bash
+cd apps/backend
+rm -f /tmp/ontology-wave25-mvp5-seed.db /tmp/ontology-wave25-mvp5-seed.json
+DATABASE_URL=sqlite+pysqlite:////tmp/ontology-wave25-mvp5-seed.db .venv/bin/alembic upgrade head
+DATABASE_URL=sqlite+pysqlite:////tmp/ontology-wave25-mvp5-seed.db .venv/bin/python scripts/seed_mvp5.py --output /tmp/ontology-wave25-mvp5-seed.json
+.venv/bin/pytest tests/test_mvp5_api.py -q
+.venv/bin/python scripts/export_openapi.py --output /tmp/ontology-wave25-mvp5-openapi.json
+```
+
 ## Notes
 
 - Enum strings are copied from `docs/pm/GLOSSARY.md`.

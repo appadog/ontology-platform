@@ -1,4 +1,4 @@
-import { Boxes, Database, FolderKanban, ListChecks, Sparkles, LayoutDashboard } from "lucide-react";
+import { Boxes, Database, FolderKanban, ListChecks, ShieldCheck, Sparkles, LayoutDashboard } from "lucide-react";
 
 export const navigationItems = [
   {
@@ -30,5 +30,10 @@ export const navigationItems = [
     label: "Candidates",
     path: "/candidates",
     icon: ListChecks,
+  },
+  {
+    label: "Admin",
+    path: "/admin",
+    icon: ShieldCheck,
   },
 ];

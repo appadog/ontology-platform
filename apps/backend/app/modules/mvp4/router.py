@@ -79,6 +79,7 @@ def get_quality_metric_detail(
     "/projects/{project_id}/evaluation-datasets",
     response_model=list[EvaluationDataset],
     summary="List evaluation datasets",
+    include_in_schema=False,
     responses={404: {"model": ApiErrorResponse}},
 )
 def list_evaluation_datasets(
@@ -94,6 +95,7 @@ def list_evaluation_datasets(
     response_model=EvaluationDataset,
     status_code=status.HTTP_201_CREATED,
     summary="Create evaluation dataset draft",
+    include_in_schema=False,
     responses={404: {"model": ApiErrorResponse}},
 )
 def create_evaluation_dataset(
@@ -120,6 +122,7 @@ def create_evaluation_dataset(
     "/evaluation-datasets/{dataset_id}",
     response_model=EvaluationDataset,
     summary="Get evaluation dataset",
+    include_in_schema=False,
     responses={404: {"model": ApiErrorResponse}},
 )
 def get_evaluation_dataset(dataset_id: str, db: Session = Depends(get_db)) -> EvaluationDataset:
@@ -222,6 +225,7 @@ def create_golden_item(
     "/projects/{project_id}/evaluation-runs",
     response_model=list[EvaluationRun],
     summary="List evaluation runs",
+    include_in_schema=False,
     responses={404: {"model": ApiErrorResponse}},
 )
 def list_evaluation_runs(project_id: str, db: Session = Depends(get_db)) -> list[EvaluationRun]:
@@ -234,6 +238,7 @@ def list_evaluation_runs(project_id: str, db: Session = Depends(get_db)) -> list
     response_model=EvaluationRun,
     status_code=status.HTTP_201_CREATED,
     summary="Create evaluation run draft",
+    include_in_schema=False,
     responses={404: {"model": ApiErrorResponse}},
 )
 def create_evaluation_run(
@@ -259,6 +264,7 @@ def create_evaluation_run(
     "/evaluation-runs/{evaluation_run_id}",
     response_model=EvaluationRun,
     summary="Get evaluation run",
+    include_in_schema=False,
     responses={404: {"model": ApiErrorResponse}},
 )
 def get_evaluation_run(evaluation_run_id: str, db: Session = Depends(get_db)) -> EvaluationRun:

@@ -4,9 +4,9 @@
 
 ## Latest Wave
 
-- Current wave: `wave-022`
-- Overall status: `MVP 4 TARGETED HARDENING CLOSED / QUALITY RECOMPUTATION CLOSEOUT`
-- 기준일: 2026-06-19
+- Current wave: `wave-031`
+- Overall status: `MVP6.2 CONTRACT HARDENING PASS / WAVE32 THIN IMPLEMENTATION READY`
+- 기준일: 2026-06-22
 
 ## Latest Decisions
 
@@ -83,6 +83,57 @@
 - Wave 21 QA verdict is `PASS / TARGETED WAVE21 HARDENING CLOSED`.
 - Current MVP4 INT4 status after Wave21: `INT4-001`, `INT4-003`, `INT4-004`, `INT4-005`, `INT4-006`, `INT4-007`, `INT4-008` are PASS; `INT4-002` remains PARTIAL pending full raw quality metric recomputation proof; `INT4-009` remains P1 / NOT RUNNABLE.
 - Wave 22 may proceed to MVP4 expansion, but its first closeout target must be `INT4-002`: full raw recomputation proof for advanced quality metrics.
+- Wave 22 PM, Backend, Frontend, and QA reports are accepted as PASS.
+- `INT4-002` is reclassified as PASS. Backend produced deterministic quality recomputation proof at `/tmp/ontology-wave22-quality-proof.json`, Frontend exposed numerator/denominator/formula/version/drilldown/no-composite evidence, and QA verified all seven P0 metric groups with tolerance `0.0001`.
+- MVP 4 product P0 is closed. `INT4-001`~`INT4-008` are PASS; `INT4-009` remains P1 / NOT RUNNABLE because collaboration/SLA was not promoted into MVP4 P0.
+- Remaining MVP4 follow-ups are P1: Docker/PostgreSQL Compose smoke, broader Playwright suite formalization, collaboration/SLA, and documenting `scripts/verify_mvp4_quality_metrics.py --no-reset` for seed/proof command sequencing.
+- Wave 23 opens MVP 5 contract-first planning only. PM must freeze the enterprise/governance P0 thin slice before Backend or Frontend implement runtime code.
+- MVP 5 initial candidate areas are admin console, RBAC/ABAC policy surface, API keys/service accounts, automatic approval policy, ontology import/export, operations/observability, cost limits, backup/restore, data retention/deletion, and enterprise release/incident governance. PM must choose the smallest coherent P0 path before implementation.
+- Wave 23 PM, Backend, Frontend, and QA reports are accepted as PASS.
+- MVP5 P0 is frozen as an admin/operator governance control plane, not another search/RAG demo.
+- MVP5 P0 thin slice includes local dev-auth admin summaries, role/permission checks, service account/API key one-time reveal plus masked list/detail/revoke, automatic approval dry-run/enforce-preview gates, JSON import/export planning, operations/DLQ/cost/observability, retention deletion dry-run, backup restore dry-run, and audit/security event expectations.
+- MVP5 P1 exclusions remain production SSO/OIDC, production secret rotation/vault/KMS, full HA/distributed infrastructure, full SPARQL/Cypher console, full RDF/Turtle/OWL/SHACL fidelity, full custom ABAC expression language, external write APIs, and ungated autonomous publish.
+- Wave 23 Backend OpenAPI planning artifact is accepted for implementation planning: `docs/api/openapi-mvp5-draft.json` parses as OpenAPI `3.1.0`, version `0.5.0-draft`, with `43` paths and `91` schemas.
+- Wave 23 QA created `docs/backlog/INT5_MVP5_ACCEPTANCE.md` and recommends Wave24 thin implementation, not another contract-hardening wave.
+- Wave 24 must start with Gate 0 cleanup: replace raw-secret-looking example literals in `docs/api/MVP5_API_CONTRACT_DRAFT.md` and `docs/api/openapi-mvp5-draft.json` with non-secret placeholders before seed/runtime/mock/report/screenshot artifacts are generated.
+- Wave 24 implementation must not print, persist, log, screenshot, or report raw credential secret values. The create response may contain a `raw_secret` field contractually, but verification must assert existence without emitting the value.
+- Wave 24 PM, Backend, Frontend, and QA reports are accepted as a coherent MVP5 admin/operator thin slice.
+- Wave 24 Gate 0 no-secret cleanup is closed: docs/OpenAPI/frontend/report/artifact scan found 0 concrete raw-secret-looking violations after replacing secret-looking masked examples with non-secret placeholders.
+- Wave 24 MVP5 admin/operator runtime and UI are accepted as PASS for selected scope: authorization matrix, credential safety, automatic approval policy safety, operations/DLQ/cost/observability, retention/backup governance, frontend admin states, local seed, mock smoke, and actual smoke passed.
+- MVP5 P0 is not closed yet. `INT5-005` remains PARTIAL because JSON ontology import/export runtime/UI was intentionally deferred to Wave25, and `INT5-009` remains PARTIAL because full MVP1-MVP4 regression breadth was not rerun in Wave24 QA.
+- Wave 25 must close `INT5-005` first, then broaden `INT5-009` regression evidence. If both pass, QA may recommend MVP5 P0 closeout or move to usability/code-split/refactor review.
+- Wave 25 PM, Backend, Frontend, and QA reports are accepted as PASS.
+- MVP5 product P0 is closed. `INT5-001` through `INT5-010` are PASS.
+- `INT5-005` JSON ontology import/export is closed: export metadata/counts/audit, import dry-run compatibility/conflict/warning/destructive states, non-mutation proof, contextual frontend route, mock smoke, and actual smoke all passed.
+- `INT5-009` regression breadth is closed: backend MVP1-style/MVP3/MVP4 tests, frontend test/build, and MVP2/MVP3/MVP4 actual smokes passed against the Wave25 seeded runtime.
+- Remaining MVP5 follow-ups are P1/P2: Docker/PostgreSQL Compose smoke, broader formal Playwright suite, production SSO/OIDC, vault/KMS/secret rotation, full ABAC language, RDF/OWL/SHACL fidelity, distributed HA/DR, and external write APIs.
+- Wave 26 opens post-MVP5 quality work: usability improvement, code split, refactor review, and safe follow-up execution. Start with PM/Architecture prioritization before broad implementation.
+- Wave 26 PM, Backend, Frontend, and QA reports are accepted as PASS.
+- Wave 26 post-MVP5 cleanup is accepted as behavior-preserving: Backend extracted MVP5 import/export pure helpers, Frontend split admin pages into focused modules, and QA verified MVP5 P0 remains closed.
+- Wave 26 QA recommends `RELEASE/DEMO PACKAGING` as the next step. No Wave27 targeted hardening is required to protect MVP5 P0.
+- Wave 27 opens release/demo packaging. The goal is reproducible local demo documentation, command matrix, seed/smoke guidance, no-secret checklist, and release handoff material without reopening product scope.
+- User added `04_MVP6_PRODUCTIZATION_AND_ADVANCED_KNOWLEDGE_OPS.md` as the MVP6 productization and advanced knowledge-ops roadmap extension after MVP5.
+- Wave28 supersedes immediate Wave27 packaging execution by user direction and opens MVP6.1 Gold Set / Benchmark Studio as the first MVP6 thin slice.
+- `AGENTS.md` now references the MVP6 roadmap as source of truth alongside `00_PROJECT_ROADMAP_MVP_1_TO_5.md`.
+- Wave28 PM, Backend, Frontend, and QA reports are accepted as PASS.
+- Wave28 MVP6.1 P0 scope is limited to deterministic Gold Set / Benchmark Studio: create evaluation dataset, add sample, add gold entity/relation, run `DETERMINISTIC_MOCK` evaluation, view metrics and error cases.
+- Wave28 explicitly excludes real LLM benchmark execution, fine-tuning, active learning, ontology governance workflow, copilot/agent runtime, connector/plugin SDK, multi-tenant runtime, and published graph mutation.
+- Wave28 Backend thin runtime is accepted as PASS: additive evaluation API, deterministic process-local runtime store, metrics/error cases, OpenAPI artifact, focused tests, MVP4 regression, ruff, and non-mutation guard passed.
+- Wave28 Frontend mock-first UI is accepted as PASS: Evaluation Datasets page now shows dataset -> sample -> gold entity/relation -> deterministic run -> metrics -> error cases, with MVP6 mocks/types/client/query, tests, build, and mock route smoke passed.
+- Wave28 QA verdict is PASS for `INT6-001` through `INT6-005`. `smoke:mvp6:actual`, Frontend nested `candidate_ref` type widening, and durable DB/Alembic persistence decision remain Wave29/P1 hardening candidates.
+- Wave29 PM, Backend, Frontend, and QA reports are accepted as PASS.
+- MVP6.1 hardening is closed: `smoke:mvp6:actual` self-creates project/dataset/sample/gold/run data against actual backend/frontend runtime and passes.
+- Frontend `EvaluationErrorCase.candidate_ref` now uses MVP6-specific `EvaluationCandidateRef` aligned with Backend OpenAPI fields.
+- Process-local evaluation runtime store is accepted for MVP6.1 closeout when actual smoke creates/reads all required data in the same backend process. Durable DB/Alembic persistence remains P1/P2.
+- Legacy actual render 404 for `/api/v1/evaluation-datasets/{dataset_id}/versions` is non-blocking for MVP6.1 and remains a cleanup candidate.
+- Wave30 opens MVP6.2 Active Learning / Continuous Improvement as contract-first planning only. Runtime implementation must wait for PM freeze, Backend contract draft, Frontend UX/API review, and QA checklist.
+- Wave30 PM, Backend, and Frontend reports are accepted as PASS for planning scope, but Wave30 QA verdict is `PARTIAL / TARGETED CONTRACT HARDENING REQUIRED`.
+- MVP6.2 P0 product scope is sound: recommendation/audit loop only, no prompt/candidate/published graph/policy mutation, and no runtime implementation leakage.
+- Wave31 must harden implementation-facing contract details before MVP6.2 thin implementation: decision command/state vocabulary, learning summary fields, source artifact enum/field names, and auto-approval preview field names.
+- Wave31 PM, Backend, Frontend, and QA reports are accepted as PASS.
+- MVP6.2 contract hardening is closed: `ACCEPT`/`DISMISS` are request commands, `ACCEPTED`/`DISMISSED` are resulting states, `SUPERSEDED` is read-side only, and non-`SUGGESTED` decision command conflicts by default.
+- MVP6.2 summary, source artifact, and auto-approval preview field names are aligned across PM, Backend/OpenAPI, Frontend requirements, and QA checklist.
+- Wave32 may open MVP6.2 thin implementation with frozen endpoint families, deterministic local data, mock/actual frontend coverage, and no prompt/candidate/published graph/policy mutation.
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -140,14 +191,30 @@
 | MVP 3 Closeout / MVP 4 Prep | Closed in Wave 18. MVP3 product P0 accepted as `PASS WITH P1 FOLLOW-UPS`; MVP4 prep brief and draft backlog are ready. | PM3-005, INT3-001~INT3-007, PM4-001~PM4-008 |
 | MVP 4 Contract-First Planning | Closed in Wave 19. PM freeze, Backend contract/OpenAPI draft, Frontend field/state/IA review, and QA `INT4-*` checklist are ready. | PM4-001~PM4-008, BE4-001~BE4-009, FE4-001~FE4-008, INT4-001~INT4-009 |
 | MVP 4 Thin Implementation | Closed after Wave21 hardening. Backend/Frontend thin surfaces exist, actual smokes pass, external read-only APIs pass, and envelope comparison is resolved. | BE4-001~BE4-009, FE4-001~FE4-007, INT4-001, INT4-003~INT4-008 |
-| MVP 4 Quality Recompute Closeout | Open in Wave22. Need full raw recomputation proof for advanced quality metrics and UI/API evidence for numerator, denominator, formula metadata, precision tolerance, and drilldown consistency. | INT4-002, BE4-001, FE4-001 |
+| MVP 4 Quality Recompute Closeout | Closed in Wave22. Backend proof artifact, seed proof section, frontend visible trust evidence, and QA recomputation/tolerance checks PASS. | INT4-002, BE4-001, FE4-001 |
+| MVP 5 Contract-First Entry | Closed in Wave23. PM freeze, Backend contract/OpenAPI draft, Frontend admin UX requirements, and QA `INT5-*` checklist are ready. | PM5-001~PM5-010, BE5-001~BE5-010, FE5-001~FE5-008, INT5-001~INT5-010 |
+| MVP 5 Thin Implementation | Closed. Wave24 admin/operator slice plus Wave25 import/export and regression closeout are PASS. | BE5-001~BE5-010, FE5-001~FE5-008, INT5-001~INT5-010 |
+| MVP 5 JSON Import/Export | Closed in Wave25. Export metadata/counts/audit, import dry-run compatibility/conflict/warning/destructive states, non-mutation proof, frontend route, and mock/actual smoke PASS. | BE5-005, FE5-005, INT5-005 |
+| MVP 5 Regression Breadth | Closed in Wave25. Backend MVP1-style/MVP3/MVP4 tests and frontend MVP2/MVP3/MVP4 actual smokes PASS. | INT5-009 |
+| Post-MVP5 Quality Review | Closed in Wave26. Backend helper extraction and Frontend admin page split are accepted as behavior-preserving; MVP5 P0 remains closed. | PM/Architecture, Backend, Frontend, QA |
+| Release / Demo Packaging | Paused as P1 follow-up by user-directed MVP6 entry. Wave27 orders exist but were not executed before Wave28 opened. | PM/Architecture, Backend, Frontend, QA |
+| MVP6 Roadmap Entry | Closed in Wave28. `04_MVP6_PRODUCTIZATION_AND_ADVANCED_KNOWLEDGE_OPS.md` added and referenced by operating docs. | MVP6 |
+| MVP6.1 Gold Set / Benchmark Studio Thin Slice | Closed in Wave28. PM freeze, Backend deterministic runtime, Frontend mock-first product UI, OpenAPI artifact, and QA `INT6-001`~`INT6-005` PASS. | PM6-001~PM6-004, BE6-001~BE6-005, FE6-001~FE6-005, INT6-001~INT6-005 |
+| MVP6.1 Actual API Smoke | Closed in Wave29. `npm run smoke:mvp6:actual` passes with self-created actual backend data and route assertions. | FE6-009, INT6-006 |
+| MVP6.1 Candidate Ref Type Widening | Closed in Wave29. Frontend `EvaluationCandidateRef` aligns with Backend OpenAPI and displays entity/relation context plus nullable evidence fallback. | FE6-010, INT6-007 |
+| MVP6.1 Durable Persistence Decision | Closed as a P1/P2 follow-up decision. Process-local store is acceptable for MVP6.1; durable DB/Alembic requires a later PM freeze. | PM6-009, BE6-006 |
+| MVP6.1 Legacy Dataset Version Query | Non-blocking cleanup candidate. Actual route render may call `/api/v1/evaluation-datasets/{dataset_id}/versions` and receive 404, but MVP6.1 required smoke assertions pass. | FE6 cleanup |
+| MVP6.2 Active Learning Contract | Closed in Wave31. PM/BE/FE/QA planning artifacts now agree and Wave32 thin implementation is approved. | PM6-010~PM6-015, BE6-012~BE6-018, FE6-011~FE6-017, INT6-011~INT6-016 |
+| MVP6.2 Decision Vocabulary | Closed in Wave31. `ACCEPT`/`DISMISS` are request commands; `ACCEPTED`/`DISMISSED` are resulting states; `SUPERSEDED` is read-side only. | INT6-012, INT6-015 |
+| MVP6.2 DTO Field Alignment | Closed in Wave31. Summary, source artifact, and auto-approval preview field names are aligned across PM, Backend/OpenAPI, Frontend requirements, and QA. | INT6-012, INT6-014, INT6-015 |
+| MVP6.2 Thin Runtime/UI | Open for Wave32. Implement deterministic read-mostly learning signal endpoints, audit-only decision capture, Product Showcase Learning Insights UI, and mock/actual smoke. | BE6-019+, FE6-018+, INT6-017+ |
 
 ## Next Gate
 
-1. PM: Define the exact `INT4-002` recomputation proof standard: metric formulas, raw input sources, precision tolerance, and accepted evidence artifacts.
-2. Backend: Add deterministic recomputation artifact or endpoint/test support proving `COMPLETENESS`, `CONSISTENCY`, `TRACEABILITY`, `VALIDATION`, `REVIEW`, `DUPLICATE`, and `RELATION_DENSITY` metrics from seed/raw API data.
-3. Frontend: Surface numerator/denominator/sample context and formula/drilldown confidence clearly enough for QA to verify `INT4-002` without inventing a composite score.
-4. QA: Re-run `INT4-002` plus regression guard for all Wave21 PASS surfaces, then recommend MVP4 closeout or additional expansion.
+1. PM: Open Wave32 implementation scope guard only; confirm no additional MVP6.2 product scope.
+2. Backend: Implement deterministic MVP6.2 learning-signal API thin slice with tests and OpenAPI export, preserving audit-only/no-mutation guarantees.
+3. Frontend: Implement Learning Insights route, DTO/client/mocks, Product Showcase style application, and mock/actual smoke against the frozen contract.
+4. QA: Validate MVP6.2 runtime contract, frontend mock/actual flow, mutation guard, and regression invariants; recommend closeout or targeted hardening.
 
 ## Latest Role Reports
 
@@ -232,6 +299,42 @@
 | Backend | wave-021 | `PASS / EXTERNAL API HARDENED` | Source/evidence external reads fixed; MVP4/MVP3 tests, ruff, seed, OpenAPI compare PASS |
 | Frontend | wave-021 | `PASS / ACTUAL SMOKES RESTORED` | MVP3 actual, MVP4 mock, MVP4 actual smokes PASS; missing markers restored |
 | QA | wave-021 | `PASS / TARGETED HARDENING CLOSED` | INT4-001/003/004/005/006/007/008 PASS; INT4-002 remains PARTIAL; INT4-009 P1 |
+| PM | wave-022 | `PASS / CRITERIA READY` | INT4-002 recomputation proof standard, seven metric group matrix, tolerance, and no-composite boundary defined |
+| Backend | wave-022 | `PASS / QUALITY PROOF READY` | Deterministic `/tmp/ontology-wave22-quality-proof.json`, seed proof section, tests, ruff, OpenAPI compare PASS |
+| Frontend | wave-022 | `PASS / FRONTEND QUALITY EVIDENCE READY` | Quality dashboard shows numerator, denominator, formula, drilldown, version, and no-composite evidence; mock/actual smokes PASS |
+| QA | wave-022 | `PASS / MVP4 P0 CLOSEOUT RECOMMENDED` | INT4-002 PASS; INT4-001~008 PASS; INT4-009 remains P1 / NOT RUNNABLE |
+| PM | wave-023 | `PASS / MVP5 PM FREEZE READY` | MVP5 P0 admin/operator governance boundary, roles, permissions, security invariants, backlog, and ADR 0008 ready |
+| Backend | wave-023 | `PASS / MVP5 CONTRACT DRAFT READY` | MVP5 API contract and OpenAPI planning artifact ready; 43 paths, 91 schemas, additive to MVP4 |
+| Frontend | wave-023 | `PASS / MVP5 ADMIN UX REQUIREMENTS READY` | Admin IA, permission states, masked secret UX, dry-run/enforce, import/export, operations, retention/backup requirements ready |
+| QA | wave-023 | `PASS / MVP5 THIN IMPLEMENTATION RECOMMENDED` | `INT5-*` checklist ready; Wave24 Gate 0 raw-secret-looking example cleanup required before runtime artifacts |
+| PM | wave-024 | `PASS / SCOPE GUARD READY` | Wave24 narrower admin/operator slice approved; JSON import/export allowed to move to Wave25 |
+| Backend | wave-024 | `PASS / MVP5 THIN RUNTIME READY` | Gate 0 cleanup, deterministic seed, admin/operator runtime, tests, ruff, OpenAPI compare, no-secret scan PASS |
+| Frontend | wave-024 | `PASS / MVP5 ADMIN UI READY` | Admin routes, DTO/client/mocks, mock smoke and commander actual smoke PASS after actual DTO normalization |
+| QA | wave-024 | `PARTIAL / NO BLOCKING FAIL` | INT5-001/002/003/004/006/007/008/010 PASS; INT5-005 and INT5-009 remain Wave25 follow-ups |
+| PM | wave-025 | `PASS / IMPORT-EXPORT FREEZE READY` | JSON import/export dry-run-only behavior and regression matrix frozen |
+| Backend | wave-025 | `PASS / IMPORT-EXPORT RUNTIME READY` | Export and import dry-run endpoints, non-mutation tests, OpenAPI compare, no-secret scan PASS |
+| Frontend | wave-025 | `PASS / IMPORT-EXPORT UX READY` | Contextual import/export route, mock/actual smoke, MVP3/MVP4 actual regression PASS |
+| QA | wave-025 | `PASS / MVP5 P0 CLOSEOUT RECOMMENDED` | INT5-001~INT5-010 PASS; MVP5 P0 closeout recommended |
+| PM | wave-026 | `PASS / POST-MVP5 REVIEW READY` | MVP5 P0 closeout accepted; safe cleanup, P1 polish, P2 refactor tiers defined |
+| Backend | wave-026 | `PASS / SAFE HELPER EXTRACTION` | MVP5 import/export pure helpers extracted with API behavior unchanged |
+| Frontend | wave-026 | `PASS / ADMIN PAGE SPLIT` | Admin pages split into focused modules; routes, markers, LNB, import dry-run-only behavior preserved |
+| QA | wave-026 | `PASS / RELEASE-DEMO PACKAGING RECOMMENDED` | MVP5 closeout remains intact after cleanup; next step release/demo packaging |
+| PM | wave-028 | `PASS / MVP6.1 SCOPE FROZEN` | MVP6.1 Gold Set / Benchmark Studio P0 thin slice frozen; same-wave implementation approved |
+| Backend | wave-028 | `PASS / MVP6.1 THIN RUNTIME READY` | Evaluation API, deterministic metrics/errors, OpenAPI artifact, tests, ruff, non-mutation guard PASS |
+| Frontend | wave-028 | `PASS / MVP6.1 MOCK-FIRST UI READY` | Evaluation flow UI, types/client/queries/mocks, tests, build, mock smoke PASS |
+| QA | wave-028 | `PASS / MVP6.1 ACCEPTANCE VERIFIED` | INT6-001~INT6-005 PASS; actual smoke and durable persistence remain P1 hardening |
+| PM | wave-029 | `PASS / MVP6.1 HARDENING FREEZE` | Actual smoke criteria, process-local store closeout, candidate_ref DTO boundary, and Wave29 exclusions recorded |
+| Backend | wave-029 | `PASS / MVP6.1 CONTRACT STABLE` | Actual smoke needs no new runtime; focused tests guard dataset/sample/gold/run and EvaluationCandidateRef fields |
+| Frontend | wave-029 | `PASS / MVP6.1 ACTUAL SMOKE READY` | `EvaluationCandidateRef` added; mock and actual MVP6 smoke pass |
+| QA | wave-029 | `PASS / MVP6.1 HARDENING VERIFIED` | INT6-006~INT6-008 PASS; MVP6.1 closeout and MVP6.2 contract-first planning recommended |
+| PM | wave-030 | `PASS / MVP6.2 PM FREEZE READY` | P0 recommendation/audit loop, taxonomy, prompt states, source artifacts, and safety exclusions frozen |
+| Backend | wave-030 | `PASS / MVP6.2 CONTRACT DRAFT READY` | Planning-only API draft and OpenAPI artifact created; 5 paths, 37 schemas |
+| Frontend | wave-030 | `PASS / MVP6.2 UX REQUIREMENTS READY` | Learning Insights IA, states, Product Showcase style guide, and blocking/optional fields documented |
+| QA | wave-030 | `PARTIAL / TARGETED HARDENING REQUIRED` | Scope/safety PASS; decision command/state and DTO field naming need Wave31 alignment before implementation |
+| PM | wave-031 | `PASS / MVP6.2 HARDENING FREEZE` | Decision vocabulary and DTO field naming frozen without redesign |
+| Backend | wave-031 | `PASS / MVP6.2 CONTRACT ALIGNED` | OpenAPI summary fields, source artifact enum, auto-approval preview fields, and command/state enums aligned |
+| Frontend | wave-031 | `PASS / MVP6.2 UX CONTRACT ALIGNED` | UX requirements now match Backend/OpenAPI field names and command/state vocabulary |
+| QA | wave-031 | `PASS / MVP6.2 IMPLEMENTATION READY` | INT6-012/014/015/016 PASS; Wave32 thin implementation recommended |
 
 ## Report Index
 
@@ -258,4 +361,13 @@
 | wave-019 | `wave-019/PM_REPORT.md` | `wave-019/BACKEND_REPORT.md` | `wave-019/FRONTEND_REPORT.md` | `wave-019/QA_REPORT.md` | `wave-019/NEXT_ORDERS.md` |
 | wave-020 | `wave-020/PM_REPORT.md` | `wave-020/BACKEND_REPORT.md` | `wave-020/FRONTEND_REPORT.md` | `wave-020/QA_REPORT.md` | `wave-020/NEXT_ORDERS.md` |
 | wave-021 | `wave-021/PM_REPORT.md` | `wave-021/BACKEND_REPORT.md` | `wave-021/FRONTEND_REPORT.md` | `wave-021/QA_REPORT.md` | `wave-021/NEXT_ORDERS.md` |
-| wave-022 | pending | pending | pending | pending | `wave-022/NEXT_ORDERS.md` |
+| wave-022 | `wave-022/PM_REPORT.md` | `wave-022/BACKEND_REPORT.md` | `wave-022/FRONTEND_REPORT.md` | `wave-022/QA_REPORT.md` | `wave-022/NEXT_ORDERS.md` |
+| wave-023 | `wave-023/PM_REPORT.md` | `wave-023/BACKEND_REPORT.md` | `wave-023/FRONTEND_REPORT.md` | `wave-023/QA_REPORT.md` | `wave-023/NEXT_ORDERS.md` |
+| wave-024 | `wave-024/PM_REPORT.md` | `wave-024/BACKEND_REPORT.md` | `wave-024/FRONTEND_REPORT.md` | `wave-024/QA_REPORT.md` | `wave-024/NEXT_ORDERS.md` |
+| wave-025 | `wave-025/PM_REPORT.md` | `wave-025/BACKEND_REPORT.md` | `wave-025/FRONTEND_REPORT.md` | `wave-025/QA_REPORT.md` | `wave-025/NEXT_ORDERS.md` |
+| wave-026 | `wave-026/PM_REPORT.md` | `wave-026/BACKEND_REPORT.md` | `wave-026/FRONTEND_REPORT.md` | `wave-026/QA_REPORT.md` | `wave-026/NEXT_ORDERS.md` |
+| wave-027 | not run | not run | not run | not run | `wave-027/NEXT_ORDERS.md` |
+| wave-028 | `wave-028/PM_REPORT.md` | `wave-028/BACKEND_REPORT.md` | `wave-028/FRONTEND_REPORT.md` | `wave-028/QA_REPORT.md` | `wave-028/NEXT_ORDERS.md` |
+| wave-029 | `wave-029/PM_REPORT.md` | `wave-029/BACKEND_REPORT.md` | `wave-029/FRONTEND_REPORT.md` | `wave-029/QA_REPORT.md` | `wave-029/NEXT_ORDERS.md` |
+| wave-030 | `wave-030/PM_REPORT.md` | `wave-030/BACKEND_REPORT.md` | `wave-030/FRONTEND_REPORT.md` | `wave-030/QA_REPORT.md` | `wave-030/NEXT_ORDERS.md` |
+| wave-031 | `wave-031/PM_REPORT.md` | `wave-031/BACKEND_REPORT.md` | `wave-031/FRONTEND_REPORT.md` | `wave-031/QA_REPORT.md` | `wave-031/NEXT_ORDERS.md` |

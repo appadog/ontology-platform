@@ -1,13 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
 import {
+  PermissionCheckRequest,
   CandidateListFilters,
+  EvaluationDatasetCreateRequest,
+  EvaluationRunCreateRequest,
+  EvaluationSampleCreateRequest,
   ExtractionJobCreateRequest,
+  GoldEntityCreateRequest,
+  GoldRelationCreateRequest,
   GraphExploreRequest,
   OntologyClassCreateRequest,
   OntologyClassUpdateRequest,
   OntologyPropertyCreateRequest,
   OntologyPropertyUpdateRequest,
+  OntologyImportCreateRequest,
   OntologyRelationCreateRequest,
   OntologyRelationUpdateRequest,
   OntologyVersionCreateRequest,
@@ -485,6 +492,39 @@ export function useEvaluationDatasets(projectId: string) {
   });
 }
 
+export function useCreateEvaluationDataset(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: EvaluationDatasetCreateRequest) => apiClient.createEvaluationDataset(projectId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "evaluation-datasets"] });
+    },
+  });
+}
+
+export function useEvaluationSamples(datasetId: string) {
+  return useQuery({
+    queryKey: ["evaluation-datasets", datasetId, "samples"],
+    queryFn: () => apiClient.listEvaluationSamples(datasetId),
+    enabled: Boolean(datasetId),
+  });
+}
+
+export function useCreateEvaluationSample(datasetId: string, projectId?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: EvaluationSampleCreateRequest) => apiClient.createEvaluationSample(datasetId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["evaluation-datasets", datasetId, "samples"] });
+      if (projectId) {
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "evaluation-datasets"] });
+      }
+    },
+  });
+}
+
 export function useEvaluationDatasetVersions(datasetId: string) {
   return useQuery({
     queryKey: ["evaluation-datasets", datasetId, "versions"],
@@ -498,6 +538,50 @@ export function useGoldenItems(datasetVersionId: string) {
     queryKey: ["evaluation-dataset-versions", datasetVersionId, "golden-items"],
     queryFn: () => apiClient.listGoldenItems(datasetVersionId),
     enabled: Boolean(datasetVersionId),
+  });
+}
+
+export function useGoldEntities(datasetId: string) {
+  return useQuery({
+    queryKey: ["evaluation-datasets", datasetId, "gold-entities"],
+    queryFn: () => apiClient.listGoldEntities(datasetId),
+    enabled: Boolean(datasetId),
+  });
+}
+
+export function useCreateGoldEntity(datasetId: string, projectId?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: GoldEntityCreateRequest) => apiClient.createGoldEntity(datasetId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["evaluation-datasets", datasetId, "gold-entities"] });
+      if (projectId) {
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "evaluation-datasets"] });
+      }
+    },
+  });
+}
+
+export function useGoldRelations(datasetId: string) {
+  return useQuery({
+    queryKey: ["evaluation-datasets", datasetId, "gold-relations"],
+    queryFn: () => apiClient.listGoldRelations(datasetId),
+    enabled: Boolean(datasetId),
+  });
+}
+
+export function useCreateGoldRelation(datasetId: string, projectId?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: GoldRelationCreateRequest) => apiClient.createGoldRelation(datasetId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["evaluation-datasets", datasetId, "gold-relations"] });
+      if (projectId) {
+        void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "evaluation-datasets"] });
+      }
+    },
   });
 }
 
@@ -522,6 +606,52 @@ export function useEvaluationRuns(projectId: string) {
     queryKey: ["projects", projectId, "evaluation-runs"],
     queryFn: () => apiClient.listEvaluationRuns(projectId),
     enabled: Boolean(projectId),
+  });
+}
+
+export function useCreateEvaluationRun(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: EvaluationRunCreateRequest) => apiClient.createEvaluationRun(projectId, payload),
+    onSuccess: (run) => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "evaluation-runs"] });
+      void queryClient.invalidateQueries({ queryKey: ["evaluation-runs", run.id] });
+      void queryClient.invalidateQueries({ queryKey: ["evaluation-runs", run.id, "metrics"] });
+      void queryClient.invalidateQueries({ queryKey: ["evaluation-runs", run.id, "errors"] });
+    },
+  });
+}
+
+export function useEvaluationRun(runId: string) {
+  return useQuery({
+    queryKey: ["evaluation-runs", runId],
+    queryFn: () => apiClient.getEvaluationRun(runId),
+    enabled: Boolean(runId),
+  });
+}
+
+export function useEvaluationMetrics(runId: string) {
+  return useQuery({
+    queryKey: ["evaluation-runs", runId, "metrics"],
+    queryFn: () => apiClient.listEvaluationMetrics(runId),
+    enabled: Boolean(runId),
+  });
+}
+
+export function useEvaluationErrorCases(runId: string) {
+  return useQuery({
+    queryKey: ["evaluation-runs", runId, "errors"],
+    queryFn: () => apiClient.listEvaluationErrorCases(runId),
+    enabled: Boolean(runId),
+  });
+}
+
+export function useEvaluationErrorCase(errorCaseId: string) {
+  return useQuery({
+    queryKey: ["evaluation-error-cases", errorCaseId],
+    queryFn: () => apiClient.getEvaluationErrorCase(errorCaseId),
+    enabled: Boolean(errorCaseId),
   });
 }
 
@@ -567,6 +697,180 @@ export function useExternalApiDocs(projectId: string) {
   return useQuery({
     queryKey: ["projects", projectId, "external-api-docs"],
     queryFn: () => apiClient.getExternalApiDocs(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useAdminOrganizationSummary(organizationId?: string) {
+  return useQuery({
+    queryKey: ["admin", "organization", organizationId ?? "default", "summary"],
+    queryFn: () => apiClient.getAdminOrganizationSummary(organizationId),
+  });
+}
+
+export function useAdminProjectSummaries() {
+  return useQuery({
+    queryKey: ["admin", "projects"],
+    queryFn: () => apiClient.listAdminProjectSummaries(),
+  });
+}
+
+export function useAdminProjectSummary(projectId: string) {
+  return useQuery({
+    queryKey: ["admin", "projects", projectId, "summary"],
+    queryFn: () => apiClient.getAdminProjectSummary(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useAdminRoleAssignments(projectId: string) {
+  return useQuery({
+    queryKey: ["admin", "projects", projectId, "role-assignments"],
+    queryFn: () => apiClient.listAdminRoleAssignments(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useAdminPermissionCheck(payload: PermissionCheckRequest) {
+  return useQuery({
+    queryKey: ["admin", "permission-check", payload],
+    queryFn: () => apiClient.checkAdminPermission(payload),
+    enabled: Boolean(payload.principal_id && payload.action && payload.resource_type),
+  });
+}
+
+export function useAdminCredentials(projectId: string) {
+  return useQuery({
+    queryKey: ["admin", "projects", projectId, "credentials"],
+    queryFn: () => apiClient.listAdminCredentials(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useCreateAdminServiceAccount(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => apiClient.createAdminServiceAccount(projectId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "projects", projectId, "credentials"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin", "projects", projectId, "summary"] });
+    },
+  });
+}
+
+export function useRevokeAdminCredential(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ credentialId, reason }: { credentialId: string; reason: string }) => apiClient.revokeAdminCredential(credentialId, reason),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "projects", projectId, "credentials"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin", "projects", projectId, "summary"] });
+    },
+  });
+}
+
+export function useAutomaticApprovalPolicy(projectId: string) {
+  return useQuery({
+    queryKey: ["admin", "projects", projectId, "automatic-approval-policy"],
+    queryFn: () => apiClient.getAutomaticApprovalPolicy(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useAutomaticApprovalEvaluation(policyId: string) {
+  return useQuery({
+    queryKey: ["admin", "automatic-approval-policy", policyId, "evaluation"],
+    queryFn: () => apiClient.evaluateAutomaticApprovalPolicy(policyId),
+    enabled: Boolean(policyId),
+  });
+}
+
+export function useAutomaticApprovalDiff(policyId: string) {
+  return useQuery({
+    queryKey: ["admin", "automatic-approval-policy", policyId, "diff"],
+    queryFn: () => apiClient.diffAutomaticApprovalPolicy(policyId),
+    enabled: Boolean(policyId),
+  });
+}
+
+export function useAutomaticApprovalEnforcePreview(policyId: string) {
+  return useQuery({
+    queryKey: ["admin", "automatic-approval-policy", policyId, "enforce-preview"],
+    queryFn: () => apiClient.previewAutomaticApprovalEnforce(policyId),
+    enabled: Boolean(policyId),
+  });
+}
+
+export function useOntologyExports(projectId: string) {
+  return useQuery({
+    queryKey: ["admin", "projects", projectId, "ontology-exports"],
+    queryFn: () => apiClient.listOntologyExports(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useOntologyExportDownload(jobId: string) {
+  return useQuery({
+    queryKey: ["admin", "ontology-exports", jobId, "download"],
+    queryFn: () => apiClient.getOntologyExportDownload(jobId),
+    enabled: Boolean(jobId),
+  });
+}
+
+export function useOntologyImportDryRun(projectId: string, payload: OntologyImportCreateRequest = { format: "JSON", mode: "DRY_RUN" }) {
+  return useQuery({
+    queryKey: ["admin", "projects", projectId, "ontology-imports", "dry-run", payload],
+    queryFn: () => apiClient.createOntologyImportDryRun(projectId, payload),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useOperationsDashboard(projectId: string) {
+  return useQuery({
+    queryKey: ["admin", "projects", projectId, "operations"],
+    queryFn: () => apiClient.getOperationsDashboard(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useRetentionPolicy(projectId: string) {
+  return useQuery({
+    queryKey: ["admin", "projects", projectId, "retention-policy"],
+    queryFn: () => apiClient.getRetentionPolicy(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useRetentionDeletionDryRun(projectId: string) {
+  return useQuery({
+    queryKey: ["admin", "projects", projectId, "retention-deletion-dry-run"],
+    queryFn: () => apiClient.runRetentionDeletionDryRun(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useBackupSnapshots(projectId: string) {
+  return useQuery({
+    queryKey: ["admin", "projects", projectId, "backup-snapshots"],
+    queryFn: () => apiClient.listBackupSnapshots(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useBackupRestoreDryRun(snapshotId: string) {
+  return useQuery({
+    queryKey: ["admin", "backup-snapshots", snapshotId, "restore-dry-run"],
+    queryFn: () => apiClient.runBackupRestoreDryRun(snapshotId),
+    enabled: Boolean(snapshotId),
+  });
+}
+
+export function useAdminAuditEvents(projectId: string) {
+  return useQuery({
+    queryKey: ["admin", "projects", projectId, "audit-events"],
+    queryFn: () => apiClient.listAdminAuditEvents(projectId),
     enabled: Boolean(projectId),
   });
 }

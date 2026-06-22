@@ -898,6 +898,8 @@ export interface QualityMetricDetail {
 
 export type EvaluationDatasetStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
 
+export type EvaluationSampleKind = "SOURCE_SEGMENT" | "MANUAL_TEXT" | "TABLE_ROW";
+
 export type GoldenSetItemKind = "ENTITY" | "RELATION" | "PROPERTY_VALUE" | "EVIDENCE_LINK";
 
 export interface EvaluationDataset {
@@ -906,11 +908,19 @@ export interface EvaluationDataset {
   name: string;
   description?: string | null;
   status: EvaluationDatasetStatus;
+  sample_count?: number;
+  gold_entity_count?: number;
+  gold_relation_count?: number;
   owner_id?: string | null;
   active_version_id?: string | null;
   created_at: string;
   updated_at: string;
   notes?: string | null;
+}
+
+export interface EvaluationDatasetCreateRequest {
+  name: string;
+  description?: string | null;
 }
 
 export interface EvaluationDatasetVersion {
@@ -942,6 +952,80 @@ export interface GoldenSetItem {
   reviewer_id?: string | null;
   created_at: string;
   notes?: string | null;
+}
+
+export interface EvaluationSample {
+  id: string;
+  project_id: string;
+  dataset_id: string;
+  sample_kind: EvaluationSampleKind;
+  source_id?: string | null;
+  source_segment_id?: string | null;
+  source_locator?: string | null;
+  title: string;
+  content_text?: string | null;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface EvaluationSampleCreateRequest {
+  sample_kind: EvaluationSampleKind;
+  source_id?: string | null;
+  source_segment_id?: string | null;
+  source_locator?: string | null;
+  title: string;
+  content_text?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface GoldEvidenceRef {
+  sample_id: string;
+  source_id?: string | null;
+  source_segment_id?: string | null;
+  locator?: string | null;
+  offset_start?: number | null;
+  offset_end?: number | null;
+  quote?: string | null;
+}
+
+export interface GoldEntity {
+  id: string;
+  project_id: string;
+  dataset_id: string;
+  sample_id: string;
+  ontology_class_id: string;
+  label: string;
+  normalized_value?: string | null;
+  evidence: GoldEvidenceRef;
+  created_at: string;
+}
+
+export interface GoldEntityCreateRequest {
+  sample_id: string;
+  ontology_class_id: string;
+  label: string;
+  normalized_value?: string | null;
+  evidence: GoldEvidenceRef;
+}
+
+export interface GoldRelation {
+  id: string;
+  project_id: string;
+  dataset_id: string;
+  sample_id: string;
+  ontology_relation_id: string;
+  source_gold_entity_id: string;
+  target_gold_entity_id: string;
+  evidence: GoldEvidenceRef;
+  created_at: string;
+}
+
+export interface GoldRelationCreateRequest {
+  sample_id: string;
+  ontology_relation_id: string;
+  source_gold_entity_id: string;
+  target_gold_entity_id: string;
+  evidence: GoldEvidenceRef;
 }
 
 export interface EvaluationDimensions {
@@ -1009,25 +1093,107 @@ export interface EvaluationRunMetrics {
   correction_pattern_counts?: Record<string, number>;
 }
 
-export type EvaluationRunStatus = "PENDING" | "RUNNING" | "SUCCESS" | "FAILED";
+export type EvaluationRunMode = "DETERMINISTIC_MOCK";
+
+export type EvaluationRunStatus = "PENDING" | "RUNNING" | "SUCCESS" | "SUCCEEDED" | "FAILED";
+
+export type EvaluationMetricStatus = "MEASURED" | "NOT_APPLICABLE";
+
+export type EvaluationMetricName =
+  | "ENTITY_PRECISION"
+  | "ENTITY_RECALL"
+  | "ENTITY_F1"
+  | "RELATION_PRECISION"
+  | "RELATION_RECALL"
+  | "RELATION_F1"
+  | "RELATION_DIRECTION_ACCURACY"
+  | "EVIDENCE_MATCH_RATE";
+
+export type EvaluationErrorType =
+  | "MISSING_ENTITY"
+  | "EXTRA_ENTITY"
+  | "WRONG_ENTITY_CLASS"
+  | "MISSING_RELATION"
+  | "EXTRA_RELATION"
+  | "WRONG_RELATION_TYPE"
+  | "WRONG_RELATION_DIRECTION"
+  | "EVIDENCE_MISMATCH";
+
+export type EvaluationCandidateKind = "ENTITY" | "RELATION";
+
+export interface EvaluationCandidateRef {
+  candidate_id: string;
+  candidate_kind: EvaluationCandidateKind;
+  sample_id: string;
+  ontology_class_id?: string | null;
+  ontology_relation_id?: string | null;
+  label?: string | null;
+  normalized_value?: string | null;
+  source_gold_entity_id?: string | null;
+  target_gold_entity_id?: string | null;
+  evidence?: GoldEvidenceRef | null;
+}
+
+export interface EvaluationMetric {
+  run_id: string;
+  metric_name: EvaluationMetricName;
+  value: number | null;
+  numerator: number;
+  denominator: number;
+  formula: string;
+  status: EvaluationMetricStatus;
+  computed_at: string;
+}
+
+export interface EvaluationRunCreateRequest {
+  dataset_id: string;
+  run_mode: EvaluationRunMode;
+  ontology_version_id: string;
+  prompt_version_id: string;
+  model_name: string;
+  model_run_id?: string | null;
+  parser_version: string;
+}
 
 export interface EvaluationRun {
   id: string;
   project_id: string;
-  dataset_version_id: string;
+  dataset_id?: string;
+  dataset_version_id?: string;
   experiment_id?: string | null;
+  status: EvaluationRunStatus;
+  run_mode?: EvaluationRunMode;
+  ontology_version_id?: string | null;
   prompt_version_id?: string | null;
   model_run_id?: string | null;
   model_provider?: string | null;
   model_name?: string | null;
-  status: EvaluationRunStatus;
+  parser_version?: string | null;
   started_at?: string | null;
+  completed_at?: string | null;
   ended_at?: string | null;
   requested_by?: string | null;
+  metric_summary?: Partial<Record<EvaluationMetricName, number | null>>;
   metrics: EvaluationRunMetrics;
   dimensions: EvaluationDimensions;
   error_code?: string | null;
   error_message?: string | null;
+}
+
+export interface EvaluationErrorCase {
+  id: string;
+  run_id: string;
+  project_id: string;
+  dataset_id: string;
+  sample_id: string;
+  error_type: EvaluationErrorType;
+  gold_entity_id?: string | null;
+  gold_relation_id?: string | null;
+  candidate_ref?: EvaluationCandidateRef | null;
+  comparison_summary: string;
+  gold_evidence?: GoldEvidenceRef | null;
+  candidate_evidence?: GoldEvidenceRef | null;
+  created_at: string;
 }
 
 export type SearchResultKind =
@@ -1267,6 +1433,698 @@ export interface ExternalApiDocsSurface {
   endpoints: ExternalApiEndpointDoc[];
   read_only: true;
   dev_auth_missing: boolean;
+}
+
+export type EnterpriseRole =
+  | "ORGANIZATION_ADMIN"
+  | "PROJECT_ADMIN"
+  | "ONTOLOGY_EDITOR"
+  | "SOURCE_MANAGER"
+  | "REVIEWER"
+  | "PUBLISHER"
+  | "ANALYST_VIEWER"
+  | "EXTERNAL_API_CONSUMER"
+  | "SERVICE_ACCOUNT";
+
+export type PrincipalType = "HUMAN_USER" | "SERVICE_ACCOUNT" | "API_KEY" | "SYSTEM";
+
+export type AssignmentScopeType = "ORGANIZATION" | "PROJECT" | "ONTOLOGY_VERSION" | "SOURCE" | "PUBLISHED_GRAPH";
+
+export type RoleAssignmentStatus = "ACTIVE" | "EXPIRED" | "REVOKED" | "PENDING";
+
+export type PermissionResourceType =
+  | "ORGANIZATION"
+  | "PROJECT"
+  | "ONTOLOGY_VERSION"
+  | "SOURCE"
+  | "CANDIDATE"
+  | "REVIEW_TASK"
+  | "PUBLISH_JOB"
+  | "PUBLISHED_GRAPH"
+  | "POLICY"
+  | "API_CREDENTIAL"
+  | "IMPORT_JOB"
+  | "EXPORT_JOB"
+  | "OPERATION_EVENT"
+  | "BACKUP_SNAPSHOT"
+  | "RETENTION_POLICY"
+  | "AUDIT_EVENT";
+
+export type PermissionAction =
+  | "READ"
+  | "CREATE"
+  | "UPDATE"
+  | "DELETE"
+  | "ASSIGN_ROLE"
+  | "PREVIEW_POLICY"
+  | "ENFORCE_POLICY"
+  | "APPROVE"
+  | "PUBLISH"
+  | "IMPORT"
+  | "EXPORT"
+  | "RETRY_JOB"
+  | "ACKNOWLEDGE_DLQ"
+  | "REVOKE_CREDENTIAL"
+  | "RESTORE_DRY_RUN";
+
+export type PermissionDecision = "ALLOW" | "DENY" | "CONDITIONAL";
+
+export type PermissionDenyReason =
+  | "MISSING_ROLE"
+  | "SCOPE_MISMATCH"
+  | "RESOURCE_STATE_BLOCKED"
+  | "VERSION_CONTEXT_REQUIRED"
+  | "SENSITIVITY_RESTRICTED"
+  | "ENVIRONMENT_RESTRICTED"
+  | "CREDENTIAL_REVOKED"
+  | "POLICY_DISABLED";
+
+export interface AuditEventRef {
+  audit_event_id: string;
+  category?: AuditEventCategory;
+  event_type?: string;
+  href?: string;
+}
+
+export interface AuditPreview {
+  audit_event_ref?: AuditEventRef | null;
+  category?: AuditEventCategory;
+  event_type?: string;
+  actor?: string;
+  reason_required?: boolean;
+  message?: string;
+}
+
+export interface OrganizationAdminSummary {
+  organization_id: string;
+  organization_name: string;
+  environment?: string;
+  auth_mode: "DEV_AUTH";
+  project_count?: number;
+  active_member_count?: number;
+  service_account_count?: number;
+  policy_summary?: Record<string, unknown>;
+  operations_summary?: Record<string, unknown>;
+  retention_summary?: Record<string, unknown>;
+  backup_summary?: Record<string, unknown>;
+  latest_audit_events?: AuditEventRef[];
+}
+
+export interface OperationHealthSummary {
+  healthy_count?: number;
+  running_count?: number;
+  failed_count?: number;
+  retrying_count?: number;
+  dlq_count?: number;
+  last_failed_job_id?: string | null;
+}
+
+export interface ProjectAdminSummary {
+  project_id: string;
+  organization_id: string;
+  project_name: string;
+  project_status?: ProjectStatus;
+  selected_ontology_version_id?: string | null;
+  current_published_graph_version_id?: string | null;
+  member_count?: number;
+  role_assignment_count?: number;
+  credential_count?: number;
+  automatic_approval_policy_ref?: string | null;
+  operation_health?: OperationHealthSummary;
+  cost_budget?: CostBudgetSummary;
+  retention_policy_ref?: string | null;
+  backup_summary?: Record<string, unknown>;
+  latest_audit_events?: AuditEventRef[];
+  permission_summary?: AdminPermissionSummary;
+}
+
+export interface AdminPermissionSummary {
+  can_read: boolean;
+  can_create?: boolean;
+  can_update?: boolean;
+  can_delete?: boolean;
+  can_assign_role?: boolean;
+  can_preview_policy?: boolean;
+  can_enforce_policy?: boolean;
+  can_retry_job?: boolean;
+  can_ack_dlq?: boolean;
+  can_revoke_credential?: boolean;
+  can_restore_dry_run?: boolean;
+  read_only?: boolean;
+  denied_reason_code?: PermissionDenyReason | PolicyBlockReason | string | null;
+  denied_reason_message?: string | null;
+  required_permission?: PermissionAction | string | null;
+  audit_event_ref?: AuditEventRef | null;
+}
+
+export interface RoleAssignment {
+  assignment_id: string;
+  principal_id: string;
+  principal_type: PrincipalType;
+  principal_display_name?: string;
+  scope_type: AssignmentScopeType;
+  organization_id?: string;
+  project_id?: string;
+  resource_id?: string | null;
+  role: EnterpriseRole;
+  status: RoleAssignmentStatus;
+  expires_at?: string | null;
+  created_by?: string;
+  created_at?: string;
+  revoked_at?: string | null;
+  audit_event_refs?: AuditEventRef[];
+}
+
+export interface PermissionCheckRequest {
+  principal_id: string;
+  principal_type: PrincipalType;
+  organization_id?: string;
+  project_id?: string;
+  resource_type: PermissionResourceType;
+  resource_id?: string | null;
+  action: PermissionAction;
+  data_state?: string;
+  sensitivity?: string;
+  version_context?: Record<string, string | null | undefined>;
+}
+
+export interface PermissionCheckResponse {
+  decision: PermissionDecision;
+  allowed: boolean;
+  read_only?: boolean;
+  deny_reasons: PermissionDenyReason[];
+  matched_roles: EnterpriseRole[];
+  required_roles: EnterpriseRole[];
+  policy_version_id?: string | null;
+  evaluated_context?: PermissionCheckRequest;
+  required_permission?: PermissionAction;
+  audit_preview?: AuditPreview | null;
+}
+
+export type CredentialKind = "SERVICE_ACCOUNT" | "API_KEY";
+
+export type CredentialStatus = "ACTIVE" | "DISABLED" | "EXPIRED" | "REVOKED" | "PENDING";
+
+export type CredentialScope =
+  | "EXTERNAL_READ"
+  | "PROJECT_ADMIN_READ"
+  | "QUALITY_READ"
+  | "PUBLISHED_GRAPH_READ"
+  | "RAG_READ"
+  | "SEARCH_READ"
+  | "IMPORT_EXPORT_MANAGE"
+  | "OPERATIONS_READ";
+
+export interface CredentialQuota {
+  monthly_request_limit?: number;
+  monthly_requests_used?: number;
+  budget_limit?: number;
+  budget_used?: number;
+  status?: "WITHIN_LIMIT" | "NEAR_LIMIT" | "EXCEEDED" | "DISABLED";
+}
+
+export interface CredentialRoleBinding {
+  role: EnterpriseRole;
+  scope_type: AssignmentScopeType;
+  project_id?: string;
+}
+
+export interface CredentialView {
+  credential_id: string;
+  credential_kind: CredentialKind;
+  project_id?: string;
+  name?: string;
+  description?: string | null;
+  status: CredentialStatus;
+  masked_secret: string;
+  scopes: CredentialScope[];
+  role_bindings?: CredentialRoleBinding[];
+  quota?: CredentialQuota | null;
+  expires_at?: string | null;
+  created_by?: string;
+  created_at?: string;
+  last_used_at?: string | null;
+  revoked_at?: string | null;
+  audit_event_refs?: AuditEventRef[];
+}
+
+export interface CredentialSecretReveal {
+  reveal_id: string;
+  one_time: true;
+  expires_at?: string;
+  copy_allowed?: boolean;
+  persistence_forbidden?: boolean;
+}
+
+export interface CredentialCreateResponse {
+  credential: CredentialView;
+  raw_secret: string;
+  secret_reveal: CredentialSecretReveal;
+  audit_event_ref: AuditEventRef;
+}
+
+export type PolicyMode = "DISABLED" | "DRY_RUN" | "ENFORCE";
+
+export type PolicyEvaluationStatus = "WOULD_APPROVE" | "WOULD_ENQUEUE_PUBLISH" | "BLOCKED" | "REQUIRES_MANUAL_REVIEW" | "SKIPPED" | "ERROR";
+
+export type PolicyBlockReason =
+  | "MISSING_EVIDENCE"
+  | "FAILED_VALIDATION"
+  | "WARNING_REQUIRES_REVIEWER_REASON"
+  | "STALE_ONTOLOGY_VERSION"
+  | "CANDIDATE_STATUS_NOT_ELIGIBLE"
+  | "UNSAFE_RELATION_TYPE"
+  | "CONFIDENCE_BELOW_THRESHOLD"
+  | "POLICY_MODE_DISABLED"
+  | "PUBLISH_GATE_NOT_SATISFIED"
+  | "AUDIT_PREVIEW_REQUIRED";
+
+export interface PolicyConditionSet {
+  confidence_threshold?: number;
+  require_evidence?: boolean;
+  allowed_candidate_kinds?: CandidateKind[];
+  require_validation_passed?: boolean;
+  reviewer_pattern?: string;
+  ontology_version_id?: string;
+}
+
+export interface AutomaticApprovalPolicyDocument {
+  policy_id: string;
+  project_id: string;
+  name: string;
+  mode: PolicyMode;
+  version: number;
+  status?: string;
+  conditions: PolicyConditionSet;
+  actions?: Array<"APPROVE" | "ENQUEUE_PUBLISH">;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+  last_evaluated_at?: string | null;
+  audit_event_refs?: AuditEventRef[];
+}
+
+export interface PolicyEvaluationSummary {
+  would_approve_count: number;
+  blocked_count: number;
+  manual_review_count: number;
+  skipped_count?: number;
+}
+
+export interface PolicyEvaluationRow {
+  row_id: string;
+  candidate_ref?: CandidateRef;
+  candidate_label?: string;
+  status: PolicyEvaluationStatus;
+  block_reasons: PolicyBlockReason[];
+  evidence_state?: string;
+  validation_state?: string;
+  version_state?: string;
+  policy_reason?: string;
+  audit_preview?: AuditPreview | null;
+}
+
+export interface PolicyEvaluationResponse {
+  policy_id: string;
+  policy_version: number;
+  mode: PolicyMode;
+  status: PolicyEvaluationStatus;
+  evaluated_at?: string;
+  summary: PolicyEvaluationSummary;
+  rows: PolicyEvaluationRow[];
+  audit_preview?: AuditPreview | null;
+}
+
+export interface PolicyDiffResponse {
+  policy_id: string;
+  from_version: number;
+  to_version: number;
+  mode_change?: string;
+  condition_changes: string[];
+  action_changes: string[];
+  destructive_or_sensitive_changes: string[];
+  audit_preview?: AuditPreview | null;
+}
+
+export interface EnforcePreviewResponse {
+  policy_id: string;
+  policy_version: number;
+  requested_mode: PolicyMode;
+  gate_status: "PASS" | "BLOCKED";
+  gate_reasons: PolicyBlockReason[];
+  requires_confirmation: boolean;
+  audit_preview?: AuditPreview | null;
+  affected_candidate_count: number;
+}
+
+export type OntologyPackageFormat = "JSON";
+
+export type GovernanceJobStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "BLOCKED" | "EXPIRED";
+
+export type ImportCompatibilityStatus =
+  | "COMPATIBLE"
+  | "WARNING_COMPATIBLE"
+  | "CONFLICT_BLOCKED"
+  | "DESTRUCTIVE_BLOCKED"
+  | "INVALID_SCHEMA"
+  | "INCOMPATIBLE_SCHEMA";
+
+export type ImportConflictSeverity = "INFO" | "WARNING" | "BLOCKING" | "DESTRUCTIVE";
+
+export type ImportConflictType =
+  | "NAME_COLLISION"
+  | "STABLE_ID_COLLISION"
+  | "SCHEMA_VERSION_INCOMPATIBLE"
+  | "MISSING_REQUIRED_FIELD"
+  | "DESTRUCTIVE_DELETE"
+  | "PUBLISHED_GRAPH_LINEAGE"
+  | "NO_OP"
+  | "UNKNOWN";
+
+export interface OntologyPackageCounts {
+  class_count: number;
+  property_count: number;
+  relation_count: number;
+}
+
+export interface OntologyPackageMetadata {
+  package_id: string;
+  schema_version: string;
+  package_schema_version?: string;
+  format: OntologyPackageFormat;
+  project_id: string;
+  ontology_id?: string | null;
+  ontology_version_id: string;
+  published_graph_version_id?: string | null;
+  generated_at: string;
+  created_at?: string;
+  created_by?: string;
+  counts: OntologyPackageCounts;
+  contents_summary?: Record<string, unknown>;
+  compatibility_notes: string[];
+  checksum?: string | null;
+  audit_event_ref?: AuditEventRef | null;
+}
+
+export interface OntologyExportCreateRequest {
+  format: OntologyPackageFormat;
+  ontology_version_id?: string | null;
+  include_published_graph_refs?: boolean;
+}
+
+export interface OntologyExportJob {
+  job_id: string;
+  project_id: string;
+  status: GovernanceJobStatus;
+  format: OntologyPackageFormat;
+  package_metadata?: OntologyPackageMetadata | null;
+  download_url?: string | null;
+  file_name?: string | null;
+  checksum?: string | null;
+  expires_at?: string | null;
+  created_by?: string;
+  created_at?: string;
+  completed_at?: string | null;
+  audit_event_ref?: AuditEventRef | null;
+}
+
+export interface OntologyExportDownload {
+  job_id: string;
+  download_url?: string | null;
+  expires_at?: string | null;
+  content_type?: string;
+  file_name?: string | null;
+  checksum?: string | null;
+  package_metadata: OntologyPackageMetadata;
+}
+
+export interface OntologyImportCreateRequest {
+  format: OntologyPackageFormat;
+  package_ref?: string | null;
+  mode: "DRY_RUN";
+  package_payload?: Record<string, unknown>;
+}
+
+export interface ImportDryRunSummary {
+  create_count: number;
+  update_count: number;
+  delete_count: number;
+  no_op_count: number;
+  conflict_count: number;
+  warning_count: number;
+}
+
+export interface ImportDryRunRow {
+  row_id: string;
+  row_type: "CONFLICT" | "WARNING" | "DESTRUCTIVE" | "INVALID";
+  conflict_type: ImportConflictType | string;
+  severity: ImportConflictSeverity;
+  blocking: boolean;
+  path: string;
+  message: string;
+  local_ref?: string | null;
+  package_ref?: string | null;
+  affected_lineage_ref?: string | null;
+  proposed_resolution?: string | null;
+}
+
+export interface DestructiveImpactSummary {
+  would_delete_classes: number;
+  would_delete_properties: number;
+  would_delete_relations: number;
+  published_graph_refs_affected: number;
+}
+
+export interface DestructiveImpactRow {
+  row_id: string;
+  resource_type: "CLASS" | "PROPERTY" | "RELATION" | "PUBLISHED_GRAPH_REF" | "UNKNOWN";
+  resource_id?: string | null;
+  impact: string;
+  blocked: boolean;
+  lineage_ref?: string | null;
+}
+
+export interface OntologyImportDryRunJob {
+  job_id: string;
+  project_id: string;
+  status: GovernanceJobStatus;
+  format: OntologyPackageFormat;
+  compatibility_status: ImportCompatibilityStatus;
+  package_metadata?: OntologyPackageMetadata | null;
+  summary: ImportDryRunSummary;
+  conflicts: ImportDryRunRow[];
+  warnings: ImportDryRunRow[];
+  destructive_impact: DestructiveImpactSummary;
+  destructive_impact_rows: DestructiveImpactRow[];
+  rollback_guidance: string[];
+  requires_confirmation: boolean;
+  confirmation_text?: string | null;
+  audit_preview?: AuditPreview | null;
+  audit_event_ref?: AuditEventRef | null;
+  dry_run_only: boolean;
+  mutation_applied: false;
+}
+
+export type OperationJobType =
+  | "SOURCE_PARSE"
+  | "EXTRACTION"
+  | "VALIDATION"
+  | "PUBLISH"
+  | "QUALITY_RECOMPUTE"
+  | "IMPORT"
+  | "EXPORT"
+  | "POLICY_EVALUATION"
+  | "BACKUP"
+  | "RETENTION_DELETE";
+
+export type OperationJobStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "RETRYING" | "DEAD_LETTERED" | "CANCELLED";
+
+export type OperationEventSeverity = "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "SECURITY";
+
+export type BudgetStatus = "WITHIN_LIMIT" | "NEAR_LIMIT" | "EXCEEDED" | "DISABLED";
+
+export type ObservabilityAvailabilityStatus = "AVAILABLE" | "PARTIAL" | "NOT_CONFIGURED" | "UNAVAILABLE";
+
+export interface OperationJob {
+  job_id: string;
+  project_id: string;
+  job_type: OperationJobType;
+  status: OperationJobStatus;
+  attempts: number;
+  max_attempts: number;
+  last_error?: string | null;
+  next_retry_at?: string | null;
+  retry_eligible?: boolean;
+  blocked_reason?: string | null;
+  audit_event_refs?: AuditEventRef[];
+}
+
+export interface DlqRow {
+  dlq_id: string;
+  job_id: string;
+  project_id: string;
+  job_type: OperationJobType;
+  failure_code?: string;
+  failure_message?: string;
+  payload_ref?: string;
+  redacted_payload_preview?: Record<string, unknown>;
+  retry_count?: number;
+  retry_eligible?: boolean;
+  acknowledge_eligible?: boolean;
+  blocked_reasons?: string[];
+  first_failed_at?: string;
+  last_failed_at?: string;
+  acknowledged_at?: string | null;
+  audit_event_refs?: AuditEventRef[];
+}
+
+export interface CostBudgetSummary {
+  project_id: string;
+  period_start?: string;
+  period_end?: string;
+  budget_status: BudgetStatus;
+  currency?: string;
+  budget_amount?: number;
+  estimated_spend?: number;
+  token_limit?: number;
+  tokens_used?: number;
+  near_limit_threshold?: number;
+  last_updated_at?: string;
+}
+
+export interface ObservabilityAvailability {
+  metrics: ObservabilityAvailabilityStatus;
+  traces: ObservabilityAvailabilityStatus;
+  logs: ObservabilityAvailabilityStatus;
+  structured_events: ObservabilityAvailabilityStatus;
+  message?: string;
+}
+
+export interface StructuredEvent {
+  event_id: string;
+  severity: OperationEventSeverity;
+  event_type: string;
+  message: string;
+  correlation_id?: string;
+  trace_id?: string | null;
+  request_id?: string;
+  redacted_fields?: string[];
+  resource_refs?: string[];
+  created_at?: string;
+}
+
+export interface OperationsDashboardResponse {
+  project_id: string;
+  generated_at?: string;
+  job_health: OperationHealthSummary;
+  jobs?: OperationJob[];
+  dlq_summary?: Record<string, unknown>;
+  dlq_rows?: DlqRow[];
+  cost_budget: CostBudgetSummary;
+  observability: ObservabilityAvailability;
+  recent_events: StructuredEvent[];
+}
+
+export type RetentionActionMode = "READ_ONLY" | "DRY_RUN" | "CONFIRM_REQUIRED" | "EXECUTE";
+
+export type RetentionResourceType = "SOURCE" | "EVIDENCE" | "CANDIDATE" | "AUDIT_EVENT" | "PUBLISHED_GRAPH_SNAPSHOT" | "OPERATION_EVENT";
+
+export type BackupStatus = "AVAILABLE" | "RUNNING" | "FAILED" | "EXPIRED" | "RESTORE_DRY_RUN_AVAILABLE" | "RESTORE_BLOCKED";
+
+export interface RetentionRule {
+  rule_id: string;
+  resource_type: RetentionResourceType;
+  retention_days: number;
+  mode: RetentionActionMode;
+  include_deleted?: boolean;
+  legal_hold?: boolean;
+  managed_by?: string;
+  read_only?: boolean;
+  audit_event_refs?: AuditEventRef[];
+}
+
+export interface RetentionPolicy {
+  project_id: string;
+  mode: RetentionActionMode;
+  rules: RetentionRule[];
+  legal_hold_enabled: boolean;
+  updated_by?: string;
+  updated_at?: string;
+  audit_event_refs?: AuditEventRef[];
+}
+
+export interface RetentionDeletionImpactSummary {
+  affected_count: number;
+  blocked_count: number;
+  irreversible_count: number;
+  destructive: boolean;
+  block_reasons?: string[];
+}
+
+export interface RetentionLineageImpact {
+  resource_type: RetentionResourceType;
+  resource_id: string;
+  impact: string;
+  blocked: boolean;
+}
+
+export interface RetentionDeletionDryRunResponse {
+  project_id: string;
+  requested_resource_type: RetentionResourceType;
+  mode: RetentionActionMode;
+  generated_at?: string;
+  impact_summary: RetentionDeletionImpactSummary;
+  lineage_impact: RetentionLineageImpact[];
+  requires_confirmation: boolean;
+  confirmation_text?: string;
+  audit_preview?: AuditPreview | null;
+}
+
+export interface BackupSnapshot {
+  snapshot_id: string;
+  project_id: string;
+  status: BackupStatus;
+  snapshot_type?: string;
+  created_at?: string;
+  expires_at?: string;
+  storage_ref?: string;
+  contents_summary?: Record<string, unknown>;
+  restore_eligibility?: {
+    eligible?: boolean;
+    block_reasons?: string[];
+    compatibility?: string;
+  };
+  audit_event_refs?: AuditEventRef[];
+}
+
+export interface RestoreDryRunResponse {
+  snapshot_id: string;
+  project_id: string;
+  eligible: boolean;
+  status: BackupStatus;
+  block_reasons: string[];
+  restore_impact: Record<string, unknown>;
+  requires_confirmation: boolean;
+  audit_preview?: AuditPreview | null;
+}
+
+export type AuditEventCategory = "ROLE" | "CREDENTIAL" | "POLICY" | "IMPORT_EXPORT" | "DLQ" | "RETENTION" | "BACKUP" | "DESTRUCTIVE_ACTION" | "SECURITY";
+
+export interface AuditEvent {
+  audit_event_id: string;
+  organization_id?: string;
+  project_id?: string;
+  category: AuditEventCategory;
+  event_type: string;
+  severity: OperationEventSeverity;
+  actor?: Record<string, unknown>;
+  target?: Record<string, unknown>;
+  reason?: string;
+  before_ref?: string;
+  after_ref?: string;
+  diff_summary?: string[];
+  request_id?: string;
+  created_at?: string;
 }
 
 export interface DashboardSummary {
