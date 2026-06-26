@@ -26,6 +26,7 @@ import {
   SearchRequest,
   SimilarEvidenceRequest,
   SourceUploadRequest,
+  SuggestionDecisionRequest,
 } from "./types";
 
 export function useDashboardSummary() {
@@ -872,5 +873,51 @@ export function useAdminAuditEvents(projectId: string) {
     queryKey: ["admin", "projects", projectId, "audit-events"],
     queryFn: () => apiClient.listAdminAuditEvents(projectId),
     enabled: Boolean(projectId),
+  });
+}
+
+// ---- MVP6.2 Active Learning / Learning Insights ----
+
+export function useLearningSummary(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "learning-signals", "summary"],
+    queryFn: () => apiClient.getLearningSummary(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useLearningCorrectionPatterns(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "learning-signals", "correction-patterns"],
+    queryFn: () => apiClient.listLearningCorrectionPatterns(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useLearningPromptSuggestions(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "learning-signals", "prompt-suggestions"],
+    queryFn: () => apiClient.listLearningPromptSuggestions(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useLearningAutoApprovalCandidates(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "learning-signals", "auto-approval-candidates"],
+    queryFn: () => apiClient.listLearningAutoApprovalCandidates(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useDecideLearningSuggestion(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ suggestionId, payload }: { suggestionId: string; payload: SuggestionDecisionRequest }) =>
+      apiClient.decideLearningSuggestion(suggestionId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "learning-signals", "prompt-suggestions"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "learning-signals", "summary"] });
+    },
   });
 }

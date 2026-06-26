@@ -2139,3 +2139,284 @@ export interface DashboardSummary {
     timestamp: string;
   }>;
 }
+
+// ---------------------------------------------------------------------------
+// MVP6.2 Active Learning / Continuous Improvement (Learning Insights)
+// Field/enum names match Backend OpenAPI (apps/backend/app/modules/learning/schemas.py).
+// ---------------------------------------------------------------------------
+
+export type LearningSignalType =
+  | "RELATION_DIRECTION_CORRECTION"
+  | "CLASS_CONFUSION"
+  | "RELATION_TYPE_CONFUSION"
+  | "EVIDENCE_MISSING"
+  | "EVIDENCE_MISMATCH"
+  | "REPEATED_VALIDATION_FAILURE"
+  | "LOW_BENCHMARK_METRIC_CLUSTER";
+
+export type LearningSourceArtifactType =
+  | "REVIEW_DECISION"
+  | "REVIEW_CORRECTION"
+  | "VALIDATION_RESULT"
+  | "QUALITY_METRIC"
+  | "QUALITY_DRILLDOWN"
+  | "EVALUATION_RUN"
+  | "EVALUATION_METRIC"
+  | "EVALUATION_ERROR_CASE";
+
+export type PromptSuggestionKind =
+  | "ADD_RELATION_DIRECTION_EXAMPLE"
+  | "CLARIFY_CLASS_BOUNDARY"
+  | "CLARIFY_RELATION_TYPE_BOUNDARY"
+  | "ADD_EVIDENCE_REQUIREMENT"
+  | "ADD_NEGATIVE_EXAMPLE"
+  | "ADD_VALIDATION_FAILURE_GUIDANCE"
+  | "INVESTIGATE_LOW_METRIC_CLUSTER";
+
+export type PromptSuggestionState = "SUGGESTED" | "ACCEPTED" | "DISMISSED" | "SUPERSEDED";
+
+export type SuggestionDecisionType = "ACCEPT" | "DISMISS";
+
+export type SuggestionDismissReasonCode =
+  | "NOT_RELEVANT"
+  | "INSUFFICIENT_EVIDENCE"
+  | "DUPLICATE"
+  | "OUT_OF_SCOPE"
+  | "RISK_TOO_HIGH"
+  | "OTHER";
+
+export type SuggestionIntendedNextAction =
+  | "USE_IN_NEXT_PROMPT_DRAFT"
+  | "DISCUSS_WITH_ONTOLOGY_OWNER"
+  | "MONITOR_FOR_MORE_EVIDENCE"
+  | "NO_ACTION";
+
+export type LearningConfidenceLabel = "LOW" | "MEDIUM" | "HIGH";
+
+export type LearningRiskLabel = "LOW" | "MEDIUM" | "HIGH";
+
+export type AutoApprovalPreviewStatus = "RECOMMENDATION_ONLY" | "NOT_ENFORCED" | "REQUIRES_POLICY_APPROVAL";
+
+export type AutoApprovalHistoricalMatchOutcome =
+  | "WOULD_MATCH"
+  | "WOULD_NOT_MATCH"
+  | "BLOCKED_BY_SAFETY_RULE"
+  | "INSUFFICIENT_EVIDENCE";
+
+export interface LearningWindow {
+  label: string;
+  started_at: string;
+  ended_at: string;
+}
+
+export interface LearningSignalTypeCount {
+  signal_type: LearningSignalType;
+  count: number;
+  high_risk_count: number;
+  latest_observed_at: string | null;
+}
+
+export interface LearningPatternSummary {
+  pattern_id: string;
+  primary_signal_type: LearningSignalType;
+  title: string;
+  support_count: number;
+  risk_label: LearningRiskLabel;
+}
+
+export interface LearningEvidenceRef {
+  source_id: string | null;
+  source_segment_id: string | null;
+  locator: string | null;
+  quote: string | null;
+}
+
+export interface LearningSourceArtifactRef {
+  artifact_type: LearningSourceArtifactType;
+  artifact_id: string;
+  project_id: string;
+  candidate_id: string | null;
+  candidate_kind: CandidateKind | null;
+  review_task_id: string | null;
+  review_decision_id: string | null;
+  validation_result_id: string | null;
+  quality_metric_id: string | null;
+  evaluation_run_id: string | null;
+  evaluation_error_case_id: string | null;
+  ontology_version_id: string | null;
+  prompt_version_id: string | null;
+  model_run_id: string | null;
+  evidence_refs: LearningEvidenceRef[];
+  observed_at: string;
+}
+
+export interface OntologyClassRef {
+  ontology_class_id: string;
+  label: string;
+}
+
+export interface OntologyRelationRef {
+  ontology_relation_id: string;
+  label: string;
+}
+
+export interface CorrectionPatternExample {
+  example_id: string;
+  before: string | null;
+  after: string | null;
+  source_artifact_id: string;
+}
+
+export interface CorrectionPattern {
+  id: string;
+  project_id: string;
+  primary_signal_type: LearningSignalType;
+  related_signal_types: LearningSignalType[];
+  title: string;
+  affected_classes: OntologyClassRef[];
+  affected_relations: OntologyRelationRef[];
+  support_count: number;
+  denominator: number | null;
+  confidence_label: LearningConfidenceLabel;
+  risk_label: LearningRiskLabel;
+  first_seen_at: string;
+  last_seen_at: string;
+  explanation: string;
+  representative_examples: CorrectionPatternExample[];
+  source_learning_signal_ids: string[];
+  source_artifacts: LearningSourceArtifactRef[];
+  safety_note: string;
+  prompt_suggestion_ids: string[];
+}
+
+export interface LearningSignalSummaryResponse {
+  project_id: string;
+  generated_at: string;
+  window: LearningWindow;
+  source_artifact_scope: LearningSourceArtifactType[];
+  total_signal_count: number;
+  signal_counts: LearningSignalTypeCount[];
+  open_prompt_suggestion_count: number;
+  accepted_prompt_suggestion_count: number;
+  dismissed_prompt_suggestion_count: number;
+  superseded_prompt_suggestion_count: number;
+  high_risk_prompt_suggestion_count: number;
+  auto_approval_preview_count: number;
+  top_patterns: LearningPatternSummary[];
+  safety_notes: string[];
+}
+
+export interface SuggestionSnapshot {
+  suggestion_kind: PromptSuggestionKind;
+  title: string;
+  preview_text: string;
+}
+
+export interface MutationGuard {
+  prompt_version_mutated: false;
+  candidate_graph_mutated: false;
+  published_graph_mutated: false;
+  auto_approval_policy_mutated: false;
+  extraction_job_started: false;
+  evaluation_run_started: false;
+}
+
+export interface SuggestionDecisionAuditNote {
+  id: string;
+  suggestion_id: string;
+  project_id: string;
+  actor_id: string;
+  actor_role: string;
+  decision: SuggestionDecisionType;
+  dismiss_reason_code: SuggestionDismissReasonCode | null;
+  note: string | null;
+  intended_next_action: SuggestionIntendedNextAction | null;
+  decided_at: string;
+  source_learning_signal_ids: string[];
+  target_prompt_version_id: string | null;
+  suggestion_snapshot: SuggestionSnapshot;
+  mutation_guard: MutationGuard;
+}
+
+export interface PromptSuggestion {
+  id: string;
+  project_id: string;
+  target_prompt_version_id: string | null;
+  suggestion_kind: PromptSuggestionKind;
+  state: PromptSuggestionState;
+  title: string;
+  rationale: string;
+  expected_impact: string;
+  preview_text: string;
+  structured_proposal: Record<string, unknown>;
+  source_learning_signal_ids: string[];
+  correction_pattern_ids: string[];
+  source_artifacts: LearningSourceArtifactRef[];
+  confidence_label: LearningConfidenceLabel;
+  risk_label: LearningRiskLabel;
+  created_at: string;
+  updated_at: string;
+  decision_audit_note: SuggestionDecisionAuditNote | null;
+  safety_note: string;
+}
+
+export interface SuggestionDecisionRequest {
+  decision: SuggestionDecisionType;
+  dismiss_reason_code?: SuggestionDismissReasonCode | null;
+  note?: string | null;
+  intended_next_action?: SuggestionIntendedNextAction | null;
+  client_request_id?: string | null;
+}
+
+export interface SuggestionDecisionResponse {
+  suggestion_id: string;
+  project_id: string;
+  previous_state: PromptSuggestionState;
+  new_state: PromptSuggestionState;
+  decision_audit_note: SuggestionDecisionAuditNote;
+}
+
+export interface AutoApprovalRulePreview {
+  candidate_kind: "ENTITY" | "RELATION";
+  conditions: string[];
+}
+
+export interface AutoApprovalPreviewMetric {
+  metric_name: string;
+  value: number | null;
+  numerator: number | null;
+  denominator: number | null;
+}
+
+export interface AutoApprovalHistoricalOutcomeItem {
+  artifact_id: string;
+  outcome: AutoApprovalHistoricalMatchOutcome;
+  reason: string;
+}
+
+export interface AutoApprovalHistoricalMatchPreview {
+  total_examined: number;
+  would_match_count: number;
+  blocked_count: number;
+  outcomes: AutoApprovalHistoricalOutcomeItem[];
+}
+
+export interface AutoApprovalCandidatePreview {
+  id: string;
+  project_id: string;
+  title: string;
+  preview_status: AutoApprovalPreviewStatus;
+  recommendation_only: true;
+  not_enforced: true;
+  requires_later_policy_approval: true;
+  rule_preview: AutoApprovalRulePreview;
+  supporting_metrics: AutoApprovalPreviewMetric[];
+  historical_match_preview: AutoApprovalHistoricalMatchPreview;
+  source_learning_signal_ids: string[];
+  correction_pattern_ids: string[];
+  source_artifacts: LearningSourceArtifactRef[];
+  confidence_label: LearningConfidenceLabel;
+  risk_label: LearningRiskLabel;
+  safety_note: string;
+  blocked_actions: string[];
+}

@@ -20,6 +20,7 @@ import { ExternalApiDocsPage } from "../pages/ExternalApiDocsPage";
 import { ExtractionJobCreatePage } from "../pages/ExtractionJobCreatePage";
 import { ExtractionJobMonitorPage } from "../pages/ExtractionJobMonitorPage";
 import { IntegratedSearchPage } from "../pages/IntegratedSearchPage";
+import { LearningInsightsPage } from "../pages/LearningInsightsPage";
 import { OntologyModelerPage } from "../pages/OntologyModelerPage";
 import { PromptPerformancePage } from "../pages/PromptPerformancePage";
 import { PublishedGraphExplorerPage } from "../pages/PublishedGraphExplorerPage";
@@ -161,6 +162,22 @@ export const router = createBrowserRouter([
       {
         path: "/projects/:projectId/evaluation-dataset-versions/:datasetVersionId",
         element: <EvaluationDatasetsPage />,
+      },
+      {
+        path: "/projects/:projectId/learning-insights",
+        element: <LearningInsightsPage />,
+      },
+      {
+        path: "/projects/:projectId/learning-insights/patterns/:patternId",
+        element: <LearningInsightsPage />,
+      },
+      {
+        path: "/projects/:projectId/learning-insights/suggestions/:suggestionId",
+        element: <LearningInsightsPage />,
+      },
+      {
+        path: "/projects/:projectId/learning-insights/auto-approval-candidates/:autoApprovalPreviewId",
+        element: <LearningInsightsPage />,
       },
       {
         path: "/projects/:projectId/prompt-performance",

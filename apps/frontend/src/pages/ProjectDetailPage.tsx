@@ -8,6 +8,7 @@ import {
   Database,
   FlaskConical,
   GitBranch,
+  Lightbulb,
   ListChecks,
   MessageSquareQuote,
   Rocket,
@@ -150,6 +151,12 @@ export function ProjectDetailPage() {
           <CardAction to={`/projects/${project.id}/evaluation-datasets`}>
             <FlaskConical aria-hidden="true" />
             Evaluation sets
+          </CardAction>
+        </HanaCard>
+        <HanaCard title="Learning Insights" description="검수·품질·평가 근거에서 나온 프롬프트 개선 추천을 검토하고 audit-only로 결정합니다.">
+          <CardAction to={`/projects/${project.id}/learning-insights`}>
+            <Lightbulb aria-hidden="true" />
+            Learning Insights
           </CardAction>
         </HanaCard>
         <HanaCard title="External API" description="개발 인증 기반 read-only 소비자 문서를 확인합니다.">

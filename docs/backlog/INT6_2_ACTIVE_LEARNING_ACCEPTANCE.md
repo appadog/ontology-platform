@@ -1,7 +1,7 @@
 # INT6.2 MVP6.2 Active Learning Acceptance Checklist
 
-Status: `WAVE31 QA CONTRACT RECHECK / TARGETED HARDENING CLOSED`
-Date: 2026-06-22
+Status: `WAVE32 QA RUNTIME ACCEPTANCE / THIN SLICE CLOSEOUT RECOMMENDED`
+Date: 2026-06-26
 Owner: QA / Integration
 
 This checklist turns `INT6-011` through `INT6-016` into contract-first
@@ -306,3 +306,98 @@ git diff --check --no-index /dev/null docs/handoffs/wave-031/QA_REPORT.md
 Expected runtime acceptance status before Wave32 implementation:
 `NOT RUNNABLE` by design. MVP6.2 runtime checks should be added only after the
 Wave32 thin implementation is explicitly opened.
+
+## Wave32 Runtime Acceptance Gates (INT6-017..INT6-020)
+
+Wave32 opened thin implementation. The gates below are now runtime-executable
+and were independently validated by QA on 2026-06-26 (not trusting role
+reports). Verdict summary:
+
+| ID | Gate | Verdict |
+|---|---|---|
+| `INT6-017` | MVP6.2 backend runtime acceptance | `PASS` |
+| `INT6-018` | MVP6.2 frontend mock/API acceptance | `PASS` |
+| `INT6-019` | MVP6.2 no-mutation guard | `PASS` |
+| `INT6-020` | Wave32 closeout recommendation | `PASS` (recommend thin-slice closeout) |
+
+### INT6-017 Backend Runtime Acceptance — `PASS`
+
+- All 5 frozen endpoint families exist in the running app (runtime OpenAPI
+  export, 128 paths) and respond per contract:
+  - `GET .../learning-signals/summary` -> 200; unknown project -> 404.
+  - `GET .../learning-signals/correction-patterns` -> 200 (bare array).
+  - `GET .../learning-signals/prompt-suggestions` -> 200 (bare array).
+  - `GET .../learning-signals/auto-approval-candidates` -> 200 (bare array).
+  - `POST /learning-signal-suggestions/{id}/decisions` -> 201.
+- Decision transitions verified live:
+  - `ACCEPT` SUGGESTED -> ACCEPTED (201).
+  - `DISMISS` requires `dismiss_reason_code`; missing -> 400
+    `DISMISS_REASON_REQUIRED`; `OTHER` without note -> 400
+    `DECISION_NOTE_REQUIRED`; `ACCEPT` with reason -> 400
+    `DISMISS_REASON_NOT_ALLOWED`.
+  - Command on `ACCEPTED`/`SUPERSEDED` (non-`SUGGESTED`) -> 409
+    `PROMPT_SUGGESTION_DECISION_CONFLICT`.
+  - Unknown suggestion -> 404 `PROMPT_SUGGESTION_NOT_FOUND`.
+- DTO field names and enums match `docs/api/openapi-mvp6-2-draft.json`: runtime
+  vs draft comparison over 34 shared schemas found 0 field-name mismatches;
+  `PromptSuggestionState` = SUGGESTED/ACCEPTED/DISMISSED/SUPERSEDED,
+  `SuggestionDecisionType` = ACCEPT/DISMISS.
+- `pytest test_mvp6_2_learning_api.py` 7 passed; `test_mvp6_evaluation_api.py`
+  4 passed; `ruff check app tests scripts` clean.
+
+### INT6-018 Frontend Mock/API Acceptance — `PASS`
+
+- Full flow rendered in both modes:
+  `summary -> correction pattern -> prompt suggestion -> accept/dismiss ->
+  audit note`, plus auto-approval preview (recommendation-only/not-enforced),
+  superseded read-side state, and conflict/already-decided states.
+- `npm run test` 19 passed (incl. 6 MVP6.2 learning mock tests); `npm run
+  build` PASS; `npm run smoke:mvp6:learning:mock` PASS (routeCount 6);
+  `npm run smoke:mvp6:learning:actual` PASS (apiCheckCount 7) against live
+  SQLite backend + actual-mode Vite.
+
+### INT6-019 No-Mutation Guard — `PASS`
+
+- Decision response `mutation_guard` flags ALL false, verified live:
+  prompt_version_mutated / candidate_graph_mutated / published_graph_mutated /
+  auto_approval_policy_mutated / extraction_job_started /
+  evaluation_run_started.
+- Code-level: `app/modules/learning/` imports only `Project` (read-only 404
+  guard), `CandidateKind` enum, errors, and DB session — no prompt/candidate/
+  publish/extraction/evaluation/policy model or service. Decision writes touch
+  only the in-memory `_suggestions_by_project` store.
+- Runtime data-level proof: after live summary/list/ACCEPT/DISMISS operations,
+  `published_entities`, `published_relations`, `candidate_entities`,
+  `candidate_relations`, and `prompt_versions` tables all show 0 rows.
+- FE/BE field-name drift independently confirmed CLOSED: backend
+  `schemas.py` and frontend `types.ts` + `mvp6LearningFixtures.ts` agree on
+  `ontology_class_id`, `ontology_relation_id`, outcome `reason`; no stray
+  `evidence_id` in `LearningEvidenceRef` on either side.
+
+### INT6-020 Closeout Recommendation — `PASS`
+
+Recommend `(a) MVP6.2 thin-slice closeout`. All Wave32 gates PASS with no
+blocker. Regression additive-only: MVP3 + project/ontology (15), MVP4 + MVP5
+(17), MVP6.1 evaluation (4) all pass; candidate/published-graph separation
+invariant intact. P1 follow-ups only (non-blocking): promote always-populated
+optional summary/pattern fields to `required` in the draft for strict-match;
+regenerate the stale full-runtime `openapi-mvp2-draft.json` snapshot (it omits
+learning paths); optional permission-limited/stale signal wiring.
+
+### Wave32 QA Validation Commands
+
+```text
+cd apps/backend && .venv/bin/pytest tests/test_mvp6_2_learning_api.py -q   # 7 passed
+cd apps/backend && .venv/bin/pytest tests/test_mvp6_evaluation_api.py -q   # 4 passed
+cd apps/backend && .venv/bin/ruff check app tests scripts                  # clean
+cd apps/backend && .venv/bin/pytest tests/test_mvp3_api.py tests/test_project_ontology_api.py -q  # 15 passed
+cd apps/backend && .venv/bin/pytest tests/test_mvp4_api.py tests/test_mvp5_api.py -q              # 17 passed
+cd apps/frontend && npm run test    # 19 passed
+cd apps/frontend && npm run build   # PASS
+cd apps/frontend && npm run smoke:mvp6:learning:mock     # PASS (6 routes)
+cd apps/frontend && npm run smoke:mvp6:learning:actual   # PASS (7 api checks)
+# runtime OpenAPI export + 34-schema field-name compare vs draft -> 0 mismatch
+# live curl decision matrix: 201/400/409/404 + mutation_guard all false
+git diff --check  # clean
+lsof -nP -iTCP:8000/-iTCP:5173 -sTCP:LISTEN  # no listeners after teardown
+```

@@ -16,7 +16,9 @@
     "smoke:mvp5:mock": "node scripts/mvp5-mock-route-smoke.mjs",
     "smoke:mvp5:actual": "node scripts/mvp5-actual-api-smoke.mjs",
     "smoke:mvp6:mock": "node scripts/mvp6-mock-route-smoke.mjs",
-    "smoke:mvp6:actual": "node scripts/mvp6-actual-api-smoke.mjs"
+    "smoke:mvp6:actual": "node scripts/mvp6-actual-api-smoke.mjs",
+    "smoke:mvp6:learning:mock": "node scripts/mvp6-learning-mock-route-smoke.mjs",
+    "smoke:mvp6:learning:actual": "node scripts/mvp6-learning-actual-api-smoke.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.81.5",

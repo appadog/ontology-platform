@@ -4,9 +4,9 @@
 
 ## Latest Wave
 
-- Current wave: `wave-031`
-- Overall status: `MVP6.2 CONTRACT HARDENING PASS / WAVE32 THIN IMPLEMENTATION READY`
-- 기준일: 2026-06-22
+- Current wave: `wave-032`
+- Overall status: `MVP6.2 ACTIVE LEARNING THIN IMPLEMENTATION CLOSED (PASS WITH P1 FOLLOW-UPS)`
+- 기준일: 2026-06-26
 
 ## Latest Decisions
 
@@ -134,6 +134,11 @@
 - MVP6.2 contract hardening is closed: `ACCEPT`/`DISMISS` are request commands, `ACCEPTED`/`DISMISSED` are resulting states, `SUPERSEDED` is read-side only, and non-`SUGGESTED` decision command conflicts by default.
 - MVP6.2 summary, source artifact, and auto-approval preview field names are aligned across PM, Backend/OpenAPI, Frontend requirements, and QA checklist.
 - Wave32 may open MVP6.2 thin implementation with frozen endpoint families, deterministic local data, mock/actual frontend coverage, and no prompt/candidate/published graph/policy mutation.
+- Wave32 PM, Backend, Frontend, and QA reports are accepted as PASS. MVP6.2 Active Learning thin slice is closed.
+- Backend implemented the five frozen learning-signal endpoint families with a deterministic process-local store; runtime↔`openapi-mvp6-2-draft.json` compare shows 0 field-name mismatches across 34 shared schemas.
+- A Wave32 FE/BE field-name drift was found by the commander (Backend renamed to the frozen draft: `ontology_class_id`, `ontology_relation_id`, auto-approval outcome `reason`, and dropped `LearningEvidenceRef.evidence_id`) and was closed in the same wave by aligning Frontend types/fixtures/smoke. QA independently verified 0 remaining drift.
+- Decision audit-only behavior verified at three layers: response `mutation_guard` all-false, code-level (learning module imports no prompt/candidate/publish/extraction/evaluation/policy write path), and runtime data-level (published/candidate/prompt tables show 0 rows after summary/list/ACCEPT/DISMISS ops). `ACCEPT`/`DISMISS` transition only `SUGGESTED`; non-`SUGGESTED` returns `409 PROMPT_SUGGESTION_DECISION_CONFLICT`; `DISMISS` requires reason code.
+- MVP6.2 Wave32 P1 non-blocking follow-ups: promote always-populated optional draft fields to `required` for strict-match, and regenerate the stale full-runtime `openapi-mvp2-draft.json` snapshot (currently omits learning paths). Neither blocks MVP6.2 closeout.
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -207,14 +212,18 @@
 | MVP6.2 Active Learning Contract | Closed in Wave31. PM/BE/FE/QA planning artifacts now agree and Wave32 thin implementation is approved. | PM6-010~PM6-015, BE6-012~BE6-018, FE6-011~FE6-017, INT6-011~INT6-016 |
 | MVP6.2 Decision Vocabulary | Closed in Wave31. `ACCEPT`/`DISMISS` are request commands; `ACCEPTED`/`DISMISSED` are resulting states; `SUPERSEDED` is read-side only. | INT6-012, INT6-015 |
 | MVP6.2 DTO Field Alignment | Closed in Wave31. Summary, source artifact, and auto-approval preview field names are aligned across PM, Backend/OpenAPI, Frontend requirements, and QA. | INT6-012, INT6-014, INT6-015 |
-| MVP6.2 Thin Runtime/UI | Open for Wave32. Implement deterministic read-mostly learning signal endpoints, audit-only decision capture, Product Showcase Learning Insights UI, and mock/actual smoke. | BE6-019+, FE6-018+, INT6-017+ |
+| MVP6.2 Thin Runtime/UI | Closed in Wave32. Five frozen learning-signal endpoints, deterministic process-local store, audit-only decision capture with 409 conflict, Product Showcase Learning Insights UI, FE/BE field-name drift closed, no-mutation guard verified 3 layers, mock+actual smoke PASS, MVP1-MVP6.1 regression additive-only. | BE6-019~BE6-022, FE6-018~FE6-021, INT6-017~INT6-020 |
+| MVP6.2 Wave32 P1 Follow-ups | Non-blocking. Promote always-populated optional draft fields to `required` for strict-match; regenerate stale `openapi-mvp2-draft.json` full-runtime snapshot to include learning paths. | BE6 cleanup |
 
 ## Next Gate
 
-1. PM: Open Wave32 implementation scope guard only; confirm no additional MVP6.2 product scope.
-2. Backend: Implement deterministic MVP6.2 learning-signal API thin slice with tests and OpenAPI export, preserving audit-only/no-mutation guarantees.
-3. Frontend: Implement Learning Insights route, DTO/client/mocks, Product Showcase style application, and mock/actual smoke against the frozen contract.
-4. QA: Validate MVP6.2 runtime contract, frontend mock/actual flow, mutation guard, and regression invariants; recommend closeout or targeted hardening.
+MVP6.2 Active Learning P0 is closed (Wave32). This completes the currently frozen MVP6 P0 scope (MVP6.1 Gold Set/Benchmark Studio + MVP6.2 Active Learning). Remaining MVP6 roadmap themes are separate future slices that each require a PM freeze before implementation:
+
+1. Optional Wave33 cleanup: the two MVP6.2 P1 follow-ups (promote always-populated optional draft fields to `required`; regenerate stale `openapi-mvp2-draft.json`). Non-blocking.
+2. Next MVP6 theme (requires PM contract-first freeze before any implementation): benchmark comparison/confusion matrix (PM6-006/BE6-007), Gold Set authoring policy + dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance, impact simulation, copilot/agents, connector/plugin SDK, multi-tenant runtime, ontology packs, advanced visualization). PM must choose the smallest coherent P0 path first.
+3. Release/Demo packaging (Wave27 orders exist but were paused) can also be resumed as a non-scope-expanding track.
+
+Commander awaiting direction on which track to open next.
 
 ## Latest Role Reports
 
@@ -335,6 +344,10 @@
 | Backend | wave-031 | `PASS / MVP6.2 CONTRACT ALIGNED` | OpenAPI summary fields, source artifact enum, auto-approval preview fields, and command/state enums aligned |
 | Frontend | wave-031 | `PASS / MVP6.2 UX CONTRACT ALIGNED` | UX requirements now match Backend/OpenAPI field names and command/state vocabulary |
 | QA | wave-031 | `PASS / MVP6.2 IMPLEMENTATION READY` | INT6-012/014/015/016 PASS; Wave32 thin implementation recommended |
+| PM | wave-032 | `PASS / SCOPE GUARD CONFIRMED` | MVP6.2 P0 scope unchanged; deterministic local data approved; frozen endpoint/decision/mutation-guard gates restated |
+| Backend | wave-032 | `PASS / MVP6.2 THIN RUNTIME READY` | Five learning-signal endpoints, process-local store, ACCEPT/DISMISS + 409 conflict, all-false mutation guard; pytest 7+4, ruff clean, 0 OpenAPI field-name mismatch |
+| Frontend | wave-032 | `PASS / LEARNING INSIGHTS READY` | Project-scoped Learning Insights UI, types/client/mocks, Product Showcase style; FE/BE field-name drift closed; test/build/mock+actual smoke PASS |
+| QA | wave-032 | `PASS / MVP6.2 CLOSEOUT RECOMMENDED` | INT6-017~INT6-020 PASS; no-mutation verified 3 layers; FE/BE drift truly closed; MVP1-MVP6.1 regression additive-only; P1 follow-ups only |
 
 ## Report Index
 
@@ -371,3 +384,4 @@
 | wave-029 | `wave-029/PM_REPORT.md` | `wave-029/BACKEND_REPORT.md` | `wave-029/FRONTEND_REPORT.md` | `wave-029/QA_REPORT.md` | `wave-029/NEXT_ORDERS.md` |
 | wave-030 | `wave-030/PM_REPORT.md` | `wave-030/BACKEND_REPORT.md` | `wave-030/FRONTEND_REPORT.md` | `wave-030/QA_REPORT.md` | `wave-030/NEXT_ORDERS.md` |
 | wave-031 | `wave-031/PM_REPORT.md` | `wave-031/BACKEND_REPORT.md` | `wave-031/FRONTEND_REPORT.md` | `wave-031/QA_REPORT.md` | `wave-031/NEXT_ORDERS.md` |
+| wave-032 | `wave-032/PM_REPORT.md` | `wave-032/BACKEND_REPORT.md` | `wave-032/FRONTEND_REPORT.md` | `wave-032/QA_REPORT.md` | `wave-032/NEXT_ORDERS.md` |

@@ -38,6 +38,7 @@ from .schemas import (
     SuggestionDecisionRequest,
     SuggestionDecisionResponse,
     SuggestionDecisionType,
+    SuggestionDismissReasonCode,
     SuggestionIntendedNextAction,
     SuggestionSnapshot,
 )
@@ -106,7 +107,6 @@ def _artifact(
         model_run_id="model-run-v6-learning",
         evidence_refs=[
             LearningEvidenceRef(
-                evidence_id=f"{artifact_id}-evidence",
                 source_id="source-policy-csv",
                 source_segment_id="segment-policy-001",
                 locator=f"learning://{artifact_id}",
@@ -175,10 +175,12 @@ def _ensure_project_data(project_id: str) -> None:
         ],
         title="Contains relation direction drifts in insurance samples",
         affected_classes=[
-            OntologyClassRef(class_id="class-insurance-product", label="Insurance Product"),
-            OntologyClassRef(class_id="class-coverage", label="Coverage"),
+            OntologyClassRef(ontology_class_id="class-insurance-product", label="Insurance Product"),
+            OntologyClassRef(ontology_class_id="class-coverage", label="Coverage"),
         ],
-        affected_relations=[OntologyRelationRef(relation_id="relation-includes", label="includes")],
+        affected_relations=[
+            OntologyRelationRef(ontology_relation_id="relation-includes", label="includes")
+        ],
         support_count=7,
         denominator=18,
         confidence_label=LearningConfidenceLabel.HIGH,
@@ -284,12 +286,12 @@ def _ensure_project_data(project_id: str) -> None:
                 AutoApprovalHistoricalOutcomeItem(
                     artifact_id=review_artifact.artifact_id,
                     outcome=AutoApprovalHistoricalMatchOutcome.WOULD_MATCH,
-                    explanation="Historically approved with evidence and no failed validation.",
+                    reason="Historically approved with evidence and no failed validation.",
                 ),
                 AutoApprovalHistoricalOutcomeItem(
                     artifact_id=validation_artifact.artifact_id,
                     outcome=AutoApprovalHistoricalMatchOutcome.BLOCKED_BY_SAFETY_RULE,
-                    explanation="Blocked because evidence was missing.",
+                    reason="Blocked because evidence was missing.",
                 ),
             ],
         ),
@@ -464,6 +466,17 @@ def decide_suggestion(
             status_code=400,
             code="DISMISS_REASON_NOT_ALLOWED",
             message="dismiss_reason_code is only allowed when decision is DISMISS.",
+            details={"suggestion_id": suggestion_id},
+        )
+    if (
+        payload.decision == SuggestionDecisionType.DISMISS
+        and payload.dismiss_reason_code == SuggestionDismissReasonCode.OTHER
+        and not (payload.note and payload.note.strip())
+    ):
+        raise ApiException(
+            status_code=400,
+            code="DECISION_NOTE_REQUIRED",
+            message="note is required when dismiss_reason_code is OTHER.",
             details={"suggestion_id": suggestion_id},
         )
 

@@ -115,7 +115,6 @@ class LearningPatternSummary(BaseModel):
 
 
 class LearningEvidenceRef(BaseModel):
-    evidence_id: str | None = None
     source_id: str | None = None
     source_segment_id: str | None = None
     locator: str | None = None
@@ -142,12 +141,12 @@ class LearningSourceArtifactRef(BaseModel):
 
 
 class OntologyClassRef(BaseModel):
-    class_id: str
+    ontology_class_id: str
     label: str
 
 
 class OntologyRelationRef(BaseModel):
-    relation_id: str
+    ontology_relation_id: str
     label: str
 
 
@@ -282,7 +281,7 @@ class AutoApprovalPreviewMetric(BaseModel):
 class AutoApprovalHistoricalOutcomeItem(BaseModel):
     artifact_id: str
     outcome: AutoApprovalHistoricalMatchOutcome
-    explanation: str
+    reason: str
 
 
 class AutoApprovalHistoricalMatchPreview(BaseModel):

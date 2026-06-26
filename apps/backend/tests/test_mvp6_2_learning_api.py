@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -267,3 +268,95 @@ def test_mvp6_2_decision_validation_guards() -> None:
         expected_status=201,
     )
     assert dismissed["new_state"] == "DISMISSED"
+
+
+def test_mvp6_2_dismiss_other_reason_requires_note() -> None:
+    ctx = _seed()
+    project_id = ctx["project_id"]
+    suggestions = _json(
+        client.get(f"/api/v1/projects/{project_id}/learning-signals/prompt-suggestions")
+    )
+    suggested = next(item for item in suggestions if item["state"] == "SUGGESTED")
+
+    missing_note = _json(
+        client.post(
+            f"/api/v1/learning-signal-suggestions/{suggested['id']}/decisions",
+            json={"decision": "DISMISS", "dismiss_reason_code": "OTHER"},
+        ),
+        expected_status=400,
+    )
+    assert missing_note["error"]["code"] == "DECISION_NOTE_REQUIRED"
+
+    ok = _json(
+        client.post(
+            f"/api/v1/learning-signal-suggestions/{suggested['id']}/decisions",
+            json={
+                "decision": "DISMISS",
+                "dismiss_reason_code": "OTHER",
+                "note": "Domain owner asked to defer this.",
+            },
+        ),
+        expected_status=201,
+    )
+    assert ok["new_state"] == "DISMISSED"
+
+
+def test_mvp6_2_decision_on_unknown_suggestion_returns_404() -> None:
+    _seed()
+    not_found = _json(
+        client.post(
+            "/api/v1/learning-signal-suggestions/does-not-exist/decisions",
+            json={"decision": "ACCEPT"},
+        ),
+        expected_status=404,
+    )
+    assert not_found["error"]["code"] == "PROMPT_SUGGESTION_NOT_FOUND"
+
+
+def test_mvp6_2_summary_404_for_unknown_project() -> None:
+    _seed()
+    resp = client.get("/api/v1/projects/unknown-project-id/learning-signals/summary")
+    assert resp.status_code == 404, resp.text
+    assert resp.json()["error"]["code"] == "PROJECT_NOT_FOUND"
+
+
+def test_mvp6_2_dto_field_names_match_frozen_contract() -> None:
+    ctx = _seed()
+    project_id = ctx["project_id"]
+
+    patterns = _json(
+        client.get(f"/api/v1/projects/{project_id}/learning-signals/correction-patterns")
+    )
+    pattern = patterns[0]
+    # Frozen contract uses ontology_class_id / ontology_relation_id, not class_id / relation_id.
+    assert {"ontology_class_id", "label"} == set(pattern["affected_classes"][0])
+    assert {"ontology_relation_id", "label"} == set(pattern["affected_relations"][0])
+
+    schema = _json(client.get("/api/v1/openapi.json"))
+    schemas = schema["components"]["schemas"]
+    assert set(schemas["OntologyClassRef"]["properties"]) == {"ontology_class_id", "label"}
+    assert set(schemas["OntologyRelationRef"]["properties"]) == {
+        "ontology_relation_id",
+        "label",
+    }
+    # LearningEvidenceRef must not expose an evidence_id field beyond the frozen draft.
+    assert "evidence_id" not in schemas["LearningEvidenceRef"]["properties"]
+
+    # Runtime OpenAPI MVP6.2 schema field names must equal the frozen planning draft.
+    frozen = json.loads(MVP6_2_OPENAPI_PATH.read_text())["components"]["schemas"]
+    for name in [
+        "OntologyClassRef",
+        "OntologyRelationRef",
+        "LearningEvidenceRef",
+        "LearningSourceArtifactRef",
+        "CorrectionPattern",
+        "PromptSuggestion",
+        "AutoApprovalCandidatePreview",
+        "LearningSignalSummaryResponse",
+        "SuggestionDecisionResponse",
+        "SuggestionDecisionAuditNote",
+        "MutationGuard",
+    ]:
+        assert set(schemas[name]["properties"]) == set(
+            frozen[name]["properties"]
+        ), name

@@ -73,9 +73,23 @@ import {
   mockMvp6Samples,
 } from "../mocks/mvp6Fixtures";
 import {
+  buildMockLearningSummary,
+  mockLearningAutoApprovalCandidates,
+  mockLearningCorrectionPatterns,
+  mockLearningPromptSuggestions,
+} from "../mocks/mvp6LearningFixtures";
+import {
   AuditEvent,
+  AutoApprovalCandidatePreview,
   AutomaticApprovalPolicyDocument,
   BackupSnapshot,
+  CorrectionPattern,
+  LearningSignalSummaryResponse,
+  PromptSuggestion,
+  SuggestionDecisionAuditNote,
+  SuggestionDecisionRequest,
+  SuggestionDecisionResponse,
+  SuggestionIntendedNextAction,
   CandidateEntity,
   CandidateListFilters,
   CandidateEvidence,
@@ -200,6 +214,22 @@ let mockMvp6GoldEntityStore: GoldEntity[] = [...mockMvp6GoldEntities];
 let mockMvp6GoldRelationStore: GoldRelation[] = [...mockMvp6GoldRelations];
 let mockMvp6EvaluationRunStore: EvaluationRun[] = [...mockMvp6EvaluationRuns];
 let mockMvp6RunCounter = 1;
+let mockLearningSuggestionStore: PromptSuggestion[] = mockLearningPromptSuggestions.map((item) => ({ ...item }));
+let mockLearningDecisionCounter = 0;
+
+export class SuggestionDecisionError extends Error {
+  code: string;
+  state?: string;
+  status: number;
+
+  constructor(message: string, code: string, status: number, state?: string) {
+    super(message);
+    this.name = "SuggestionDecisionError";
+    this.code = code;
+    this.status = status;
+    this.state = state;
+  }
+}
 
 async function delay<T>(value: T): Promise<T> {
   await new Promise((resolve) => globalThis.setTimeout(resolve, 180));
@@ -3047,5 +3077,151 @@ export const apiClient = {
 
     const job = await request<ExtractionJobDetail>(`/api/v1/extraction-jobs/${jobId}`);
     return job.model_runs ?? [];
+  },
+
+  // ---- MVP6.2 Active Learning / Learning Insights ----
+
+  async getLearningSummary(projectId: string): Promise<LearningSignalSummaryResponse> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(buildMockLearningSummary(mockLearningSuggestionStore, mockLearningCorrectionPatterns));
+    }
+
+    return request<LearningSignalSummaryResponse>(`/api/v1/projects/${projectId}/learning-signals/summary`);
+  },
+
+  async listLearningCorrectionPatterns(projectId: string): Promise<CorrectionPattern[]> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(mockLearningCorrectionPatterns.filter((pattern) => pattern.project_id === projectId));
+    }
+
+    const payload = await request<CorrectionPattern[] | { items?: CorrectionPattern[] }>(
+      `/api/v1/projects/${projectId}/learning-signals/correction-patterns`,
+    );
+    return unwrapItems(payload);
+  },
+
+  async listLearningPromptSuggestions(projectId: string): Promise<PromptSuggestion[]> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(mockLearningSuggestionStore.filter((suggestion) => suggestion.project_id === projectId));
+    }
+
+    const payload = await request<PromptSuggestion[] | { items?: PromptSuggestion[] }>(
+      `/api/v1/projects/${projectId}/learning-signals/prompt-suggestions`,
+    );
+    return unwrapItems(payload);
+  },
+
+  async listLearningAutoApprovalCandidates(projectId: string): Promise<AutoApprovalCandidatePreview[]> {
+    if (USE_MOCK_API) {
+      assertMvp4Project(projectId);
+      return delay(mockLearningAutoApprovalCandidates.filter((preview) => preview.project_id === projectId));
+    }
+
+    const payload = await request<AutoApprovalCandidatePreview[] | { items?: AutoApprovalCandidatePreview[] }>(
+      `/api/v1/projects/${projectId}/learning-signals/auto-approval-candidates`,
+    );
+    return unwrapItems(payload);
+  },
+
+  async decideLearningSuggestion(
+    suggestionId: string,
+    payload: SuggestionDecisionRequest,
+  ): Promise<SuggestionDecisionResponse> {
+    if (USE_MOCK_API) {
+      const suggestion = mockLearningSuggestionStore.find((item) => item.id === suggestionId);
+      if (!suggestion) {
+        throw new SuggestionDecisionError("Prompt suggestion was not found.", "PROMPT_SUGGESTION_NOT_FOUND", 404);
+      }
+      if (suggestion.state !== "SUGGESTED") {
+        throw new SuggestionDecisionError(
+          "Only SUGGESTED prompt suggestions can receive a decision command.",
+          "PROMPT_SUGGESTION_DECISION_CONFLICT",
+          409,
+          suggestion.state,
+        );
+      }
+      if (payload.decision === "DISMISS" && !payload.dismiss_reason_code) {
+        throw new SuggestionDecisionError(
+          "dismiss_reason_code is required when decision is DISMISS.",
+          "DISMISS_REASON_REQUIRED",
+          400,
+        );
+      }
+      if (payload.decision === "ACCEPT" && payload.dismiss_reason_code) {
+        throw new SuggestionDecisionError(
+          "dismiss_reason_code is only allowed when decision is DISMISS.",
+          "DISMISS_REASON_NOT_ALLOWED",
+          400,
+        );
+      }
+
+      const previousState = suggestion.state;
+      const newState = payload.decision === "ACCEPT" ? "ACCEPTED" : "DISMISSED";
+      const decidedAt = new Date().toISOString();
+      mockLearningDecisionCounter += 1;
+      const intendedNextAction: SuggestionIntendedNextAction =
+        payload.intended_next_action ?? (payload.decision === "ACCEPT" ? "USE_IN_NEXT_PROMPT_DRAFT" : "NO_ACTION");
+      const auditNote: SuggestionDecisionAuditNote = {
+        id: `${suggestionId}-decision-${mockLearningDecisionCounter}`,
+        suggestion_id: suggestionId,
+        project_id: suggestion.project_id,
+        actor_id: "dev-user",
+        actor_role: "PROJECT_ADMIN",
+        decision: payload.decision,
+        dismiss_reason_code: payload.dismiss_reason_code ?? null,
+        note: payload.note ?? null,
+        intended_next_action: intendedNextAction,
+        decided_at: decidedAt,
+        source_learning_signal_ids: suggestion.source_learning_signal_ids,
+        target_prompt_version_id: suggestion.target_prompt_version_id,
+        suggestion_snapshot: {
+          suggestion_kind: suggestion.suggestion_kind,
+          title: suggestion.title,
+          preview_text: suggestion.preview_text,
+        },
+        mutation_guard: {
+          prompt_version_mutated: false,
+          candidate_graph_mutated: false,
+          published_graph_mutated: false,
+          auto_approval_policy_mutated: false,
+          extraction_job_started: false,
+          evaluation_run_started: false,
+        },
+      };
+      mockLearningSuggestionStore = mockLearningSuggestionStore.map((item) =>
+        item.id === suggestionId
+          ? { ...item, state: newState, updated_at: decidedAt, decision_audit_note: auditNote }
+          : item,
+      );
+      return delay({
+        suggestion_id: suggestionId,
+        project_id: suggestion.project_id,
+        previous_state: previousState,
+        new_state: newState,
+        decision_audit_note: auditNote,
+      });
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/learning-signal-suggestions/${suggestionId}/decisions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const raw = (await response.json().catch(() => null)) as
+        | { error?: { code?: string; message?: string; details?: { state?: string } }; code?: string; message?: string; details?: { state?: string } }
+        | null;
+      const apiError = raw?.error ?? raw ?? undefined;
+      throw new SuggestionDecisionError(
+        apiError?.message ?? `Suggestion decision failed: ${response.status}`,
+        apiError?.code ?? "SUGGESTION_DECISION_FAILED",
+        response.status,
+        apiError?.details?.state,
+      );
+    }
+    return response.json() as Promise<SuggestionDecisionResponse>;
   },
 };
