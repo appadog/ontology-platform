@@ -1,0 +1,1494 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP6.3 Benchmark Comparison Planning API",
+    "description": "Planning-only OpenAPI artifact for MVP6.3 Benchmark Comparison / Confusion Matrix. Read-only aggregation over existing MVP6.1 evaluation artifacts. Additive; does not replace any prior MVP1-MVP6.2 OpenAPI draft. Wave33 contract-first planning only: no runtime code, models, migrations, or tests.",
+    "version": "0.6.3-draft"
+  },
+  "tags": [
+    {
+      "name": "MVP6.3 Benchmark Comparison",
+      "description": "Read-only benchmark comparison and confusion-matrix contracts over existing MVP6.1 evaluation runs, metrics, and error cases."
+    }
+  ],
+  "paths": {
+    "/api/v1/projects/{project_id}/benchmark-comparisons": {
+      "post": {
+        "tags": [
+          "MVP6.3 Benchmark Comparison"
+        ],
+        "summary": "Build a benchmark comparison view (read-aggregation only)",
+        "description": "Composes a comparison view from selected existing run ids. Read-only aggregation over existing evaluation runs/metrics/error cases. Executes no run, calls no LLM, mutates no graph/gold/policy. Exposes an all-false mutation_guard.",
+        "operationId": "buildBenchmarkComparison",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkComparisonCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comparison view composed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkComparison"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "MVP6.3 Benchmark Comparison"
+        ],
+        "summary": "List benchmark comparisons in a project",
+        "operationId": "listBenchmarkComparisons",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/BenchmarkComparisonGroupBy"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comparison summaries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkComparisonListResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/benchmark-comparisons/{comparison_id}": {
+      "get": {
+        "tags": [
+          "MVP6.3 Benchmark Comparison"
+        ],
+        "summary": "Get a benchmark comparison view",
+        "operationId": "getBenchmarkComparison",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ComparisonId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comparison view",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkComparison"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/benchmark-comparisons/{comparison_id}/confusion-matrix": {
+      "get": {
+        "tags": [
+          "MVP6.3 Benchmark Comparison"
+        ],
+        "summary": "Get a per-run confusion matrix",
+        "description": "Confusion matrix for one compared run + axis, derived only from existing error cases plus implied matched pairs. Empty buckets report NOT_APPLICABLE, never a fabricated rate.",
+        "operationId": "getBenchmarkConfusionMatrix",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ComparisonId"
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Which compared run the matrix is computed for."
+          },
+          {
+            "name": "axis",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ConfusionMatrixAxis"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Confusion matrix",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfusionMatrix"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/benchmark-comparisons/{comparison_id}/confusion-matrix/cells/{cell_id}/error-cases": {
+      "get": {
+        "tags": [
+          "MVP6.3 Benchmark Comparison"
+        ],
+        "summary": "Drill a confusion cell to contributing error cases",
+        "description": "Returns the existing EvaluationErrorCase rows that contribute to a confusion cell. Diagonal/true-positive cells return an empty list.",
+        "operationId": "getConfusionCellErrorCases",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ComparisonId"
+          },
+          {
+            "$ref": "#/components/parameters/CellId"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contributing error cases",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfusionCellErrorCasesResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ProjectId": {
+        "name": "project_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ComparisonId": {
+        "name": "comparison_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CellId": {
+        "name": "cell_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "BenchmarkComparisonGroupBy": {
+        "type": "string",
+        "enum": [
+          "MODEL",
+          "PROMPT_VERSION",
+          "ONTOLOGY_VERSION",
+          "DATASET_VERSION",
+          "PARSER_VERSION"
+        ],
+        "title": "BenchmarkComparisonGroupBy",
+        "description": "Dimension by which runs are grouped/labeled in a comparison."
+      },
+      "ComparisonComparabilityFlag": {
+        "type": "string",
+        "enum": [
+          "SAME_DATASET",
+          "DIFFERENT_DATASET_VERSION",
+          "DIFFERENT_DATASET",
+          "DIFFERENT_ONTOLOGY_VERSION",
+          "MISSING_METRIC"
+        ],
+        "title": "ComparisonComparabilityFlag",
+        "description": "Per-pair/per-set comparability warning so deltas are never silently misleading."
+      },
+      "ConfusionMatrixAxis": {
+        "type": "string",
+        "enum": [
+          "ENTITY_CLASS",
+          "RELATION_TYPE"
+        ],
+        "title": "ConfusionMatrixAxis",
+        "description": "What the confusion matrix is computed over (reusing MVP6.1 buckets only)."
+      },
+      "MetricDeltaStatus": {
+        "type": "string",
+        "enum": [
+          "IMPROVED",
+          "REGRESSED",
+          "UNCHANGED",
+          "NOT_COMPARABLE"
+        ],
+        "title": "MetricDeltaStatus",
+        "description": "Per-metric, per-run delta status vs the baseline run."
+      },
+      "RunExclusionReason": {
+        "type": "string",
+        "enum": [
+          "NOT_TERMINAL_SUCCESS",
+          "DIFFERENT_PROJECT",
+          "RUN_NOT_FOUND",
+          "DUPLICATE_RUN_ID"
+        ],
+        "title": "RunExclusionReason",
+        "description": "Why an eligible-looking run was excluded from the comparison set."
+      },
+      "EvaluationMetricName": {
+        "type": "string",
+        "enum": [
+          "ENTITY_PRECISION",
+          "ENTITY_RECALL",
+          "ENTITY_F1",
+          "RELATION_PRECISION",
+          "RELATION_RECALL",
+          "RELATION_F1",
+          "RELATION_DIRECTION_ACCURACY",
+          "EVIDENCE_MATCH_RATE"
+        ],
+        "title": "EvaluationMetricName",
+        "description": "Reused MVP6.1 metric name set, verbatim. No new metric is introduced in MVP6.3."
+      },
+      "EvaluationMetricStatus": {
+        "type": "string",
+        "enum": [
+          "MEASURED",
+          "NOT_APPLICABLE"
+        ],
+        "title": "EvaluationMetricStatus",
+        "description": "Reused MVP6.1 metric status."
+      },
+      "EvaluationErrorType": {
+        "type": "string",
+        "enum": [
+          "MISSING_ENTITY",
+          "EXTRA_ENTITY",
+          "WRONG_ENTITY_CLASS",
+          "MISSING_RELATION",
+          "EXTRA_RELATION",
+          "WRONG_RELATION_TYPE",
+          "WRONG_RELATION_DIRECTION",
+          "EVIDENCE_MISMATCH"
+        ],
+        "title": "EvaluationErrorType",
+        "description": "Reused MVP6.1 error type."
+      },
+      "GoldEvidenceRef": {
+        "type": "object",
+        "title": "GoldEvidenceRef",
+        "description": "Reused MVP6.1 evidence locator. Source of truth: openapi-mvp6-draft.json.",
+        "properties": {
+          "sample_id": {
+            "type": "string"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_segment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "locator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "offset_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "offset_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "sample_id"
+        ]
+      },
+      "EvaluationCandidateRef": {
+        "type": "object",
+        "title": "EvaluationCandidateRef",
+        "description": "Reused MVP6.1 candidate ref. Source of truth: openapi-mvp6-draft.json.",
+        "properties": {
+          "candidate_id": {
+            "type": "string"
+          },
+          "candidate_kind": {
+            "type": "string",
+            "enum": [
+              "ENTITY",
+              "RELATION"
+            ]
+          },
+          "sample_id": {
+            "type": "string"
+          },
+          "ontology_class_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ontology_relation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "normalized_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_gold_entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target_gold_entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoldEvidenceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "candidate_id",
+          "candidate_kind",
+          "sample_id"
+        ]
+      },
+      "EvaluationErrorCase": {
+        "type": "object",
+        "title": "EvaluationErrorCase",
+        "description": "Reused MVP6.1 error case, verbatim. Source of truth: openapi-mvp6-draft.json. Drilled cell error cases are this shape.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "sample_id": {
+            "type": "string"
+          },
+          "error_type": {
+            "$ref": "#/components/schemas/EvaluationErrorType"
+          },
+          "gold_entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gold_relation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "candidate_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvaluationCandidateRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "comparison_summary": {
+            "type": "string"
+          },
+          "gold_evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoldEvidenceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "candidate_evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoldEvidenceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "project_id",
+          "dataset_id",
+          "sample_id",
+          "error_type",
+          "comparison_summary",
+          "created_at"
+        ]
+      },
+      "BenchmarkMutationGuard": {
+        "type": "object",
+        "title": "BenchmarkMutationGuard",
+        "description": "All-false analysis-only guard. Mirrors the MVP6.2 audit-only mutation_guard pattern.",
+        "properties": {
+          "candidate_graph_mutated": {
+            "type": "boolean",
+            "const": false
+          },
+          "published_graph_mutated": {
+            "type": "boolean",
+            "const": false
+          },
+          "evaluation_run_started": {
+            "type": "boolean",
+            "const": false
+          },
+          "gold_set_mutated": {
+            "type": "boolean",
+            "const": false
+          }
+        },
+        "required": [
+          "candidate_graph_mutated",
+          "published_graph_mutated",
+          "evaluation_run_started",
+          "gold_set_mutated"
+        ]
+      },
+      "BenchmarkComparisonCreateRequest": {
+        "type": "object",
+        "title": "BenchmarkComparisonCreateRequest",
+        "description": "Read-aggregation builder request. Composes a comparison view from selected existing run ids.",
+        "properties": {
+          "run_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "description": ">= 2 ids; de-duplicated; >= 2 must be eligible terminal-success runs."
+          },
+          "group_by": {
+            "$ref": "#/components/schemas/BenchmarkComparisonGroupBy"
+          },
+          "baseline_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Optional; default = first eligible run in run_ids."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metric_names": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/EvaluationMetricName"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional; default = full EvaluationMetricName set."
+          }
+        },
+        "required": [
+          "run_ids",
+          "group_by"
+        ]
+      },
+      "BenchmarkRunContext": {
+        "type": "object",
+        "title": "BenchmarkRunContext",
+        "description": "Echoed EvaluationRun context. Traceability is preserved; nothing is invented.",
+        "properties": {
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prompt_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ontology_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parser_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dataset_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "EvaluationRun status echo (SUCCEEDED or SUCCESS for eligible runs)."
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "BenchmarkComparisonRun": {
+        "type": "object",
+        "title": "BenchmarkComparisonRun",
+        "properties": {
+          "run_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "group_value": {
+            "type": "string",
+            "description": "Display value for group_by (e.g. 'model_name / model_provider' for MODEL)."
+          },
+          "is_baseline": {
+            "type": "boolean"
+          },
+          "run_context": {
+            "$ref": "#/components/schemas/BenchmarkRunContext"
+          },
+          "comparability_flags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComparisonComparabilityFlag"
+            }
+          }
+        },
+        "required": [
+          "run_id",
+          "label",
+          "group_value",
+          "is_baseline",
+          "run_context",
+          "comparability_flags"
+        ]
+      },
+      "BenchmarkMetricCell": {
+        "type": "object",
+        "title": "BenchmarkMetricCell",
+        "properties": {
+          "run_id": {
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metric_status": {
+            "$ref": "#/components/schemas/EvaluationMetricStatus"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number",
+                "description": "run.value - baseline.value when both MEASURED; null when NOT_COMPARABLE."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delta_status": {
+            "$ref": "#/components/schemas/MetricDeltaStatus"
+          }
+        },
+        "required": [
+          "run_id",
+          "metric_status",
+          "delta_status"
+        ]
+      },
+      "BenchmarkMetricRow": {
+        "type": "object",
+        "title": "BenchmarkMetricRow",
+        "properties": {
+          "metric_name": {
+            "$ref": "#/components/schemas/EvaluationMetricName"
+          },
+          "baseline_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "baseline_metric_status": {
+            "$ref": "#/components/schemas/EvaluationMetricStatus"
+          },
+          "row_comparability_flags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComparisonComparabilityFlag"
+            },
+            "description": "Metric-row-level comparability flags (gap 7). Carries MISSING_METRIC when this metric is NOT_APPLICABLE/absent in the baseline or any compared run."
+          },
+          "per_run": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkMetricCell"
+            }
+          }
+        },
+        "required": [
+          "metric_name",
+          "baseline_metric_status",
+          "row_comparability_flags",
+          "per_run"
+        ]
+      },
+      "BenchmarkExcludedRun": {
+        "type": "object",
+        "title": "BenchmarkExcludedRun",
+        "properties": {
+          "run_id": {
+            "type": "string"
+          },
+          "exclusion_reason": {
+            "$ref": "#/components/schemas/RunExclusionReason"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "run_id",
+          "exclusion_reason"
+        ]
+      },
+      "ComparabilitySummary": {
+        "type": "object",
+        "title": "ComparabilitySummary",
+        "properties": {
+          "flags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComparisonComparabilityFlag"
+            }
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "flags",
+          "notes"
+        ]
+      },
+      "BenchmarkComparison": {
+        "type": "object",
+        "title": "BenchmarkComparison",
+        "description": "Read-only comparison view aggregated from existing evaluation runs/metrics/error cases.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "group_by": {
+            "$ref": "#/components/schemas/BenchmarkComparisonGroupBy"
+          },
+          "baseline_run_id": {
+            "type": "string"
+          },
+          "metric_names": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvaluationMetricName"
+            }
+          },
+          "delta_epsilon": {
+            "type": "number",
+            "description": "Fixed deterministic epsilon, 0.0001."
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkComparisonRun"
+            }
+          },
+          "metric_rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkMetricRow"
+            }
+          },
+          "excluded_runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkExcludedRun"
+            }
+          },
+          "comparability_summary": {
+            "$ref": "#/components/schemas/ComparabilitySummary"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/BenchmarkMutationGuard"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/BenchmarkComparisonCapabilities"
+          },
+          "safety_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "group_by",
+          "baseline_run_id",
+          "metric_names",
+          "delta_epsilon",
+          "runs",
+          "metric_rows",
+          "excluded_runs",
+          "comparability_summary",
+          "generated_at",
+          "mutation_guard"
+        ]
+      },
+      "BenchmarkComparisonCapabilities": {
+        "type": "object",
+        "title": "BenchmarkComparisonCapabilities",
+        "description": "Optional read-only permission/capability hint (gap 10). Display hint only; authorization is enforced server-side (403 PERMISSION_DENIED). Grants no mutation capability.",
+        "properties": {
+          "can_view": {
+            "type": "boolean"
+          },
+          "can_create_comparison": {
+            "type": "boolean"
+          },
+          "can_drill_error_cases": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BenchmarkComparisonSummary": {
+        "type": "object",
+        "title": "BenchmarkComparisonSummary",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "group_by": {
+            "$ref": "#/components/schemas/BenchmarkComparisonGroupBy"
+          },
+          "baseline_run_id": {
+            "type": "string"
+          },
+          "run_count": {
+            "type": "integer"
+          },
+          "comparability_flags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComparisonComparabilityFlag"
+            }
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "group_by",
+          "baseline_run_id",
+          "run_count",
+          "comparability_flags",
+          "generated_at"
+        ]
+      },
+      "BenchmarkComparisonListResponse": {
+        "type": "object",
+        "title": "BenchmarkComparisonListResponse",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkComparisonSummary"
+            }
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ConfusionCellErrorCaseRef": {
+        "type": "object",
+        "title": "ConfusionCellErrorCaseRef",
+        "description": "Drill pointer from a confusion cell to contributing error cases.",
+        "properties": {
+          "cell_id": {
+            "type": "string"
+          },
+          "error_case_count": {
+            "type": "integer",
+            "description": "0 for diagonal/true-positive cells."
+          }
+        },
+        "required": [
+          "cell_id",
+          "error_case_count"
+        ]
+      },
+      "ConfusionMatrixCell": {
+        "type": "object",
+        "title": "ConfusionMatrixCell",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Deterministic opaque cell id (axis + gold_label + candidate_label)."
+          },
+          "gold_label": {
+            "type": "string",
+            "description": "Ontology class/relation label, or __NONE__ sentinel."
+          },
+          "candidate_label": {
+            "type": "string",
+            "description": "Ontology class/relation label, or __NONE__ sentinel."
+          },
+          "is_diagonal": {
+            "type": "boolean"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "contributing_error_case_ref": {
+            "$ref": "#/components/schemas/ConfusionCellErrorCaseRef"
+          }
+        },
+        "required": [
+          "id",
+          "gold_label",
+          "candidate_label",
+          "is_diagonal",
+          "count",
+          "contributing_error_case_ref"
+        ]
+      },
+      "ConfusionMatrixLabelCount": {
+        "type": "object",
+        "title": "ConfusionMatrixLabelCount",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "count"
+        ]
+      },
+      "ConfusionMatrixTotals": {
+        "type": "object",
+        "title": "ConfusionMatrixTotals",
+        "properties": {
+          "row_totals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfusionMatrixLabelCount"
+            }
+          },
+          "col_totals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfusionMatrixLabelCount"
+            }
+          },
+          "diagonal_count": {
+            "type": "integer"
+          },
+          "off_diagonal_count": {
+            "type": "integer"
+          },
+          "accuracy": {
+            "anyOf": [
+              {
+                "type": "number",
+                "description": "diagonal/(diagonal+off_diagonal); null when matrix empty."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "accuracy_status": {
+            "$ref": "#/components/schemas/EvaluationMetricStatus"
+          }
+        },
+        "required": [
+          "row_totals",
+          "col_totals",
+          "diagonal_count",
+          "off_diagonal_count",
+          "accuracy_status"
+        ]
+      },
+      "ConfusionMatrix": {
+        "type": "object",
+        "title": "ConfusionMatrix",
+        "description": "Per-run confusion matrix derived only from existing error cases plus implied matched pairs.",
+        "properties": {
+          "comparison_id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "axis": {
+            "$ref": "#/components/schemas/ConfusionMatrixAxis"
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ontology class/relation labels plus reserved __NONE__ when present."
+          },
+          "label_display_names": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Optional { ontology_id: display_name } map (gap 6). labels[]/gold_label/candidate_label are ontology ids plus __NONE__; __NONE__ is never a key here."
+          },
+          "cells": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfusionMatrixCell"
+            }
+          },
+          "totals": {
+            "$ref": "#/components/schemas/ConfusionMatrixTotals"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/BenchmarkMutationGuard"
+          }
+        },
+        "required": [
+          "comparison_id",
+          "run_id",
+          "axis",
+          "labels",
+          "cells",
+          "totals",
+          "generated_at",
+          "mutation_guard"
+        ]
+      },
+      "ConfusionCellErrorCasesResponse": {
+        "type": "object",
+        "title": "ConfusionCellErrorCasesResponse",
+        "properties": {
+          "comparison_id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "axis": {
+            "$ref": "#/components/schemas/ConfusionMatrixAxis"
+          },
+          "cell_id": {
+            "type": "string"
+          },
+          "gold_label": {
+            "type": "string"
+          },
+          "candidate_label": {
+            "type": "string"
+          },
+          "error_cases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvaluationErrorCase"
+            }
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "comparison_id",
+          "run_id",
+          "axis",
+          "cell_id",
+          "gold_label",
+          "candidate_label",
+          "error_cases"
+        ]
+      },
+      "ApiError": {
+        "type": "object",
+        "title": "ApiError",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    }
+  }
+}

@@ -11,6 +11,7 @@ import {
   ProjectAdminRetentionBackupPage,
   ProjectAdminRolesPage,
 } from "../pages/AdminPages";
+import { BenchmarkComparisonPage } from "../pages/BenchmarkComparisonPage";
 import { CandidateResultsPage } from "../pages/CandidateResultsPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DocumentChunkViewerPage } from "../pages/DocumentChunkViewerPage";
@@ -182,6 +183,14 @@ export const router = createBrowserRouter([
       {
         path: "/projects/:projectId/prompt-performance",
         element: <PromptPerformancePage />,
+      },
+      {
+        path: "/projects/:projectId/benchmark-comparisons",
+        element: <BenchmarkComparisonPage />,
+      },
+      {
+        path: "/projects/:projectId/benchmark-comparisons/:comparisonId",
+        element: <BenchmarkComparisonPage />,
       },
       {
         path: "/projects/:projectId/external-api",

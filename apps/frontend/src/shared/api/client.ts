@@ -79,10 +79,26 @@ import {
   mockLearningPromptSuggestions,
 } from "../mocks/mvp6LearningFixtures";
 import {
+  buildMockMvp6BenchmarkComparison,
+  buildMockMvp6ConfusionMatrix,
+  findMockMvp6Cell,
+  findMockMvp6CellErrorCases,
+  mockMvp6BenchmarkRuns,
+  MVP6_BENCHMARK_COMPARISON_ID,
+  MVP6_BENCHMARK_PROJECT_ID,
+} from "../mocks/mvp6BenchmarkFixtures";
+import {
   AuditEvent,
   AutoApprovalCandidatePreview,
   AutomaticApprovalPolicyDocument,
   BackupSnapshot,
+  BenchmarkComparison,
+  BenchmarkComparisonCreateRequest,
+  BenchmarkComparisonListResponse,
+  BenchmarkComparisonSummary,
+  ConfusionMatrix,
+  ConfusionMatrixAxis,
+  ConfusionCellErrorCasesResponse,
   CorrectionPattern,
   LearningSignalSummaryResponse,
   PromptSuggestion,
@@ -230,6 +246,22 @@ export class SuggestionDecisionError extends Error {
     this.state = state;
   }
 }
+
+export class BenchmarkComparisonError extends Error {
+  code: string;
+  status: number;
+
+  constructor(message: string, code: string, status: number) {
+    super(message);
+    this.name = "BenchmarkComparisonError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
+// Process-local persisted comparison store keyed by comparison_id (PM C12 = option a).
+let mockMvp6BenchmarkStore: BenchmarkComparison[] = [buildMockMvp6BenchmarkComparison(MVP6_BENCHMARK_PROJECT_ID)];
+let mockMvp6BenchmarkCounter = 0;
 
 async function delay<T>(value: T): Promise<T> {
   await new Promise((resolve) => globalThis.setTimeout(resolve, 180));
@@ -2559,7 +2591,12 @@ export const apiClient = {
   async listEvaluationRuns(projectId: string): Promise<EvaluationRun[]> {
     if (USE_MOCK_API) {
       assertMvp4Project(projectId);
-      return delay(mockMvp6EvaluationRunStore.filter((run) => run.project_id === projectId));
+      // Benchmark comparison reads existing evaluation runs; include the deterministic MVP6.3
+      // benchmark fixtures (2 SUCCEEDED + 1 FAILED) so the comparison builder has >=2 eligible runs.
+      const benchmarkRuns = mockMvp6BenchmarkRuns.filter((run) => run.project_id === projectId);
+      const stored = mockMvp6EvaluationRunStore.filter((run) => run.project_id === projectId);
+      const seen = new Set(stored.map((run) => run.id));
+      return delay([...stored, ...benchmarkRuns.filter((run) => !seen.has(run.id))]);
     }
 
     const payload = await request<EvaluationRun[] | { items?: EvaluationRun[] }>(`/api/v1/projects/${projectId}/evaluation-runs`);
@@ -3223,5 +3260,147 @@ export const apiClient = {
       );
     }
     return response.json() as Promise<SuggestionDecisionResponse>;
+  },
+
+  // ---- MVP6.3 Benchmark Comparison / Confusion Matrix (read-only aggregation) ----
+
+  async listBenchmarkComparisons(
+    projectId: string,
+    filters: { group_by?: string; limit?: number; cursor?: string } = {},
+  ): Promise<BenchmarkComparisonListResponse> {
+    if (USE_MOCK_API) {
+      const items: BenchmarkComparisonSummary[] = mockMvp6BenchmarkStore
+        .filter((comparison) => comparison.project_id === projectId)
+        .filter((comparison) => !filters.group_by || comparison.group_by === filters.group_by)
+        .map((comparison) => ({
+          id: comparison.id,
+          project_id: comparison.project_id,
+          group_by: comparison.group_by,
+          baseline_run_id: comparison.baseline_run_id,
+          run_count: comparison.runs.length,
+          comparability_flags: comparison.comparability_summary.flags,
+          generated_at: comparison.generated_at,
+        }));
+      return delay({ items, next_cursor: null });
+    }
+
+    const query = buildAnyQueryString({ group_by: filters.group_by, limit: filters.limit, cursor: filters.cursor });
+    return request<BenchmarkComparisonListResponse>(
+      `/api/v1/projects/${projectId}/benchmark-comparisons${query}`,
+    );
+  },
+
+  async createBenchmarkComparison(
+    projectId: string,
+    payload: BenchmarkComparisonCreateRequest,
+  ): Promise<BenchmarkComparison> {
+    if (USE_MOCK_API) {
+      const uniqueRunIds = [...new Set(payload.run_ids)];
+      if (uniqueRunIds.length < 2) {
+        throw new BenchmarkComparisonError(
+          "At least two eligible terminal-success runs are required for a comparison.",
+          "BENCHMARK_INSUFFICIENT_RUNS",
+          400,
+        );
+      }
+      mockMvp6BenchmarkCounter += 1;
+      const comparison = buildMockMvp6BenchmarkComparison(projectId, {
+        id: `${MVP6_BENCHMARK_COMPARISON_ID}-${mockMvp6BenchmarkCounter}`,
+        groupBy: payload.group_by,
+        baselineRunId: payload.baseline_run_id ?? undefined,
+        metricNames: payload.metric_names ?? undefined,
+      });
+      mockMvp6BenchmarkStore = [comparison, ...mockMvp6BenchmarkStore];
+      return delay(comparison);
+    }
+
+    return jsonRequest<BenchmarkComparison>(`/api/v1/projects/${projectId}/benchmark-comparisons`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getBenchmarkComparison(comparisonId: string): Promise<BenchmarkComparison> {
+    if (USE_MOCK_API) {
+      const comparison = mockMvp6BenchmarkStore.find((item) => item.id === comparisonId);
+      if (!comparison) {
+        throw new BenchmarkComparisonError(
+          "Benchmark comparison was not found.",
+          "BENCHMARK_COMPARISON_NOT_FOUND",
+          404,
+        );
+      }
+      return delay(comparison);
+    }
+
+    return request<BenchmarkComparison>(`/api/v1/benchmark-comparisons/${comparisonId}`);
+  },
+
+  async getBenchmarkConfusionMatrix(
+    comparisonId: string,
+    runId: string,
+    axis: ConfusionMatrixAxis,
+  ): Promise<ConfusionMatrix> {
+    if (USE_MOCK_API) {
+      const comparison = mockMvp6BenchmarkStore.find((item) => item.id === comparisonId);
+      if (!comparison) {
+        throw new BenchmarkComparisonError(
+          "Benchmark comparison was not found.",
+          "BENCHMARK_COMPARISON_NOT_FOUND",
+          404,
+        );
+      }
+      if (!comparison.runs.some((run) => run.run_id === runId)) {
+        throw new BenchmarkComparisonError(
+          "The requested run is not part of this comparison.",
+          "BENCHMARK_RUN_NOT_IN_COMPARISON",
+          404,
+        );
+      }
+      return delay(buildMockMvp6ConfusionMatrix(comparisonId, runId, axis));
+    }
+
+    const query = buildAnyQueryString({ run_id: runId, axis });
+    return request<ConfusionMatrix>(
+      `/api/v1/benchmark-comparisons/${comparisonId}/confusion-matrix${query}`,
+    );
+  },
+
+  async getBenchmarkCellErrorCases(
+    comparisonId: string,
+    runId: string,
+    axis: ConfusionMatrixAxis,
+    cellId: string,
+    filters: { limit?: number; cursor?: string } = {},
+  ): Promise<ConfusionCellErrorCasesResponse> {
+    if (USE_MOCK_API) {
+      const comparison = mockMvp6BenchmarkStore.find((item) => item.id === comparisonId);
+      if (!comparison) {
+        throw new BenchmarkComparisonError(
+          "Benchmark comparison was not found.",
+          "BENCHMARK_COMPARISON_NOT_FOUND",
+          404,
+        );
+      }
+      const cell = findMockMvp6Cell(axis, cellId);
+      if (!cell) {
+        throw new BenchmarkComparisonError("Confusion cell was not found.", "CONFUSION_CELL_NOT_FOUND", 404);
+      }
+      return delay({
+        comparison_id: comparisonId,
+        run_id: runId,
+        axis,
+        cell_id: cellId,
+        gold_label: cell.gold,
+        candidate_label: cell.candidate,
+        error_cases: findMockMvp6CellErrorCases(axis, cellId),
+        next_cursor: null,
+      });
+    }
+
+    const query = buildAnyQueryString({ limit: filters.limit, cursor: filters.cursor });
+    return request<ConfusionCellErrorCasesResponse>(
+      `/api/v1/benchmark-comparisons/${comparisonId}/confusion-matrix/cells/${cellId}/error-cases${query}`,
+    );
   },
 };

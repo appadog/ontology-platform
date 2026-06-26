@@ -1,7 +1,7 @@
 # MVP 6 Draft Backlog
 
-Status: `MVP6.2 WAVE32 THIN IMPLEMENTATION SCOPE GUARDED`
-Date: 2026-06-22
+Status: `MVP6.3 WAVE33 BENCHMARK COMPARISON CONTRACT-FIRST PLANNING`
+Date: 2026-06-26
 
 MVP6 is broad. Wave28 and Wave29 closed MVP6.1 Gold Set / Benchmark Studio.
 Wave30 freezes MVP6.2 Active Learning / Continuous Improvement as a
@@ -227,6 +227,109 @@ create/update/enable/enforce behavior, ontology governance, impact simulation,
 agent/copilot runtime, connector/plugin SDK, tenant runtime, ontology packs, or
 advanced visualization/storytelling.
 
+## Wave33 MVP6.3 Benchmark Comparison PM Freeze Summary
+
+Wave33 opens the next MVP6 theme as contract-first planning only. The chosen
+P0 is **Benchmark Comparison / Confusion Matrix**, the smallest coherent
+extension of the closed MVP6.1 evaluation surface. It is read-only aggregation
+over already-stored `EvaluationRun` / `EvaluationMetric` / `EvaluationErrorCase`
+artifacts. Runtime implementation waits for Wave34 after Backend contract draft,
+Frontend field/state/IA review, and a QA executable checklist are ready. The
+full freeze is in `docs/pm/MVP6_3_BENCHMARK_COMPARISON_BRIEF.md` and the durable
+boundary is recorded in `docs/adr/0009-mvp6-3-benchmark-comparison-read-only-boundary.md`.
+
+Frozen MVP6.3 P0 demo flow:
+
+```text
+select project
+-> open Benchmark Comparison
+-> select 2+ existing evaluation runs (by model/prompt/ontology/dataset version)
+-> view side-by-side metric comparison with deltas
+-> view per-class / per-relation-type confusion matrix and bucket accuracy
+-> drill into a confusion cell to its contributing error cases
+```
+
+P0 may analyze these existing source artifacts only: MVP6.1 `EvaluationRun`,
+`EvaluationMetric`, `EvaluationErrorCase` (typed by `EvaluationErrorType`),
+`EvaluationCandidateRef`, and `EvaluationDimensions` class/relation/source
+buckets. It must not join MVP3 review/correction, MVP4 quality, MVP6.2 learning
+signals, or published-graph data.
+
+New P0 enums (no new metric names — `EvaluationMetricName` is reused verbatim):
+
+- `BenchmarkComparisonGroupBy`: `MODEL`, `PROMPT_VERSION`, `ONTOLOGY_VERSION`,
+  `DATASET_VERSION`, `PARSER_VERSION`.
+- `ComparisonComparabilityFlag`: `SAME_DATASET`, `DIFFERENT_DATASET_VERSION`,
+  `DIFFERENT_DATASET`, `DIFFERENT_ONTOLOGY_VERSION`, `MISSING_METRIC`.
+- `ConfusionMatrixAxis`: `ENTITY_CLASS`, `RELATION_TYPE`.
+- Metric delta status (response-side): `IMPROVED`, `REGRESSED`, `UNCHANGED`,
+  `NOT_COMPARABLE`.
+
+Frozen safety boundary: read-only analysis only. No new run execution, no LLM
+call, no gold-set authoring, no dataset revisioning write, no candidate/publish/
+published-graph mutation. If a comparison object is persisted it is an analysis
+artifact with an all-false `mutation_guard` mirroring the MVP6.2 audit-only
+pattern.
+
+Frozen exclusions: Gold Set authoring/dataset revisioning write, executing new
+runs from the comparison UI, real LLM/provider execution, new metric names /
+ontology constraint pass-rate, significance testing / time-trend / scheduled
+alerts, comparison export to training datasets, cross-project/cross-org
+comparison, MVP3/MVP4/MVP6.2 joins, and all Theme-3+ surfaces.
+
+## Wave34 MVP6.3 Implementation Scope Guard + Persist-vs-Compute Freeze
+
+Wave34 is approved only as a thin implementation of the frozen MVP6.3 P0 flow.
+No new product scope: the demo flow (select project -> open Benchmark Comparison
+-> select 2+ terminal-success runs -> side-by-side metric deltas -> per-class /
+per-relation-type confusion matrix -> drill a cell to contributing error cases)
+and the four endpoint families are unchanged from the Wave33 freeze. No benchmark
+P1+ scope (gold-set authoring/versioning write, real provider execution,
+significance/trend/alerts, training export, cross-project comparison, governance,
+agents, connectors, tenants, packs, advanced viz).
+
+Frozen endpoint families:
+
+- `POST /api/v1/projects/{project_id}/benchmark-comparisons`
+- `GET  /api/v1/projects/{project_id}/benchmark-comparisons`
+- `GET  /api/v1/benchmark-comparisons/{comparison_id}`
+- `GET  /api/v1/benchmark-comparisons/{comparison_id}/confusion-matrix`
+- `GET  /api/v1/benchmark-comparisons/{comparison_id}/confusion-matrix/cells/{cell_id}/error-cases`
+
+**Persist-vs-compute decision (acceptance gate C12) — FROZEN: option (a) persist
+a deterministic process-local comparison record keyed by `comparison_id`.**
+
+Rationale:
+
+- It matches the existing MVP6.1 evaluation pattern exactly: that module keeps
+  module-level dicts keyed by id (`_runs: dict[str, EvaluationRun]`, etc.) with a
+  `reset_runtime_store()`, and MVP6.2 learning follows the same shape. Persisting
+  `_comparisons: dict[str, BenchmarkComparison]` is the same proven pattern, not a
+  new mechanism.
+- It satisfies the list + GET-by-id round-trip (R3) directly: `POST` composes and
+  stores the comparison record, `GET list` returns the project's stored records,
+  and `GET by id` returns the same composed object — no recomputation-determinism
+  risk on read.
+- The stored record stays a read-only analysis artifact: it carries an all-false
+  `BenchmarkMutationGuard` and is rebuilt from existing runs, so persistence adds
+  no mutation surface to candidate/published/prompt/gold/policy paths.
+
+Restated Wave34 acceptance gates (all required):
+
+- All responses (and any persisted comparison) expose an all-false
+  `BenchmarkMutationGuard` (`candidate_graph_mutated`, `published_graph_mutated`,
+  `evaluation_run_started`, `gold_set_mutated`).
+- No MVP6.1 field/enum rename; MVP6.1 shapes reused by `$ref`.
+- Comparability flags surfaced honestly at all three levels (per-run, per-set,
+  per-metric-row); cross-dataset/cross-ontology flagged, never blocked or hidden.
+- `NOT_APPLICABLE` (never fabricated 0%/100%) and `__NONE__` (display sentinel,
+  never a stored ontology id) semantics preserved.
+- `>=2` terminal-success run eligibility; ineligible runs surfaced via
+  `excluded_runs[]` + `RunExclusionReason`, never a crash.
+
+Backlog IDs: PM `PM6-018`; Backend `BE6-024`~`BE6-027`; Frontend
+`FE6-023`~`FE6-026`; QA `INT6-022`~`INT6-025`.
+
 ## PM Backlog
 
 | ID | Priority | Owner | Task | Dependencies | Acceptance draft |
@@ -247,6 +350,8 @@ advanced visualization/storytelling.
 | PM6-014 | P0 | PM | Decision command/state vocabulary freeze | Wave30 QA finding, PM6-012 | `ACCEPT`/`DISMISS` are request commands; `ACCEPTED`/`DISMISSED` are resulting states; `SUPERSEDED` is read-side only; non-`SUGGESTED` commands conflict by default |
 | PM6-015 | P0 | PM | DTO field naming freeze | Wave30 QA finding, BE6-012~BE6-015, FE6-011~FE6-014 | learning summary, source artifact enum, and auto-approval preview field names are frozen for Backend/OpenAPI and Frontend alignment before runtime implementation |
 | PM6-016 | P0 | PM | Wave32 implementation scope guard | PM6-014, PM6-015, INT6-016 | deterministic local thin data is acceptable; Backend/Frontend acceptance stays inside frozen endpoints/UI flow; `ACCEPT`/`DISMISS` transition only `SUGGESTED`; non-`SUGGESTED` conflict and all-false mutation guard are required; later MVP6 themes remain out of scope |
+| PM6-017 | P0 | PM | MVP6.3 Benchmark Comparison P0 scope freeze | MVP6.1 closeout, MVP6 roadmap Theme 1 §4.1-4.4 | `docs/pm/MVP6_3_BENCHMARK_COMPARISON_BRIEF.md` freezes the read-only comparison/confusion-matrix P0 demo flow, source artifacts, enums/states, delta and cell definitions, safety boundary, and exclusions; durable boundary recorded in ADR 0009 |
+| PM6-018 | P0 | PM | Wave34 MVP6.3 implementation scope guard + persist-vs-compute freeze | PM6-017, INT6-021 (C12) | scope unchanged from the frozen P0 flow and 4 endpoint families; persist-vs-compute frozen to option (a) persist a deterministic process-local comparison record keyed by `comparison_id` (mirrors MVP6.1 `_runs` store, satisfies list + GET-by-id round-trip R3); all-false `BenchmarkMutationGuard`, no MVP6.1 field/enum rename, comparability flags + `NOT_APPLICABLE`/`__NONE__` semantics preserved, `>=2` terminal-success eligibility with `RunExclusionReason`; no benchmark P1+ scope |
 
 ## Backend Backlog
 
@@ -274,6 +379,11 @@ advanced visualization/storytelling.
 | BE6-020 | P0 | Backend | Suggestion decision audit runtime | PM6-016, BE6-014 | `ACCEPT`/`DISMISS` transition only `SUGGESTED` suggestions, `DISMISS` enforces reason rules, and non-`SUGGESTED` decisions return conflict |
 | BE6-021 | P0 | Backend | MVP6.2 OpenAPI export/runtime alignment | BE6-019, BE6-020 | runtime OpenAPI export or comparison keeps the five MVP6.2 endpoint families and DTO/enums aligned with the Wave31 planning artifact |
 | BE6-022 | P0 | Backend | No-mutation regression guard | PM6-016, BE6-020 | decision responses and tests prove prompt, candidate graph, published graph, policy, extraction, and evaluation mutation flags remain false |
+| BE6-023 | P0 | Backend | MVP6.3 Benchmark Comparison contract draft | PM6-017, BE6-005, BE6-007 | `docs/api/MVP6_3_BENCHMARK_COMPARISON_API_CONTRACT_DRAFT.md` and `docs/api/openapi-mvp6-3-draft.json` define additive read-only comparison/confusion-matrix endpoints, the new enums, metric delta/comparability/confusion-cell DTOs, baseline + epsilon rule, and an all-false analysis mutation guard; planning-only, parses as OpenAPI 3.1.0, additive to MVP1-MVP6.2 paths |
+| BE6-024 | P0 | Backend | MVP6.3 comparison + delta endpoints | PM6-018, BE6-023 | `POST/GET /api/v1/projects/{project_id}/benchmark-comparisons` and `GET /api/v1/benchmark-comparisons/{comparison_id}` implement the read-aggregation builder over existing MVP6.1 runs, persist a deterministic process-local comparison record keyed by `comparison_id` (list + GET-by-id round-trip), per-metric signed delta with `MetricDeltaStatus` + fixed epsilon `0.0001` (`NOT_COMPARABLE` -> `delta: null`), and 3-level comparability flags |
+| BE6-025 | P0 | Backend | MVP6.3 confusion matrix + cell error-case drilldown | PM6-018, BE6-024 | `GET .../confusion-matrix` per run + `ConfusionMatrixAxis`, `GET .../confusion-matrix/cells/{cell_id}/error-cases` with pagination; cells derive only from existing `EvaluationErrorCase` + implied matches, `NOT_APPLICABLE` empty buckets, `__NONE__` false-pos/neg sentinel, deterministic URL-safe `cell_id` |
+| BE6-026 | P0 | Backend | MVP6.3 OpenAPI export / runtime alignment | PM6-018, BE6-024, BE6-025 | runtime DTO field names + new enums match `openapi-mvp6-3-draft.json` (0 field-name mismatch on shared schemas); MVP6.1 shapes reused by `$ref` with no rename |
+| BE6-027 | P0 | Backend | MVP6.3 no-mutation regression guard | PM6-018, BE6-024 | all responses expose an all-false `BenchmarkMutationGuard`; `>=2` terminal-success eligibility with `excluded_runs[]`/`RunExclusionReason`; focused tests cover endpoints, delta + epsilon boundary, comparability flags, sparse/`__NONE__` matrix, cell drilldown, eligibility/exclusion, no-mutation; MVP6.1 evaluation tests stay green |
 
 ## Frontend Backlog
 
@@ -300,6 +410,11 @@ advanced visualization/storytelling.
 | FE6-019 | P0 | Frontend | Learning Insights API types/client/mocks | BE6-019~BE6-021, FE6-017 | TypeScript types, client calls, and deterministic mocks match the frozen MVP6.2 endpoint families and DTO fields |
 | FE6-020 | P0 | Frontend | Product Showcase style application | FE6-015, FE6-018 | summary card, workflow queues, badges, action bar, detail panel, decision drawer/modal, and audit timeline make the P0 loop readable without implying automation |
 | FE6-021 | P0 | Frontend | Mock and actual smoke | BE6-019~BE6-021, FE6-018~FE6-020 | mock smoke verifies summary to decision audit flow; actual smoke verifies the same flow when Backend runtime is available, including conflict/error state |
+| FE6-022 | P0 | Frontend | MVP6.3 Benchmark Comparison UX/API requirements | PM6-017, BE6-023 | document Benchmark Comparison route/IA (project-scoped, contextual to Evaluation/Benchmark area, no ID-bound pages in global LNB), required fields, run-selector + baseline picker, metric delta table, confusion-matrix view with cell drilldown to error cases, comparability-flag display, and first-class loading/empty/error/permission/not-comparable states; planning-only, no route/component/type/mock/smoke code |
+| FE6-023 | P0 | Frontend | MVP6.3 route / IA | PM6-018, FE6-022 | project-scoped Benchmark Comparison area contextual to the existing Evaluation/Benchmark surface; no ID-bound pages in the global LNB |
+| FE6-024 | P0 | Frontend | MVP6.3 types / client / mocks | PM6-018, BE6-026 | TypeScript types, API client, query hooks, and mocks match the frozen `openapi-mvp6-3-draft.json` exactly; reuse MVP6.1 shapes without rename |
+| FE6-025 | P0 | Frontend | MVP6.3 comparison + confusion-matrix UI | PM6-018, FE6-024 | run selection (`>=2` terminal-success) + group-by + baseline -> side-by-side metric table with signed deltas + delta-status badges -> comparability warning band -> confusion matrix with ENTITY_CLASS/RELATION_TYPE toggle -> cell drilldown; honest loading/empty/error/permission/not-comparable/stale states, render `NOT_APPLICABLE` (never fake 0/100%) and `__NONE__` as labeled sentinel, degrade missing run to `excluded_runs` without full crash; no copy implying model selection/autonomous publish |
+| FE6-026 | P0 | Frontend | MVP6.3 mock + actual smoke | PM6-018, FE6-025 | `npm run smoke:mvp6:benchmark:mock` and, if backend runnable, `npm run smoke:mvp6:benchmark:actual` exercise run-selection -> deltas -> confusion matrix -> cell drilldown |
 
 ## QA / Integration Backlog
 
@@ -325,6 +440,11 @@ advanced visualization/storytelling.
 | INT6-018 | P0 | QA | MVP6.2 frontend mock/API acceptance | PM6-016, FE6-018~FE6-021 | QA verifies Learning Insights mock/actual flow from summary through decision audit note, including loading, empty, error, permission, and conflict states |
 | INT6-019 | P0 | QA | MVP6.2 no-mutation guard | PM6-016, BE6-022, FE6-021 | QA confirms no prompt, candidate, published graph, policy, extraction, or evaluation mutation occurs through learning signal operations |
 | INT6-020 | P0 | QA | Wave32 closeout recommendation | INT6-017~INT6-019 | QA recommends MVP6.2 thin slice closeout, targeted Wave33 hardening, or stop for PM redesign based on runtime/UI evidence |
+| INT6-021 | P0 | QA | MVP6.3 Benchmark Comparison acceptance checklist | PM6-017, BE6-023, FE6-022 | executable checklist verifies OpenAPI parse/additivity, comparison/confusion-matrix happy path over existing runs, new enums and metric delta/comparability/confusion-cell definitions, baseline + epsilon + NOT_COMPARABLE handling, read-only/no-mutation safety boundary, exclusions, and no runtime leakage under `apps/`/`infra/`; recommends Wave34 thin implementation, hardening, or PM redesign |
+| INT6-022 | P0 | QA | MVP6.3 backend runtime acceptance | PM6-018, BE6-024~BE6-027 | validate the 4 endpoint families against `INT6_3` runtime gates R1-R10: DTO/enum alignment to OpenAPI, delta math + epsilon, comparability flags, confusion matrix sparse/`__NONE__`, cell drilldown, `POST` -> list -> GET-by-id round-trip (R3), eligibility/exclusion |
+| INT6-023 | P0 | QA | MVP6.3 frontend mock/API acceptance | PM6-018, FE6-023~FE6-026 | validate the mock + actual flow run-selection -> deltas -> confusion matrix -> cell drilldown, including comparability / `NOT_APPLICABLE` / `__NONE__` / not-comparable / excluded-run states |
+| INT6-024 | P0 | QA | MVP6.3 no-mutation guard | PM6-018, BE6-027 | confirm all-false `BenchmarkMutationGuard` at runtime and no candidate/published/prompt/policy/extraction/evaluation/gold mutation; reverify no MVP6.1 field/enum rename |
+| INT6-025 | P0 | QA | Wave34 closeout recommendation | PM6-018, INT6-022~INT6-024 | run selected MVP1-MVP6.2 regression + smokes BE/FE touched; recommend MVP6.3 thin-slice closeout, targeted Wave35 hardening, or PM redesign with exact commands/artifacts and no leftover listeners on 8000/5173 |
 
 ## Scope Limits
 

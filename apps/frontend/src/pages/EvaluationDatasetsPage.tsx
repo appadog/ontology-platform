@@ -195,6 +195,7 @@ export function EvaluationDatasetsPage() {
           <HanaBadge tone="success">MVP6.1</HanaBadge>
           <HanaBadge tone="neutral">DETERMINISTIC_MOCK</HanaBadge>
           <Mvp3ActionLink to={`/projects/${projectId}/prompt-performance`}>Prompt performance</Mvp3ActionLink>
+          <Mvp3ActionLink to={`/projects/${projectId}/benchmark-comparisons`}>Compare runs</Mvp3ActionLink>
         </PageActions>
       </PageHeader>
 

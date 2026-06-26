@@ -4,8 +4,8 @@
 
 ## Latest Wave
 
-- Current wave: `wave-032`
-- Overall status: `MVP6.2 ACTIVE LEARNING THIN IMPLEMENTATION CLOSED (PASS WITH P1 FOLLOW-UPS)`
+- Current wave: `wave-034`
+- Overall status: `MVP6.3 BENCHMARK COMPARISON THIN IMPLEMENTATION CLOSED (PASS)`
 - 기준일: 2026-06-26
 
 ## Latest Decisions
@@ -139,6 +139,22 @@
 - A Wave32 FE/BE field-name drift was found by the commander (Backend renamed to the frozen draft: `ontology_class_id`, `ontology_relation_id`, auto-approval outcome `reason`, and dropped `LearningEvidenceRef.evidence_id`) and was closed in the same wave by aligning Frontend types/fixtures/smoke. QA independently verified 0 remaining drift.
 - Decision audit-only behavior verified at three layers: response `mutation_guard` all-false, code-level (learning module imports no prompt/candidate/publish/extraction/evaluation/policy write path), and runtime data-level (published/candidate/prompt tables show 0 rows after summary/list/ACCEPT/DISMISS ops). `ACCEPT`/`DISMISS` transition only `SUGGESTED`; non-`SUGGESTED` returns `409 PROMPT_SUGGESTION_DECISION_CONFLICT`; `DISMISS` requires reason code.
 - MVP6.2 Wave32 P1 non-blocking follow-ups: promote always-populated optional draft fields to `required` for strict-match, and regenerate the stale full-runtime `openapi-mvp2-draft.json` snapshot (currently omits learning paths). Neither blocks MVP6.2 closeout.
+- Wave33 opened the next MVP6 theme as contract-first planning by user direction. PM chose **MVP6.3 Benchmark Comparison / Confusion Matrix** as the smallest coherent next P0: read-only aggregation over the already-closed MVP6.1 evaluation artifacts, no new mutation surface.
+- Wave33 PM, Backend, Frontend, and QA reports are accepted as PASS (planning). Runtime acceptance is `NOT RUNNABLE` by design until Wave34.
+- MVP6.3 P0 demo flow frozen: select project -> open Benchmark Comparison -> select 2+ terminal-success runs -> side-by-side metric comparison with deltas -> per-class/per-relation-type confusion matrix -> drill a cell to contributing error cases.
+- MVP6.3 new enums frozen: `BenchmarkComparisonGroupBy` (MODEL/PROMPT_VERSION/ONTOLOGY_VERSION/DATASET_VERSION/PARSER_VERSION), `ComparisonComparabilityFlag` (SAME_DATASET/DIFFERENT_DATASET_VERSION/DIFFERENT_DATASET/DIFFERENT_ONTOLOGY_VERSION/MISSING_METRIC), `ConfusionMatrixAxis` (ENTITY_CLASS/RELATION_TYPE), `MetricDeltaStatus` (IMPROVED/REGRESSED/UNCHANGED/NOT_COMPARABLE; empty bucket -> NOT_APPLICABLE; `__NONE__` false-pos/neg sentinel), `RunExclusionReason`. Existing MVP6.1 metric names (`EvaluationMetricName` x8) and error types are reused verbatim — no renames.
+- MVP6.3 durable boundary recorded in ADR 0009: benchmark comparison is read-only; if a comparison is persisted it carries an all-false `BenchmarkMutationGuard`; candidate/published separation and evidence/version/model-run traceability are preserved.
+- MVP6.3 OpenAPI planning artifact `docs/api/openapi-mvp6-3-draft.json` parses as 3.1.0 version `0.6.3-draft` with 4 benchmark-comparison paths (5 operations) and 30 schemas; it is disjoint-additive (redefines no MVP1-MVP6.2 path).
+- All 10 Frontend DTO gaps are resolved in the final Backend draft (7 pre-answered + 3 amended: `label_display_names` id->display map, `row_comparability_flags`, `capabilities` display hint).
+- One open item carried to Wave34: Backend persist-vs-compute decision for comparison objects (the list/GET-by-id contract assumes retrievability) — QA acceptance gate C12.
+- Wave34 implemented and closed the MVP6.3 Benchmark Comparison thin slice as PASS. PM, Backend, Frontend, and QA reports all accepted.
+- C12 frozen by PM as option (a): persist deterministic process-local comparison records keyed by `comparison_id` (mirrors the MVP6.1 evaluation `_runs` store + `reset_runtime_store()`). list + GET-by-id round-trip (gate R3) verified live.
+- Backend `apps/backend/app/modules/benchmark/` implements the five operations across the four frozen endpoint families, reusing MVP6.1 evaluation shapes/enums verbatim (no renames). Signed deltas with `MetricDeltaStatus` + epsilon 0.0001 (`NOT_COMPARABLE`->`delta:null`), 3-level comparability flags, confusion matrix by ENTITY_CLASS/RELATION_TYPE with `NOT_APPLICABLE` empty buckets and `__NONE__` false-pos/neg sentinel, opaque URL-safe `cell_id`, and cell error-case drilldown with cursor pagination. 13 benchmark + 4 evaluation tests pass, ruff clean, runtime OpenAPI vs draft 0 field/enum mismatches.
+- Frontend `Benchmark Comparison` UI is project-scoped and contextual to the Evaluation surface (no global LNB ID-pages); run-selection -> side-by-side deltas -> confusion matrix -> cell drilldown, with honest comparability/NOT_APPLICABLE/`__NONE__`/excluded-run states. 28 FE tests, build, and mock smoke pass.
+- The parallel-wave gap (FE actual smoke was NOT RUN because the backend module did not yet exist when FE ran) was closed by QA: QA booted the actual backend (uvicorn on file-backed SQLite) and ran `npm run smoke:mvp6:benchmark:actual` -> PASS with zero FE/BE contract drift.
+- No-mutation verified at three layers: response `BenchmarkMutationGuard` all-false; benchmark module imports only read paths and writes only its own `_comparisons` store; data-level all 13 candidate/published/prompt/extraction/review tables show 0 rows after the full flow. MVP6.1 metric names/error types reused verbatim (no renames).
+- MVP6.3 regression PASS: 56 backend tests (project/ontology + MVP3/4/5/6.1/6.2/6.3) and the MVP6.1 evaluation actual smoke pass; additive-only; candidate/published separation intact.
+- MVP6.3 P1/P2 non-blocking follow-ups: document the SQLite smoke-boot nuance (backend defaults to Postgres:5432), regenerate the stale full-runtime `openapi-mvp2-draft.json` snapshot to include benchmark/learning paths, and add a divergent-run seed for richer delta UI demos. None block closeout.
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -214,16 +230,20 @@
 | MVP6.2 DTO Field Alignment | Closed in Wave31. Summary, source artifact, and auto-approval preview field names are aligned across PM, Backend/OpenAPI, Frontend requirements, and QA. | INT6-012, INT6-014, INT6-015 |
 | MVP6.2 Thin Runtime/UI | Closed in Wave32. Five frozen learning-signal endpoints, deterministic process-local store, audit-only decision capture with 409 conflict, Product Showcase Learning Insights UI, FE/BE field-name drift closed, no-mutation guard verified 3 layers, mock+actual smoke PASS, MVP1-MVP6.1 regression additive-only. | BE6-019~BE6-022, FE6-018~FE6-021, INT6-017~INT6-020 |
 | MVP6.2 Wave32 P1 Follow-ups | Non-blocking. Promote always-populated optional draft fields to `required` for strict-match; regenerate stale `openapi-mvp2-draft.json` full-runtime snapshot to include learning paths. | BE6 cleanup |
+| MVP6.3 Benchmark Comparison Contract | Closed in Wave33. PM freeze + ADR 0009, Backend contract draft + `openapi-mvp6-3-draft.json` (4 paths/30 schemas), Frontend UX/API requirements, and QA `INT6_3` checklist (C1-C12 planning / R1-R10 runtime) all agree; 10 FE DTO gaps resolved; no runtime leakage. | PM6-017, BE6-023, FE6-022, INT6-021 |
+| MVP6.3 Benchmark Comparison Thin Runtime/UI | Closed in Wave34. Five operations / four endpoint families, process-local persist by `comparison_id`, deltas+epsilon, 3-level comparability, confusion matrix NOT_APPLICABLE/`__NONE__`, cell drilldown pagination, all-false mutation guard. FE UI + types/mocks; actual smoke PASS (zero drift); no-mutation 3 layers; 56-test regression. | BE6-024~BE6-027, FE6-023~FE6-026, INT6-022~INT6-025 |
+| MVP6.3 Wave34 P1/P2 Follow-ups | Non-blocking. Document SQLite smoke-boot nuance (backend defaults to Postgres:5432); regenerate stale `openapi-mvp2-draft.json` full-runtime snapshot (omits benchmark+learning paths); add divergent-run seed for richer delta UI demo. | BE6/QA cleanup |
 
 ## Next Gate
 
 MVP6.2 Active Learning P0 is closed (Wave32). This completes the currently frozen MVP6 P0 scope (MVP6.1 Gold Set/Benchmark Studio + MVP6.2 Active Learning). Remaining MVP6 roadmap themes are separate future slices that each require a PM freeze before implementation:
 
 1. Optional Wave33 cleanup: the two MVP6.2 P1 follow-ups (promote always-populated optional draft fields to `required`; regenerate stale `openapi-mvp2-draft.json`). Non-blocking.
-2. Next MVP6 theme (requires PM contract-first freeze before any implementation): benchmark comparison/confusion matrix (PM6-006/BE6-007), Gold Set authoring policy + dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance, impact simulation, copilot/agents, connector/plugin SDK, multi-tenant runtime, ontology packs, advanced visualization). PM must choose the smallest coherent P0 path first.
-3. Release/Demo packaging (Wave27 orders exist but were paused) can also be resumed as a non-scope-expanding track.
+2. MVP6.3 Benchmark Comparison is closed (Wave33 planning + Wave34 implementation both PASS). Closed MVP6 themes so far: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison.
+3. Next MVP6 theme requires a PM contract-first freeze before implementation (PM picks the smallest coherent P0). Remaining candidates: Gold Set authoring policy + dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance workflow, impact simulation, copilot/agent runtime, connector/plugin SDK, multi-tenant runtime, ontology packs, advanced visualization). Each is a larger step than 6.3.
+4. Alternatively: sweep the accumulated MVP6.x P1/P2 follow-ups (stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, strict-required field promotion, divergent-run seed) in one hardening wave, or resume the paused Wave27 release/demo packaging.
 
-Commander awaiting direction on which track to open next.
+Commander awaiting direction on the next theme (or a hardening/packaging track).
 
 ## Latest Role Reports
 
@@ -348,6 +368,14 @@ Commander awaiting direction on which track to open next.
 | Backend | wave-032 | `PASS / MVP6.2 THIN RUNTIME READY` | Five learning-signal endpoints, process-local store, ACCEPT/DISMISS + 409 conflict, all-false mutation guard; pytest 7+4, ruff clean, 0 OpenAPI field-name mismatch |
 | Frontend | wave-032 | `PASS / LEARNING INSIGHTS READY` | Project-scoped Learning Insights UI, types/client/mocks, Product Showcase style; FE/BE field-name drift closed; test/build/mock+actual smoke PASS |
 | QA | wave-032 | `PASS / MVP6.2 CLOSEOUT RECOMMENDED` | INT6-017~INT6-020 PASS; no-mutation verified 3 layers; FE/BE drift truly closed; MVP1-MVP6.1 regression additive-only; P1 follow-ups only |
+| PM | wave-033 | `PASS / MVP6.3 THEME FROZEN` | Chose Benchmark Comparison as smallest coherent next P0; brief + ADR 0009 + PM6-017/BE6-023/FE6-022/INT6-021 backlog |
+| Backend | wave-033 | `PASS / MVP6.3 CONTRACT DRAFT READY` | 4 benchmark paths/30 schemas, `openapi-mvp6-3-draft.json` 0.6.3-draft, disjoint-additive; 10 FE gaps resolved (7 pre + 3 amended); MVP6.1 shapes reused, no renames |
+| Frontend | wave-033 | `PASS / MVP6.3 UX REQUIREMENTS READY` | Project-scoped IA (no global LNB ID-pages), run-selection->deltas->confusion matrix->cell drilldown flow, comparability/NOT_APPLICABLE/`__NONE__` states; raised 10 DTO gaps |
+| QA | wave-033 | `PASS / WAVE34 THIN IMPLEMENTATION RECOMMENDED` | INT6-021 checklist (C1-C12 planning / R1-R10 runtime); artifacts agree; OpenAPI asserts pass; no runtime leakage; persist-vs-compute is Wave34 C12 |
+| PM | wave-034 | `PASS / SCOPE GUARD + C12 FROZEN` | Persist-vs-compute = process-local persist by `comparison_id`; scope unchanged; BE6-024~027/FE6-023~026/INT6-022~025 recorded |
+| Backend | wave-034 | `PASS / MVP6.3 THIN RUNTIME READY` | benchmark module: 5 ops, deltas+epsilon, 3-level comparability, confusion matrix NOT_APPLICABLE/`__NONE__`, cell drilldown pagination, all-false guard; 13+4 tests, ruff clean, 0 OpenAPI mismatch |
+| Frontend | wave-034 | `PASS / BENCHMARK COMPARISON UI READY` | Project-scoped UI, run-selection->deltas->confusion matrix->cell drilldown, honest states; 28 tests/build/mock smoke PASS; actual smoke later run by QA |
+| QA | wave-034 | `PASS / MVP6.3 CLOSEOUT` | INT6-022~025 PASS; actual smoke booted+PASS zero drift; no-mutation 3 layers; 56-test regression; R1-R10 PASS |
 
 ## Report Index
 
@@ -385,3 +413,5 @@ Commander awaiting direction on which track to open next.
 | wave-030 | `wave-030/PM_REPORT.md` | `wave-030/BACKEND_REPORT.md` | `wave-030/FRONTEND_REPORT.md` | `wave-030/QA_REPORT.md` | `wave-030/NEXT_ORDERS.md` |
 | wave-031 | `wave-031/PM_REPORT.md` | `wave-031/BACKEND_REPORT.md` | `wave-031/FRONTEND_REPORT.md` | `wave-031/QA_REPORT.md` | `wave-031/NEXT_ORDERS.md` |
 | wave-032 | `wave-032/PM_REPORT.md` | `wave-032/BACKEND_REPORT.md` | `wave-032/FRONTEND_REPORT.md` | `wave-032/QA_REPORT.md` | `wave-032/NEXT_ORDERS.md` |
+| wave-033 | `wave-033/PM_REPORT.md` | `wave-033/BACKEND_REPORT.md` | `wave-033/FRONTEND_REPORT.md` | `wave-033/QA_REPORT.md` | `wave-033/NEXT_ORDERS.md` |
+| wave-034 | `wave-034/PM_REPORT.md` | `wave-034/BACKEND_REPORT.md` | `wave-034/FRONTEND_REPORT.md` | `wave-034/QA_REPORT.md` | `wave-034/NEXT_ORDERS.md` |

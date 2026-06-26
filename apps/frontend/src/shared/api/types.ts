@@ -1196,6 +1196,191 @@ export interface EvaluationErrorCase {
   created_at: string;
 }
 
+// ---- MVP6.3 Benchmark Comparison / Confusion Matrix ----
+// Field/enum names match docs/api/openapi-mvp6-3-draft.json exactly.
+// Reuses MVP6.1 EvaluationRun / EvaluationMetric* / EvaluationErrorCase / EvaluationCandidateRef
+// / GoldEvidenceRef verbatim — no renames.
+
+export type BenchmarkComparisonGroupBy =
+  | "MODEL"
+  | "PROMPT_VERSION"
+  | "ONTOLOGY_VERSION"
+  | "DATASET_VERSION"
+  | "PARSER_VERSION";
+
+export type ComparisonComparabilityFlag =
+  | "SAME_DATASET"
+  | "DIFFERENT_DATASET_VERSION"
+  | "DIFFERENT_DATASET"
+  | "DIFFERENT_ONTOLOGY_VERSION"
+  | "MISSING_METRIC";
+
+export type ConfusionMatrixAxis = "ENTITY_CLASS" | "RELATION_TYPE";
+
+export type MetricDeltaStatus = "IMPROVED" | "REGRESSED" | "UNCHANGED" | "NOT_COMPARABLE";
+
+export type RunExclusionReason =
+  | "NOT_TERMINAL_SUCCESS"
+  | "DIFFERENT_PROJECT"
+  | "RUN_NOT_FOUND"
+  | "DUPLICATE_RUN_ID";
+
+export interface BenchmarkMutationGuard {
+  candidate_graph_mutated: boolean;
+  published_graph_mutated: boolean;
+  evaluation_run_started: boolean;
+  gold_set_mutated: boolean;
+}
+
+export interface BenchmarkComparisonCreateRequest {
+  run_ids: string[];
+  group_by: BenchmarkComparisonGroupBy;
+  baseline_run_id?: string | null;
+  metric_names?: EvaluationMetricName[] | null;
+}
+
+export interface BenchmarkRunContext {
+  model_name?: string | null;
+  model_provider?: string | null;
+  prompt_version_id?: string | null;
+  ontology_version_id?: string | null;
+  parser_version?: string | null;
+  dataset_id?: string | null;
+  dataset_version_id?: string | null;
+  model_run_id?: string | null;
+  status: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+}
+
+export interface BenchmarkComparisonRun {
+  run_id: string;
+  label: string;
+  group_value: string;
+  is_baseline: boolean;
+  run_context: BenchmarkRunContext;
+  comparability_flags: ComparisonComparabilityFlag[];
+}
+
+export interface BenchmarkMetricCell {
+  run_id: string;
+  value?: number | null;
+  metric_status: EvaluationMetricStatus;
+  delta?: number | null;
+  delta_status: MetricDeltaStatus;
+}
+
+export interface BenchmarkMetricRow {
+  metric_name: EvaluationMetricName;
+  baseline_value?: number | null;
+  baseline_metric_status: EvaluationMetricStatus;
+  row_comparability_flags: ComparisonComparabilityFlag[];
+  per_run: BenchmarkMetricCell[];
+}
+
+export interface BenchmarkExcludedRun {
+  run_id: string;
+  exclusion_reason: RunExclusionReason;
+  detail?: string | null;
+}
+
+export interface ComparabilitySummary {
+  flags: ComparisonComparabilityFlag[];
+  notes: string[];
+}
+
+export interface BenchmarkComparisonCapabilities {
+  can_view?: boolean;
+  can_create_comparison?: boolean;
+  can_drill_error_cases?: boolean;
+}
+
+export interface BenchmarkComparison {
+  id: string;
+  project_id: string;
+  group_by: BenchmarkComparisonGroupBy;
+  baseline_run_id: string;
+  metric_names: EvaluationMetricName[];
+  delta_epsilon: number;
+  runs: BenchmarkComparisonRun[];
+  metric_rows: BenchmarkMetricRow[];
+  excluded_runs: BenchmarkExcludedRun[];
+  comparability_summary: ComparabilitySummary;
+  generated_at: string;
+  mutation_guard: BenchmarkMutationGuard;
+  capabilities?: BenchmarkComparisonCapabilities;
+  safety_note?: string | null;
+}
+
+export interface BenchmarkComparisonSummary {
+  id: string;
+  project_id: string;
+  group_by: BenchmarkComparisonGroupBy;
+  baseline_run_id: string;
+  run_count: number;
+  comparability_flags: ComparisonComparabilityFlag[];
+  generated_at: string;
+}
+
+export interface BenchmarkComparisonListResponse {
+  items: BenchmarkComparisonSummary[];
+  next_cursor?: string | null;
+}
+
+export interface ConfusionCellErrorCaseRef {
+  cell_id: string;
+  error_case_count: number;
+}
+
+export interface ConfusionMatrixCell {
+  id: string;
+  gold_label: string;
+  candidate_label: string;
+  is_diagonal: boolean;
+  count: number;
+  contributing_error_case_ref: ConfusionCellErrorCaseRef;
+}
+
+export interface ConfusionMatrixLabelCount {
+  label: string;
+  count: number;
+}
+
+export interface ConfusionMatrixTotals {
+  row_totals: ConfusionMatrixLabelCount[];
+  col_totals: ConfusionMatrixLabelCount[];
+  diagonal_count: number;
+  off_diagonal_count: number;
+  accuracy?: number | null;
+  accuracy_status: EvaluationMetricStatus;
+}
+
+export interface ConfusionMatrix {
+  comparison_id: string;
+  run_id: string;
+  axis: ConfusionMatrixAxis;
+  labels: string[];
+  label_display_names?: Record<string, string>;
+  cells: ConfusionMatrixCell[];
+  totals: ConfusionMatrixTotals;
+  generated_at: string;
+  mutation_guard: BenchmarkMutationGuard;
+}
+
+export interface ConfusionCellErrorCasesResponse {
+  comparison_id: string;
+  run_id: string;
+  axis: ConfusionMatrixAxis;
+  cell_id: string;
+  gold_label: string;
+  candidate_label: string;
+  error_cases: EvaluationErrorCase[];
+  next_cursor?: string | null;
+}
+
+/** Reserved display sentinel for an absent gold (false positive) or candidate (false negative) bucket. */
+export const CONFUSION_NONE_LABEL = "__NONE__";
+
 export type SearchResultKind =
   | "PUBLISHED_ENTITY"
   | "PUBLISHED_RELATION"

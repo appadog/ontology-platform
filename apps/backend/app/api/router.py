@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.modules.audit.router import router as audit_router
 from app.modules.auth.router import router as auth_router
+from app.modules.benchmark.router import router as benchmark_router
 from app.modules.candidate.router import router as candidate_router
 from app.modules.evaluation.router import router as evaluation_router
 from app.modules.extraction.router import router as extraction_router
@@ -27,6 +28,7 @@ api_router.include_router(extraction_router)
 api_router.include_router(candidate_router)
 api_router.include_router(evaluation_router)
 api_router.include_router(learning_router)
+api_router.include_router(benchmark_router)
 api_router.include_router(validation_router)
 api_router.include_router(review_router)
 api_router.include_router(audit_router)

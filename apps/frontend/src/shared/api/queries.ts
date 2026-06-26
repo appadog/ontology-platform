@@ -18,6 +18,8 @@ import {
   OntologyRelationCreateRequest,
   OntologyRelationUpdateRequest,
   OntologyVersionCreateRequest,
+  BenchmarkComparisonCreateRequest,
+  ConfusionMatrixAxis,
   PublishCandidate,
   ProjectCreateRequest,
   ProjectUpdateRequest,
@@ -919,5 +921,54 @@ export function useDecideLearningSuggestion(projectId: string) {
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "learning-signals", "prompt-suggestions"] });
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "learning-signals", "summary"] });
     },
+  });
+}
+
+// ---- MVP6.3 Benchmark Comparison / Confusion Matrix ----
+
+export function useBenchmarkComparisons(projectId: string, groupBy?: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "benchmark-comparisons", groupBy ?? "ALL"],
+    queryFn: () => apiClient.listBenchmarkComparisons(projectId, { group_by: groupBy }),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useBenchmarkComparison(comparisonId: string) {
+  return useQuery({
+    queryKey: ["benchmark-comparisons", comparisonId],
+    queryFn: () => apiClient.getBenchmarkComparison(comparisonId),
+    enabled: Boolean(comparisonId),
+  });
+}
+
+export function useCreateBenchmarkComparison(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: BenchmarkComparisonCreateRequest) => apiClient.createBenchmarkComparison(projectId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "benchmark-comparisons"] });
+    },
+  });
+}
+
+export function useBenchmarkConfusionMatrix(comparisonId: string, runId: string, axis: ConfusionMatrixAxis) {
+  return useQuery({
+    queryKey: ["benchmark-comparisons", comparisonId, "confusion-matrix", runId, axis],
+    queryFn: () => apiClient.getBenchmarkConfusionMatrix(comparisonId, runId, axis),
+    enabled: Boolean(comparisonId) && Boolean(runId),
+  });
+}
+
+export function useBenchmarkCellErrorCases(
+  comparisonId: string,
+  runId: string,
+  axis: ConfusionMatrixAxis,
+  cellId: string,
+) {
+  return useQuery({
+    queryKey: ["benchmark-comparisons", comparisonId, "confusion-matrix", runId, axis, "cells", cellId],
+    queryFn: () => apiClient.getBenchmarkCellErrorCases(comparisonId, runId, axis, cellId),
+    enabled: Boolean(comparisonId) && Boolean(runId) && Boolean(cellId),
   });
 }
