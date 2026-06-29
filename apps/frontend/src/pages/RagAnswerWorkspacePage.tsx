@@ -72,7 +72,7 @@ export function RagAnswerWorkspacePage() {
           ) : !answer ? (
             <PageState kind="empty" title="No answer yet" description="Ask a question to see citation and published fact panels." />
           ) : answer.state === "INSUFFICIENT_EVIDENCE" ? (
-            <HanaCard title="Insufficient evidence" description={versionLabel(answer.published_graph_version_ref)}>
+            <HanaCard emphasis="default" title="Insufficient evidence" description={versionLabel(answer.published_graph_version_ref)}>
               <CardBody>
                 <StateBadge state={answer.state} />
                 <Muted>{answer.insufficient_evidence?.message ?? "The system did not find enough published evidence to answer."}</Muted>
@@ -87,7 +87,7 @@ export function RagAnswerWorkspacePage() {
               </CardBody>
             </HanaCard>
           ) : (
-            <HanaCard title="Answer" description={versionLabel(answer.published_graph_version_ref)}>
+            <HanaCard emphasis="default" title="Answer" description={versionLabel(answer.published_graph_version_ref)}>
               <CardBody>
                 <StateRow>
                   <StateBadge state={answer.state} />
@@ -107,7 +107,7 @@ export function RagAnswerWorkspacePage() {
         </Stack>
 
         <Stack>
-          <HanaCard title="Citations">
+          <HanaCard emphasis="default" title="Citations">
             <CardBody>
               {answer?.citations.length ? (
                 <InlineList>
@@ -124,7 +124,7 @@ export function RagAnswerWorkspacePage() {
               )}
             </CardBody>
           </HanaCard>
-          <HanaCard title="Linked published facts">
+          <HanaCard emphasis="default" title="Linked published facts">
             <CardBody>
               {answer?.linked_published_facts.length ? (
                 <InlineList>

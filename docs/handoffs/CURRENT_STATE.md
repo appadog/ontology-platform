@@ -4,8 +4,8 @@
 
 ## Latest Wave
 
-- Current wave: `wave-036`
-- Overall status: `UI/UX FULL-PRODUCT REVIEW REMEDIATION CLOSED (P1+P2+P3 + D3/D6 full rollout, PASS)`
+- Current wave: `wave-038`
+- Overall status: `DESIGN UPGRADE P2 POLISH CLOSED (PASS) — DESIGN-UPGRADE TRACK (W37+W38) COMPLETE`
 - 기준일: 2026-06-29
 
 ## Latest Decisions
@@ -167,6 +167,14 @@
 - Wave36 QA independently caught a real gap FE missed — the org Admin Console still had an English H1 `Admin Console`; QA fixed it to `관리자 콘솔` per D3, then re-verified. With that, D3 is fully complete.
 - Wave36 final verification: `npm run test` 28/28 PASS, `npm run build` clean, all 5 mock smokes (mvp4/mvp5/mvp6/benchmark/learning) PASS, 0 horizontal overflow retained for Candidate Results + Ontology Modeler at all 6 resolutions; git clean; no leftover listeners.
 - Only deferred UI/UX item: run the `*:actual` smokes on the next backend-up gate (their Korean H1 assertions are already reconciled; no contract change).
+- Wave37 ran a reference-driven design language upgrade (user goal: more intuitive/easy UI, referencing `https://wwit.design` and `https://ai.codle.io/kr`). Principles translated to our operational console — NOT a marketing-page copy. PM/Design -> Frontend -> QA; Backend NOT RUN (no API/DTO/enum change).
+- PM/Design froze the direction in `docs/pm/DESIGN_DIRECTION_REFERENCE_UPGRADE.md` (PM6-020): 7 adopted principles (3-tier hierarchy, one canonical card module, generous whitespace, one primary action per screen, restrained single accent, progressive disclosure, outcome-first Korean microcopy), a token spec, the Section+Card module, per-screen-type guidance, and a P0/P1/P2 change list (FE6-038..048).
+- Commander decision on the flagged token choice: NON-BREAKING ADDITIVE — added `fontSize.lgPlus=22px` (kept `xl=28px`, no rename) and `fontWeight.semibold=600` (kept medium:700/bold:800). No consumer churn.
+- Frontend implemented FE6-038..045 (P0/P1): theme tokens (additive), HanaCard additive props (eyebrow/single-action/emphasis, call sites unchanged), shared `ui/platform/Section.tsx`+`Layout.tsx` deduping per-MVP layout helpers (byte-identical re-export, 0 visual diff), Dashboard (value/onboarding + one primary action), Review Workbench (summary-emphasis header, KO decision labels, one primary, collapsed drilldown), Candidate Results + Sources (Section+Card rows, empty CTA), Benchmark (summary-first, one `비교 실행`, collapsed confusion matrix, honest NOT_APPLICABLE/__NONE__/NOT_COMPARABLE badges), and empty-state next-action CTAs. P2 FE6-046/047/048 deferred (low-risk follow-ups).
+- Wave37 QA verdict PASS (closeout). Verified in rendered DOM at desktop 1440 + tablet 768 that the 7 principles are applied; tokens confirmed additive; no regression (KO titles, EN+KO status badges, single active LNB, 0 horizontal overflow at all 6 resolutions intact); benchmark smoke changes token-aware (EN->KO + open-disclosure, no acceptance markers deleted); `npm run test` 31/31, build clean, 5 mock smokes PASS.
+- Wave38 completed the deferred design P2 polish as PASS: FE6-046 (PageHeader tokenized: `28px`->`fontSize.xl`, `1.2`->`lineHeight.tight`, `8px`->`spacing.sm` exact aliases, visual parity, additive `eyebrow` prop), FE6-048 (Analyze screens Search/RAG/Learning Insights adopted emphasis="default" flat cards + exact-hex surface-token swaps, one strong summary per screen, no color/layout shift). FE6-047 (breakpoint token map) SKIPPED with rationale — the design doc marks it advisory/skippable and a refactor would risk the 0-overflow invariant for no user-visible gain; QA judged the skip acceptable. Frontend/UX wave; Backend NOT RUN.
+- Wave38 QA verdict PASS (closeout): 31/31 tests, build clean, mock smokes (mvp4/mvp6/benchmark/learning incl. search+rag) PASS, 0 horizontal overflow retained at all resolutions for Candidate Results + Ontology Modeler + the touched Analyze screens, no regression of KO titles / status badges / single active LNB / Wave37 tokens, no API/DTO change.
+- The reference-driven design-upgrade track (Wave37 P0/P1 + Wave38 P2) is COMPLETE. Only non-blocking carry-over: run the design `*:actual` smokes at the next backend-up gate (mock coverage representative; no contract change).
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -247,12 +255,16 @@
 | MVP6.3 Wave34 P1/P2 Follow-ups | Non-blocking. Document SQLite smoke-boot nuance (backend defaults to Postgres:5432); regenerate stale `openapi-mvp2-draft.json` full-runtime snapshot (omits benchmark+learning paths); add divergent-run seed for richer delta UI demo. | BE6/QA cleanup |
 | UI/UX Review Remediation P1+P2+P3 | Closed in Wave35 (PASS). PM decisions (D1-D6) + ADR 0010; Frontend FE6-027..036 all implemented; P1 overflow 0 at 6 resolutions; LNB reaches MVP4-6; QA P1 4/4, P2 5/5, P3 3/3; regression clean. | PM6-019, FE6-027~FE6-036, INT6-026~INT6-028 |
 | UI/UX Rollout Follow-up | Closed in Wave36 (PASS). D3 full Korean page titles + D6 full status-badge rollout complete across all screens; single active LNB (FE6-037) fixed; org Admin Console H1 gap caught+fixed by QA; smoke changes token-aware (no markers lost); 28 tests/build/5 smokes PASS, 0 overflow retained. | FE6-034, FE6-035, FE6-037, INT6-029, INT6-030 |
+| Reference-driven Design Upgrade | Closed in Wave37 (PASS). 7 principles from wwit.design/ai.codle.io applied to the console; additive tokens (lgPlus 22px, semibold 600), HanaCard additive props, shared Section/Layout dedup, Dashboard/Workbench/Candidate/Sources/Benchmark + empty-CTA. QA verified in DOM; no regression; 31 tests/build/5 smokes PASS. | PM6-020, FE6-038~FE6-045, INT6-031, INT6-032 |
+| Design Upgrade P2 Follow-ups | Closed in Wave38 (PASS). FE6-046 PageHeader tokenized, FE6-048 Analyze screens Section+Card/emphasis adopted; FE6-047 breakpoint map skipped (advisory, QA-accepted). No regression; 31 tests/build/smokes PASS, 0 overflow. | FE6-046~FE6-048, INT6-033, INT6-034 |
+| Design `*:actual` smokes | Non-blocking carry-over. Run the design/UI `*:actual` smokes at the next backend-up gate; no contract change, mock coverage representative. | FE/QA cleanup |
 
 ## Next Gate
 
-Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison. Full-product UI/UX review remediation closed across Wave35 (P1+P2+P3) and Wave36 (full D3/D6 rollout + single-active LNB), all PASS.
+Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison. UI/UX work closed across Wave35 (review remediation P1+P2+P3), Wave36 (full D3/D6 rollout + single-active LNB), and Wave37 (reference-driven design language upgrade) — all PASS.
 
-Awaiting user direction on the next track:
+The reference-driven design-upgrade track (Wave37 + Wave38) is complete. Awaiting user direction on the next track:
+0. Non-blocking carry-over: run design `*:actual` smokes at the next backend-up gate.
 1. Next MVP6 theme (PM contract-first freeze first): Gold Set authoring/dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance, impact simulation, copilot/agents, connector/plugin SDK, multi-tenant, ontology packs, advanced viz).
 2. Sweep accumulated MVP6.x P1/P2 follow-ups (stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, strict-required field promotion, divergent-run seed) in one hardening wave.
 3. Resume the paused Wave27 release/demo packaging.
@@ -394,6 +406,12 @@ Awaiting user direction on the next track:
 | QA | wave-035 | `PASS / WAVE36 ROLLOUT FOLLOW-UP RECOMMENDED` | P1 4/4, P2 5/5, P3 3/3; independent responsive re-test 0 overflow; LNB reachability confirmed; regression clean; token-aware smoke update recommended for full D3/D6 |
 | Frontend | wave-036 | `PASS / D3+D6 FULL ROLLOUT` | All page H1 KO, all status tokens badged, FE6-037 single-active LNB; fixed interrupted-run build breakage; smoke H1 swapped token-aware; 28 tests/build/5 smokes PASS, 0 overflow |
 | QA | wave-036 | `PASS / UI-UX REMEDIATION CLOSEOUT` | INT6-029/030 PASS; caught+fixed org Admin Console EN H1; verified token-aware (no markers lost); regression+responsive clean; Wave35+36 closeout approved |
+| PM | wave-037 | `PASS / DESIGN DIRECTION FROZEN` | `DESIGN_DIRECTION_REFERENCE_UPGRADE.md` (PM6-020); 7 principles, token spec, Section+Card module, P0/P1/P2 change list FE6-038..048 |
+| Backend | wave-037 | `NOT RUN / NO BACKEND WORK` | Design/UX wave; no API/DTO/enum change |
+| Frontend | wave-037 | `PASS / DESIGN UPGRADE READY` | FE6-038..045 done (additive tokens, HanaCard props, Section/Layout dedup, Dashboard/Workbench/Candidate/Sources/Benchmark + empty CTAs); 31 tests/build/5 smokes PASS; 0 overflow; P2 046-048 deferred |
+| QA | wave-037 | `PASS / DESIGN UPGRADE CLOSEOUT` | INT6-031/032 PASS; 7 principles verified in DOM; tokens additive; no regression (KO titles/badges/single LNB/0 overflow); benchmark smoke token-aware |
+| Frontend | wave-038 | `PASS / DESIGN P2 POLISH READY` | FE6-046 PageHeader tokenized (visual parity); FE6-048 Analyze screens emphasis/surface tokens; FE6-047 skipped w/ rationale; 31 tests/build/smokes PASS, 0 overflow |
+| QA | wave-038 | `PASS / DESIGN-UPGRADE TRACK CLOSEOUT` | INT6-033/034 PASS; FE6-046/048 verified, FE6-047 skip acceptable; no regression; Wave37+38 design track closed |
 
 ## Report Index
 
@@ -435,3 +453,5 @@ Awaiting user direction on the next track:
 | wave-034 | `wave-034/PM_REPORT.md` | `wave-034/BACKEND_REPORT.md` | `wave-034/FRONTEND_REPORT.md` | `wave-034/QA_REPORT.md` | `wave-034/NEXT_ORDERS.md` |
 | wave-035 | `wave-035/PM_REPORT.md` | not run | `wave-035/FRONTEND_REPORT.md` | `wave-035/QA_REPORT.md` | `wave-035/NEXT_ORDERS.md` |
 | wave-036 | not run | not run | `wave-036/FRONTEND_REPORT.md` | `wave-036/QA_REPORT.md` | `wave-036/NEXT_ORDERS.md` |
+| wave-037 | `wave-037/PM_REPORT.md` | not run | `wave-037/FRONTEND_REPORT.md` | `wave-037/QA_REPORT.md` | `wave-037/NEXT_ORDERS.md` |
+| wave-038 | not run | not run | `wave-038/FRONTEND_REPORT.md` | `wave-038/QA_REPORT.md` | `wave-038/NEXT_ORDERS.md` |

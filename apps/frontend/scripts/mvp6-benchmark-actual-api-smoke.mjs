@@ -154,12 +154,15 @@ try {
   }
   // Wave36 D3: page H1 Koreanized (UIUX_REMEDIATION_DECISIONS section 3.2). 1:1 swap.
   await page.getByRole("heading", { name: "벤치마크 비교" }).waitFor();
-  await page.getByRole("heading", { name: "Select runs to compare" }).waitFor();
+  // Wave37 FE6-044: run-selector card title Koreanized (D3/§5).
+  await page.getByRole("heading", { name: "비교할 실행 선택" }).waitFor();
   await screenshot(page, "benchmark-actual-builder");
 
-  await page.getByRole("button", { name: "Build comparison" }).click();
+  // Wave37 FE6-044: single primary action "비교 실행" (§4.3 P4).
+  await page.getByRole("button", { name: "비교 실행" }).click();
   await page.getByRole("heading", { name: "Side-by-side metrics" }).waitFor();
-  await page.getByRole("heading", { name: "Confusion matrix", exact: true }).waitFor();
+  // Wave37 FE6-044 (P6): matrix collapsed by default; open the disclosure.
+  await page.getByText("혼동 행렬 자세히 보기", { exact: false }).first().click();
   await screenshot(page, "benchmark-actual-comparison");
   result.routes.push({ name: "benchmark-actual", path, status: response.status() });
 } finally {

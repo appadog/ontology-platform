@@ -24,6 +24,7 @@ const Metric = styled.article`
   border: 1px solid ${({ theme }) => theme.color.border};
   border-radius: ${({ theme }) => theme.radius.md};
   background: ${({ theme }) => theme.color.surfaceRaised};
+  box-shadow: ${({ theme }) => theme.shadow.card};
 
   span {
     color: ${({ theme }) => theme.color.textMuted};

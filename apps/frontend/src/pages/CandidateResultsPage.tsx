@@ -170,7 +170,13 @@ export function CandidateResultsPage() {
         </FormGrid>
       </HanaCard>
       {candidates.length === 0 ? (
-        <PageState kind="empty" title="조건에 맞는 Candidate가 없습니다" description="filter를 조정하거나 추출 작업 모니터에서 실행 상태를 확인하세요." />
+        <PageState
+          kind="empty"
+          title="조건에 맞는 Candidate가 없습니다"
+          description="filter를 조정하거나 추출 작업 모니터에서 실행 상태를 확인하세요."
+          actionLabel="추출 작업 상태 보기"
+          onAction={() => window.location.assign(`/extraction-jobs/${jobQuery.data.id}`)}
+        />
       ) : (
         <>
           <CandidateCardList aria-label="Mobile candidate review list">

@@ -51,7 +51,7 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="대시보드" description="프로젝트, 원천 데이터, 온톨로지 draft 상태를 빠르게 확인합니다." />
+      <PageHeader title="대시보드" description="오늘 무엇을 검수하고 게시할지 한눈에 파악하고, 바로 다음 작업으로 이동합니다." />
       <Hero aria-label="제품 소개">
         <HeroHeadline>문서에서 추출한 지식을 검수·게시하고, 품질을 추적하는 온톨로지 운영 플랫폼</HeroHeadline>
         <HeroSubline>
@@ -119,15 +119,15 @@ export function DashboardPage() {
 
 const Hero = styled.section`
   display: grid;
-  gap: 16px;
-  padding: 28px;
+  gap: ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) => theme.spacing.xl};
   border: 1px solid ${({ theme }) => theme.color.border};
   border-radius: ${({ theme }) => theme.radius.md};
   background: ${({ theme }) => theme.color.surfaceRaised};
   box-shadow: ${({ theme }) => theme.shadow.soft};
 
   @media (max-width: 760px) {
-    padding: 20px;
+    padding: ${({ theme }) => theme.spacing.lg};
   }
 `;
 
@@ -155,8 +155,8 @@ const HeroSubline = styled.p`
 const ValuePoints = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 4px;
+  gap: ${({ theme }) => theme.spacing.md};
+  margin-top: ${({ theme }) => theme.spacing.xs};
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
@@ -165,9 +165,9 @@ const ValuePoints = styled.div`
 
 const ValuePoint = styled.div`
   display: grid;
-  gap: 6px;
+  gap: ${({ theme }) => theme.spacing.xs};
   min-width: 0;
-  padding: 16px;
+  padding: ${({ theme }) => theme.spacing.lg};
   border: 1px solid ${({ theme }) => theme.color.border};
   border-radius: ${({ theme }) => theme.radius.md};
   background: ${({ theme }) => theme.color.surface};
@@ -188,14 +188,14 @@ const ValuePoint = styled.div`
 const HeroActions = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 4px;
+  gap: ${({ theme }) => theme.spacing.sm};
+  margin-top: ${({ theme }) => theme.spacing.xs};
 `;
 
 const MetricGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: ${({ theme }) => theme.spacing.md};
 
   @media (max-width: 1100px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -210,15 +210,15 @@ const ActivityList = styled.ul`
   display: grid;
   gap: 0;
   margin: 0;
-  padding: 10px 18px 18px;
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
   list-style: none;
 
   li {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 14px 0;
+    gap: ${({ theme }) => theme.spacing.lg};
+    padding: ${({ theme }) => theme.spacing.md} 0;
     border-bottom: 1px solid ${({ theme }) => theme.color.border};
 
     &:last-child {
@@ -244,11 +244,11 @@ const ActivityMain = styled.div`
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.sm};
   min-width: 0;
 
   span {
-    font-weight: 700;
+    font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
     overflow-wrap: anywhere;
   }
 `;
@@ -258,11 +258,11 @@ const Notice = styled.aside`
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
   border: 1px solid ${({ theme }) => theme.color.border};
   border-radius: ${({ theme }) => theme.radius.md};
   background: ${({ theme }) => theme.color.surfaceRaised};
   color: ${({ theme }) => theme.color.textMuted};
-  font-weight: 700;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
 `;

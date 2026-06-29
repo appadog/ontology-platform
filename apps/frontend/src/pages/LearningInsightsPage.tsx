@@ -255,7 +255,7 @@ export function LearningInsightsPage() {
             <MetricCard label="Auto-approval previews" value={summary.auto_approval_preview_count}>Not enforced</MetricCard>
           </KpiGrid>
 
-          <HanaCard title="Learning signal taxonomy" description="Counts by frozen signal type from approved source artifacts.">
+          <HanaCard emphasis="default" title="Learning signal taxonomy" description="Counts by frozen signal type from approved source artifacts.">
             <CardBody>
               <SignalGrid>
                 {summary.signal_counts.map((signal) => (
@@ -737,8 +737,8 @@ const StrongSummary = styled.section`
   gap: ${({ theme }) => theme.spacing.lg};
   padding: ${({ theme }) => theme.spacing.xl};
   border-radius: ${({ theme }) => theme.radius.md};
-  background: #0f172a;
-  color: #f8fafc;
+  background: ${({ theme }) => theme.color.surfaceStrong};
+  color: ${({ theme }) => theme.color.textOnStrong};
 
   span {
     color: #94a3b8;
@@ -850,7 +850,7 @@ const QueueRow = styled.button`
   &[data-selected="true"] {
     border-color: ${({ theme }) => theme.color.borderStrong};
     border-left-color: ${({ theme }) => theme.color.primary};
-    background: #fff7ed;
+    background: ${({ theme }) => theme.color.surfaceSelected};
     box-shadow: ${({ theme }) => theme.shadow.soft};
   }
 
@@ -919,7 +919,7 @@ const PreviewBox = styled.pre`
   padding: ${({ theme }) => theme.spacing.md};
   border: 1px solid ${({ theme }) => theme.color.border};
   border-radius: ${({ theme }) => theme.radius.sm};
-  background: #ecfeff;
+  background: ${({ theme }) => theme.color.surfaceInfo};
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-family: ${({ theme }) => theme.typography.fontFamily};
@@ -930,7 +930,7 @@ const SafetyBox = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
   border: 1px solid ${({ theme }) => theme.color.warningSoft};
   border-radius: ${({ theme }) => theme.radius.sm};
-  background: #fffbeb;
+  background: ${({ theme }) => theme.color.surfaceWarning};
   color: ${({ theme }) => theme.color.warning};
   line-height: ${({ theme }) => theme.typography.lineHeight.normal};
 `;
@@ -942,7 +942,7 @@ const PreviewOnlyBanner = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
   border: 1px solid ${({ theme }) => theme.color.warningSoft};
   border-radius: ${({ theme }) => theme.radius.sm};
-  background: #fffbeb;
+  background: ${({ theme }) => theme.color.surfaceWarning};
   color: ${({ theme }) => theme.color.warning};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
 
@@ -985,7 +985,7 @@ const AuditNoteBox = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
   border: 1px solid ${({ theme }) => theme.color.positiveSoft};
   border-radius: ${({ theme }) => theme.radius.sm};
-  background: #ecfdf5;
+  background: ${({ theme }) => theme.color.surfaceSuccess};
 `;
 
 const Timeline = styled.ol`

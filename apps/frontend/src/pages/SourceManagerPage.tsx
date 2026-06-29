@@ -85,7 +85,11 @@ export function SourceManagerPage() {
           {uploadSource.isPending ? "업로드 중" : "Source 업로드"}
         </HanaButton>
       </PageHeader>
-      <HanaCard title="Upload source" description="파일 유형과 표시 이름을 정한 뒤 원천 데이터를 업로드합니다.">
+      <HanaCard
+        eyebrow="원천 데이터 추가"
+        title="원천 데이터 업로드"
+        description="파일 유형과 표시 이름을 정한 뒤 원천 데이터를 업로드하면 컬럼 프로파일 또는 구간 보기로 이어집니다."
+      >
         <UploadGrid>
           <Field>
             <span>File</span>
@@ -120,7 +124,7 @@ export function SourceManagerPage() {
           onAction={() => document.querySelector<HTMLInputElement>("input[type='file']")?.click()}
         />
       ) : (
-        <HanaCard>
+        <HanaCard emphasis="default" eyebrow="업로드된 원천 데이터" title="원천 데이터 목록">
           <TableWrap>
             <table>
               <thead>
@@ -180,7 +184,7 @@ const TableWrap = styled.div`
 
   th,
   td {
-    padding: 16px 18px;
+    padding: ${({ theme }) => theme.spacing.lg};
     border-bottom: 1px solid ${({ theme }) => theme.color.border};
     text-align: left;
     vertical-align: middle;
@@ -188,7 +192,7 @@ const TableWrap = styled.div`
 
   th {
     color: ${({ theme }) => theme.color.textMuted};
-    font-size: 12px;
+    font-size: ${({ theme }) => theme.typography.fontSize.xs};
     text-transform: uppercase;
   }
 
@@ -199,7 +203,7 @@ const TableWrap = styled.div`
 
 const SourceLink = styled(Link)`
   display: grid;
-  gap: 4px;
+  gap: ${({ theme }) => theme.spacing.xs};
 
   strong {
     color: ${({ theme }) => theme.color.primary};
@@ -207,15 +211,15 @@ const SourceLink = styled(Link)`
 
   span {
     color: ${({ theme }) => theme.color.textMuted};
-    font-size: 12px;
+    font-size: ${({ theme }) => theme.typography.fontSize.xs};
   }
 `;
 
 const UploadGrid = styled.div`
   display: grid;
   grid-template-columns: minmax(220px, 2fr) 160px minmax(180px, 1fr);
-  gap: 12px;
-  padding: 18px;
+  gap: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.lg};
 
   @media (max-width: 880px) {
     grid-template-columns: 1fr;
@@ -224,12 +228,12 @@ const UploadGrid = styled.div`
 
 const Field = styled.label`
   display: grid;
-  gap: 6px;
+  gap: ${({ theme }) => theme.spacing.xs};
 
   span {
     color: ${({ theme }) => theme.color.textMuted};
-    font-size: 12px;
-    font-weight: 800;
+    font-size: ${({ theme }) => theme.typography.fontSize.xs};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
     text-transform: uppercase;
   }
 `;
@@ -246,7 +250,7 @@ const FileInput = styled.input`
 
 const InlineError = styled.p`
   margin: 0;
-  padding: 0 18px 18px;
+  padding: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
   color: ${({ theme }) => theme.color.danger};
-  font-weight: 800;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
 `;

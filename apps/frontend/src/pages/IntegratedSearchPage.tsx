@@ -90,7 +90,7 @@ export function IntegratedSearchPage() {
                 <PageState kind="empty" title="No results" description="Reset filters or try another published graph term." />
               ) : (
                 searchQuery.data.groups.map((group) => (
-                  <HanaCard key={group.kind} title={resultKindLabels[group.kind]} description={`${group.total_count} result`}>
+                  <HanaCard key={group.kind} emphasis="default" title={resultKindLabels[group.kind]} description={`${group.total_count} result`}>
                     <InlineList>
                       {group.items.map((item) => (
                         <ResultItem key={item.id}>
@@ -117,7 +117,7 @@ export function IntegratedSearchPage() {
           )}
         </Stack>
         <Stack>
-          <HanaCard title="Vector adapter">
+          <HanaCard emphasis="default" title="Vector adapter">
             <CardBody>
               {vectorQuery.data ? (
                 <>
@@ -132,7 +132,7 @@ export function IntegratedSearchPage() {
               )}
             </CardBody>
           </HanaCard>
-          <HanaCard title="Similar evidence">
+          <HanaCard emphasis="default" title="Similar evidence">
             <CardBody>
               {similarQuery.isLoading ? (
                 <Muted>Loading similar evidence.</Muted>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -60,6 +60,7 @@ function isTerminalSuccess(run: EvaluationRun): boolean {
 
 export function BenchmarkComparisonPage() {
   const { projectId = "" } = useParams();
+  const navigate = useNavigate();
   const projectQuery = useProject(projectId);
   const runsQuery = useEvaluationRuns(projectId);
   const listQuery = useBenchmarkComparisons(projectId);
@@ -146,14 +147,18 @@ export function BenchmarkComparisonPage() {
       ) : eligibleRuns.length === 0 ? (
         <PageState
           kind="empty"
-          title="No evaluation runs in this project yet"
-          description="Create a deterministic evaluation run from the Evaluation Datasets flow before comparing runs."
+          title="아직 평가 실행이 없습니다"
+          description="비교하려면 먼저 평가 데이터셋 흐름에서 결정적 평가 실행을 만들어야 합니다."
+          actionLabel="평가 데이터셋으로 이동"
+          onAction={() => navigate(`/projects/${projectId}/evaluation-datasets`)}
         />
       ) : eligibleRuns.length < 2 ? (
         <PageState
           kind="empty"
-          title="At least 2 successful runs are required"
-          description="Benchmark comparison needs two or more terminal-success evaluation runs in the same project. Add another deterministic run to compare."
+          title="성공한 실행이 2개 이상 필요합니다"
+          description="벤치마크 비교에는 같은 프로젝트에서 정상 종료된 평가 실행이 둘 이상 있어야 합니다. 비교할 결정적 실행을 하나 더 추가하세요."
+          actionLabel="평가 데이터셋으로 이동"
+          onAction={() => navigate(`/projects/${projectId}/evaluation-datasets`)}
         />
       ) : (
         <RunBuilder
@@ -210,7 +215,11 @@ function RunBuilder({
   const ineligibleRuns = allRuns.filter((run) => !eligibleRuns.some((eligible) => eligible.id === run.id));
 
   return (
-    <HanaCard title="Select runs to compare" description="Pick 2+ terminal-success runs, then build a read-only comparison.">
+    <HanaCard
+      eyebrow="비교 준비"
+      title="비교할 실행 선택"
+      description="정상 종료된 실행 2개 이상을 고르고 기준 실행을 정한 뒤, 읽기 전용 비교를 실행하세요."
+    >
       <CardBody>
         <RunList>
           {eligibleRuns.map((run) => {
@@ -284,14 +293,14 @@ function RunBuilder({
           </ControlField>
           <HanaButton type="button" variant="primary" onClick={onBuild} disabled={selectedRunIds.length < 2 || isBuilding}>
             <GitCompareArrows aria-hidden="true" size={16} />
-            Build comparison
+            {isBuilding ? "비교 실행 중" : "비교 실행"}
           </HanaButton>
         </BuilderControls>
 
         {selectedRunIds.length < 2 ? (
-          <Muted>Select at least 2 runs to build a comparison.</Muted>
+          <Muted>비교를 실행하려면 실행을 2개 이상 선택하세요.</Muted>
         ) : null}
-        {buildError ? <Muted>The comparison could not be built. Adjust the selected runs and try again.</Muted> : null}
+        {buildError ? <Muted>비교를 실행하지 못했습니다. 선택한 실행을 조정한 뒤 다시 시도하세요.</Muted> : null}
       </CardBody>
     </HanaCard>
   );
@@ -357,6 +366,8 @@ function ComparisonDetail({ comparisonId }: { comparisonId: string }) {
 
   return (
     <Stack>
+      <ComparisonSummaryCard comparison={comparison} />
+
       <SectionTitle>
         <GitCompareArrows aria-hidden="true" size={18} />
         <h2>Side-by-side metrics</h2>
@@ -410,6 +421,71 @@ function ComparisonDetail({ comparisonId }: { comparisonId: string }) {
 
       <ConfusionMatrixSection comparison={comparison} />
     </Stack>
+  );
+}
+
+// Wave 37 (FE6-044 / §4.3 P6): summary-first strong Section answering "what did
+// this comparison decide" before the dense matrix. Counts are derived from the
+// existing per-run delta_status; absent/NOT_APPLICABLE sides stay honest (they
+// land in "비교 불가", never a fabricated 0%).
+function ComparisonSummaryCard({ comparison }: { comparison: BenchmarkComparison }) {
+  const baseline = comparison.runs.find((run) => run.is_baseline);
+  let improved = 0;
+  let regressed = 0;
+  let flat = 0;
+  let notComparable = 0;
+  comparison.metric_rows.forEach((row) => {
+    row.per_run.forEach((cell) => {
+      if (comparison.runs.find((run) => run.run_id === cell.run_id)?.is_baseline) {
+        return;
+      }
+      switch (cell.delta_status) {
+        case "IMPROVED":
+          improved += 1;
+          break;
+        case "REGRESSED":
+          regressed += 1;
+          break;
+        case "NOT_COMPARABLE":
+          notComparable += 1;
+          break;
+        default:
+          flat += 1;
+      }
+    });
+  });
+  const nonBaselineRunCount = comparison.runs.filter((run) => !run.is_baseline).length;
+
+  return (
+    <HanaCard
+      emphasis="summary"
+      eyebrow="비교 결과"
+      title="기준 실행 대비 어떤 지표가 좋아지고 나빠졌는지 확인합니다"
+      description={`${comparison.runs.length}개 실행 · 기준 ${baseline?.label ?? comparison.baseline_run_id} · ${comparison.group_by} 기준 그룹화 · 허용 오차 ${comparison.delta_epsilon}`}
+    >
+      <SummaryStripBody>
+        <SummaryStat data-tone="up">
+          <strong>{improved}</strong>
+          <span>향상</span>
+        </SummaryStat>
+        <SummaryStat data-tone="down">
+          <strong>{regressed}</strong>
+          <span>저하</span>
+        </SummaryStat>
+        <SummaryStat data-tone="flat">
+          <strong>{flat}</strong>
+          <span>허용 오차 내</span>
+        </SummaryStat>
+        <SummaryStat data-tone="muted">
+          <strong>{notComparable}</strong>
+          <span>비교 불가</span>
+        </SummaryStat>
+        <SummaryStat data-tone="muted">
+          <strong>{nonBaselineRunCount}</strong>
+          <span>기준 외 실행</span>
+        </SummaryStat>
+      </SummaryStripBody>
+    </HanaCard>
   );
 }
 
@@ -577,11 +653,11 @@ function ConfusionMatrixSection({ comparison }: { comparison: BenchmarkCompariso
   }
 
   return (
-    <Stack>
-      <SectionTitle>
+    <MatrixDisclosure>
+      <summary>
         <Grid3x3 aria-hidden="true" size={18} />
-        <h2>Confusion matrix</h2>
-      </SectionTitle>
+        <span>혼동 행렬 자세히 보기</span>
+      </summary>
 
       <MatrixControls>
         <ControlField>
@@ -621,7 +697,7 @@ function ConfusionMatrixSection({ comparison }: { comparison: BenchmarkCompariso
       {activeCellId && matrixQuery.data ? (
         <CellDrilldown comparisonId={comparison.id} runId={runId} axis={axis} cellId={activeCellId} matrix={matrixQuery.data} />
       ) : null}
-    </Stack>
+    </MatrixDisclosure>
   );
 }
 
@@ -828,6 +904,62 @@ const SafetyNote = styled.div`
   svg {
     color: ${({ theme }) => theme.color.primary};
     flex-shrink: 0;
+  }
+`;
+
+// Wave 37 (FE6-044): KPI-style strip inside the summary Section card.
+const SummaryStripBody = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.xl};
+  padding: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+`;
+
+const SummaryStat = styled.div`
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+
+  strong {
+    font-size: ${({ theme }) => theme.typography.fontSize.lgPlus};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  }
+
+  span {
+    color: ${({ theme }) => theme.color.textMuted};
+    font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  }
+
+  &[data-tone="up"] strong {
+    color: ${({ theme }) => theme.color.positive};
+  }
+  &[data-tone="down"] strong {
+    color: ${({ theme }) => theme.color.danger};
+  }
+  &[data-tone="flat"] strong,
+  &[data-tone="muted"] strong {
+    color: ${({ theme }) => theme.color.text};
+  }
+`;
+
+// Wave 37 (FE6-044 / P6): confusion matrix collapsed by default behind a
+// native disclosure so the decision-critical summary + metric deltas read first.
+const MatrixDisclosure = styled.details`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.md};
+  margin-top: ${({ theme }) => theme.spacing.lg};
+
+  > summary {
+    display: flex;
+    gap: ${({ theme }) => theme.spacing.sm};
+    align-items: center;
+    cursor: pointer;
+    font-size: ${({ theme }) => theme.typography.fontSize.lg};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  }
+
+  > summary svg {
+    color: ${({ theme }) => theme.color.textMuted};
   }
 `;
 

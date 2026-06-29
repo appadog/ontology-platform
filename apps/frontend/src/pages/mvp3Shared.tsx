@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import styled from "styled-components";
 import { Link } from "react-router-dom";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
+// Wave 37 (FE6-040): shared layout primitives now live in the platform module.
+import { ScreenGrid, Stack, Split, CardBody, Muted, BadgeRow } from "../shared/ui/platform/Section";
 import {
   PublishedEntity,
   PublishedGraphSnapshot,
@@ -163,28 +165,11 @@ export const Mvp3PrimaryLink = styled(Mvp3ActionLink)`
   color: #ffffff;
 `;
 
-export const BadgeRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.xs};
-  align-items: center;
-`;
-
-export const ScreenGrid = styled.div`
-  display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
-  gap: ${({ theme }) => theme.spacing.lg};
-
-  @media (max-width: 1120px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-export const CardBody = styled.div`
-  display: grid;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: ${({ theme }) => theme.spacing.lg};
-`;
+// Wave 37 (FE6-040): ScreenGrid / Stack / Split / CardBody / Muted / BadgeRow
+// were promoted into the shared platform module (imported above). Re-exported
+// here so existing import sites (`./mvp3Shared`) keep working with no churn and
+// no visual diff.
+export { ScreenGrid, Stack, Split, CardBody, Muted, BadgeRow };
 
 export const FieldGrid = styled.div`
   display: grid;
@@ -240,28 +225,6 @@ export const CompactTable = styled.div`
 
   tr:last-child td {
     border-bottom: 0;
-  }
-`;
-
-export const Muted = styled.p`
-  margin: 0;
-  color: ${({ theme }) => theme.color.textMuted};
-  line-height: ${({ theme }) => theme.typography.lineHeight.normal};
-`;
-
-export const Stack = styled.div`
-  display: grid;
-  gap: ${({ theme }) => theme.spacing.md};
-  min-width: 0;
-`;
-
-export const Split = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: ${({ theme }) => theme.spacing.md};
-
-  @media (max-width: 780px) {
-    grid-template-columns: 1fr;
   }
 `;
 

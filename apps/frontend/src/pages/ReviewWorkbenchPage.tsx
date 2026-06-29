@@ -24,12 +24,30 @@ import {
   severityTone,
 } from "./mvp3Shared";
 
+// Wave 37 (FE6-042 / §5.2): KO decision action labels (D3). The resulting
+// *status* badge still shows the EN token (APPROVED 등) per D6 — only these
+// action button labels are Korean. ReviewDecisionType enum values are unchanged.
 const decisionLabels: Record<ReviewDecisionType, string> = {
-  APPROVE: "Approve",
-  REJECT: "Reject",
-  REQUEST_CHANGES: "Needs discussion",
-  MODIFY_AND_APPROVE: "Modify and approve",
+  APPROVE: "승인",
+  REJECT: "반려",
+  REQUEST_CHANGES: "논의 필요",
+  MODIFY_AND_APPROVE: "수정 후 승인",
 };
+
+// Outcome-first KO blocking reasons shown under each decision button (P7).
+const blockingReasonText: Record<string, string> = {
+  "No review permission": "검수 권한이 없습니다",
+  "Reason required": "사유 입력이 필요합니다",
+  "Missing evidence": "근거가 없습니다",
+  "Broken evidence": "근거 연결이 끊어졌습니다",
+  "Failed validation": "검증 실패 항목입니다",
+  "No correction diff": "수정 내역이 없습니다",
+  "Already published": "이미 게시되었습니다",
+};
+
+function reasonLabel(reason: string) {
+  return blockingReasonText[reason] ?? reason;
+}
 
 export function ReviewWorkbenchPage() {
   const { projectId = "", reviewTaskId = "" } = useParams();
@@ -167,8 +185,22 @@ export function ReviewWorkbenchPage() {
       </PageHeader>
       <Mvp3Workflow current="Workbench" action={<Mvp3ActionLink to={`/projects/${projectId}/review`}>Back to inbox</Mvp3ActionLink>} />
       {!canDecide ? (
-        <PageState kind="permission" title="Read-only review" description={taskAny.read_only_reason ?? "This task is visible without decision permission."} />
+        <PageState kind="permission" title="읽기 전용 검수" description={taskAny.read_only_reason ?? "결정 권한 없이 열람만 가능한 항목입니다."} />
       ) : null}
+      <HanaCard
+        emphasis="summary"
+        eyebrow="검수 결정"
+        title="이 항목을 게시 후보로 넘길지 결정합니다"
+        description="근거와 검증 결과를 확인하고 한 가지 결정을 선택하세요."
+      >
+        <SummaryBody>
+          {task.validation_results.some((result) => result.severity === "WARNING") ? (
+            <Muted>검증 경고가 있는 항목입니다. 게시하려면 사유를 입력해야 합니다.</Muted>
+          ) : (
+            <Muted>검증 결과와 근거 상태를 확인한 뒤 아래에서 결정을 진행하세요.</Muted>
+          )}
+        </SummaryBody>
+      </HanaCard>
       <ScreenGrid>
         <Stack>
           <HanaCard title="Evidence and source" description={taskAny.source_locator ?? task.source_id ?? "Actual API source context"}>
@@ -209,31 +241,34 @@ export function ReviewWorkbenchPage() {
               </KeyValue>
             </CardBody>
           </HanaCard>
-          <HanaCard title="Original vs corrected">
-            <Split>
-              <SnapshotBox>
-                <h3>Original LLM value</h3>
-                <pre>{JSON.stringify(candidateSnapshot, null, 2)}</pre>
-              </SnapshotBox>
-              <SnapshotBox>
-                <h3>Expert correction</h3>
-                <pre>{JSON.stringify(correctedSnapshot ?? { state: "No correction diff saved" }, null, 2)}</pre>
-              </SnapshotBox>
-            </Split>
-            <DiffList>
-              {correctionDiff.length === 0 ? (
-                <Muted>No correction diff.</Muted>
-              ) : (
-                correctionDiff.map((item) => (
-                  <li key={item.field_path}>
-                    <strong>{item.field_path}</strong>
-                    <span>
-                      {String(item.original_value)} {"->"} {String(item.corrected_value)}
-                    </span>
-                  </li>
-                ))
-              )}
-            </DiffList>
+          <HanaCard title="원본과 수정 비교" description="원본 LLM 값과 전문가 수정 내역을 펼쳐서 비교합니다.">
+            <Drilldown>
+              <summary>원본 / 수정 상세 보기</summary>
+              <Split>
+                <SnapshotBox>
+                  <h3>원본 LLM 값</h3>
+                  <pre>{JSON.stringify(candidateSnapshot, null, 2)}</pre>
+                </SnapshotBox>
+                <SnapshotBox>
+                  <h3>전문가 수정</h3>
+                  <pre>{JSON.stringify(correctedSnapshot ?? { state: "저장된 수정 내역 없음" }, null, 2)}</pre>
+                </SnapshotBox>
+              </Split>
+              <DiffList>
+                {correctionDiff.length === 0 ? (
+                  <Muted>수정 내역이 없습니다.</Muted>
+                ) : (
+                  correctionDiff.map((item) => (
+                    <li key={item.field_path}>
+                      <strong>{item.field_path}</strong>
+                      <span>
+                        {String(item.original_value)} {"->"} {String(item.corrected_value)}
+                      </span>
+                    </li>
+                  ))
+                )}
+              </DiffList>
+            </Drilldown>
           </HanaCard>
         </Stack>
         <Stack>
@@ -250,7 +285,7 @@ export function ReviewWorkbenchPage() {
                       {state.decision === "MODIFY_AND_APPROVE" ? <PenLine aria-hidden="true" /> : null}
                       {decisionLabels[state.decision]}
                     </HanaButton>
-                    <small>{state.disabledReasons.length === 0 ? "Ready" : state.disabledReasons.join(", ")}</small>
+                    <small>{state.disabledReasons.length === 0 ? "선택 가능" : state.disabledReasons.map(reasonLabel).join(", ")}</small>
                   </DecisionAction>
                 ))}
               </ActionGrid>
@@ -275,29 +310,57 @@ export function ReviewWorkbenchPage() {
               ))}
             </CardBody>
           </HanaCard>
-          <HanaCard title="Decision history">
-            <CardBody>
-              {decisions.length === 0 ? (
-                <PageState kind="empty" title="No decision yet" description="This candidate is still awaiting a first expert decision." />
-              ) : (
-                decisions.map((decision) => (
+          <HanaCard title="결정 이력" description="이 항목의 과거 검수 결정을 펼쳐서 확인합니다.">
+            {decisions.length === 0 ? (
+              <CardBody>
+                <PageState
+                  kind="empty"
+                  title="아직 결정이 없습니다"
+                  description="이 후보는 첫 전문가 결정을 기다리고 있습니다. 위에서 결정을 선택하세요."
+                />
+              </CardBody>
+            ) : (
+              <Drilldown>
+                <summary>결정 이력 {decisions.length}건 보기</summary>
+                {decisions.map((decision) => (
                   <HistoryItem key={decision.id}>
                     <BadgeRow>
                       <StatusBadge token={decision.decision} tone={statusToTone(decision.resulting_review_status)} />
                       <span>{formatDateTime(decision.created_at)}</span>
                     </BadgeRow>
                     <strong>{decision.reviewer_display_name ?? decision.reviewer_id}</strong>
-                    <Muted>{decision.reason ?? "No reason stored"}</Muted>
+                    <Muted>{decision.reason ?? "저장된 사유 없음"}</Muted>
                   </HistoryItem>
-                ))
-              )}
-            </CardBody>
+                ))}
+              </Drilldown>
+            )}
           </HanaCard>
         </Stack>
       </ScreenGrid>
     </>
   );
 }
+
+const SummaryBody = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+`;
+
+// Wave 37 (FE6-042 / P6): progressive disclosure for dense detail (raw diff,
+// audit history) — collapsed by default behind a native disclosure.
+const Drilldown = styled.details`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.md};
+  padding: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+
+  > summary {
+    cursor: pointer;
+    padding: ${({ theme }) => theme.spacing.sm} 0;
+    color: ${({ theme }) => theme.color.textMuted};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  }
+`;
 
 const EvidencePanel = styled.div`
   display: grid;

@@ -32,12 +32,16 @@ try {
   await page.getByRole("heading", { name: "벤치마크 비교" }).waitFor();
   await page.getByText("MVP6.3", { exact: true }).waitFor();
   await page.getByText("Read-only aggregation over existing evaluation runs", { exact: false }).first().waitFor();
-  await page.getByRole("heading", { name: "Select runs to compare" }).waitFor();
+  // Wave37 FE6-044: run-selector card title Koreanized (outcome-first, D3/§5).
+  await page.getByRole("heading", { name: "비교할 실행 선택" }).waitFor();
   await screenshot(page, "benchmark-builder");
   result.routes.push({ name: "benchmark-builder", path, status: response.status(), assertions: ["title", "mvp6.3 marker", "read-only copy", "run selector"] });
 
   // 2. Build the comparison.
-  await page.getByRole("button", { name: "Build comparison" }).click();
+  // Wave37 FE6-044: the single primary action is the KO "비교 실행" (§4.3 P4).
+  await page.getByRole("button", { name: "비교 실행" }).click();
+  // Wave37 FE6-044: summary-first strong Section renders before the matrix (§4.3).
+  await page.getByRole("heading", { name: "기준 실행 대비 어떤 지표가 좋아지고 나빠졌는지 확인합니다" }).waitFor();
   await page.getByRole("heading", { name: "Side-by-side metrics" }).waitFor();
   await page.getByRole("heading", { name: "Metric deltas vs baseline" }).waitFor();
   // Comparability warning band (DIFFERENT_DATASET_VERSION present).
@@ -55,7 +59,9 @@ try {
   result.routes.push({ name: "benchmark-deltas", path, status: 200, assertions: ["metric deltas", "comparability band", "improved/regressed/not-comparable", "excluded runs"] });
 
   // 3. Confusion matrix + __NONE__ sentinel.
-  await page.getByRole("heading", { name: "Confusion matrix", exact: true }).waitFor();
+  // Wave37 FE6-044 (P6): the matrix is collapsed by default behind a native
+  // disclosure; open it before asserting on matrix content.
+  await page.getByText("혼동 행렬 자세히 보기", { exact: false }).first().click();
   await page.getByText("(no match)", { exact: false }).first().waitFor();
   await screenshot(page, "benchmark-confusion-matrix");
   result.routes.push({ name: "benchmark-confusion-matrix", path, status: 200, assertions: ["confusion matrix", "__NONE__ (no match) sentinel"] });
@@ -68,9 +74,9 @@ try {
   await screenshot(page, "benchmark-cell-drilldown");
   result.routes.push({ name: "benchmark-cell-drilldown", path, status: 200, assertions: ["cell drilldown", "contributing error cases", "evidence-first"] });
 
-  // 5. Relation-type axis toggle.
+  // 5. Relation-type axis toggle (matrix disclosure already open from step 3).
   await page.getByRole("tab", { name: "RELATION_TYPE" }).click();
-  await page.getByRole("heading", { name: "Confusion matrix", exact: true }).waitFor();
+  await page.getByText("혼동 행렬 자세히 보기", { exact: false }).first().waitFor();
   await screenshot(page, "benchmark-relation-axis");
   result.routes.push({ name: "benchmark-relation-axis", path, status: 200, assertions: ["relation-type axis"] });
 } finally {
