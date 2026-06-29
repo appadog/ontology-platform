@@ -38,12 +38,11 @@ export function RagAnswerWorkspacePage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "RAG answers" },
+          { label: "RAG" },
         ]}
       />
-      <PageHeader title="RAG Answer Workspace" description={`${projectQuery.data.name} · grounded answers with citations`}>
+      <PageHeader title="RAG 답변 작업 공간" description={`${projectQuery.data.name} · grounded answers with citations`}>
         <PageActions>
           <HanaBadge tone="success">Grounded RAG</HanaBadge>
           {vectorQuery.data ? <StateBadge state={vectorQuery.data.status} /> : <HanaBadge tone="muted">VECTOR UNKNOWN</HanaBadge>}

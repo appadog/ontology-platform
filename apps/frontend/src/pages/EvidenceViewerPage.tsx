@@ -25,7 +25,7 @@ export function EvidenceViewerPage() {
         <Breadcrumbs
           items={buildEvidenceBreadcrumb(context)}
         />
-        <PageHeader title="Evidence Viewer" description="Evidence 참조가 없거나 더 이상 조회되지 않습니다.">
+        <PageHeader title="근거 뷰어" description="Evidence 참조가 없거나 더 이상 조회되지 않습니다.">
           <HanaBadge tone="danger">BROKEN_EVIDENCE</HanaBadge>
         </PageHeader>
         <WorkflowStage current="Evidence" />
@@ -67,7 +67,7 @@ export function EvidenceViewerPage() {
       <Breadcrumbs
         items={buildEvidenceBreadcrumb(context, evidence)}
       />
-      <PageHeader title="Evidence Viewer" description="Candidate 판단에 사용된 Evidence 본문을 먼저 확인합니다.">
+      <PageHeader title="근거 뷰어" description="Candidate 판단에 사용된 Evidence 본문을 먼저 확인합니다.">
         <HanaBadge tone="neutral">{evidence.source_type}</HanaBadge>
         {context.jobId ? <DataLink to={`/extraction-jobs/${context.jobId}/candidates`}>Candidate로 돌아가기</DataLink> : null}
       </PageHeader>

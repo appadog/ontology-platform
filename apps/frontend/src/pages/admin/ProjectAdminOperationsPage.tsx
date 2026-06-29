@@ -33,7 +33,7 @@ export function ProjectAdminOperationsPage() {
   return (
     <>
       <Breadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: projectQuery.data.project_name, to: `/projects/${projectId}/admin` }, { label: "Operations" }]} />
-      <PageHeader title="Operations Dashboard" description="Job health, retry boundaries, DLQ, cost budget, structured events, and observability states." />
+      <PageHeader title="운영 대시보드" description="Job health, retry boundaries, DLQ, cost budget, structured events, and observability states." />
       <AdminScopeContext project={projectQuery.data} />
       <ProjectAdminTabs projectId={projectId} />
       <AdminGrid data-testid="mvp5-operations-dashboard">

@@ -28,7 +28,8 @@ try {
   }
 
   // 1. Builder + read-only safety copy.
-  await page.getByRole("heading", { name: "Benchmark Comparison" }).waitFor();
+  // Wave36 D3: page H1 Koreanized (UIUX_REMEDIATION_DECISIONS §3.2). 1:1 swap.
+  await page.getByRole("heading", { name: "벤치마크 비교" }).waitFor();
   await page.getByText("MVP6.3", { exact: true }).waitFor();
   await page.getByText("Read-only aggregation over existing evaluation runs", { exact: false }).first().waitFor();
   await page.getByRole("heading", { name: "Select runs to compare" }).waitFor();

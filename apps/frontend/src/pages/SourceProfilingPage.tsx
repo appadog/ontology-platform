@@ -2,7 +2,7 @@ import { BarChart3, Play } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
-import { useRunSourceProfile, useSource, useSourceProfile } from "../shared/api/queries";
+import { useProject, useRunSourceProfile, useSource, useSourceProfile } from "../shared/api/queries";
 import { HanaBadge, HanaButton, HanaCard } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
@@ -12,6 +12,8 @@ import { formatPercent, InlineList, MutedText, PanelGrid, TableWrap } from "./mv
 export function SourceProfilingPage() {
   const { sourceId = "" } = useParams();
   const { data: source, isLoading: isSourceLoading, isError: isSourceError, refetch: refetchSource } = useSource(sourceId);
+  const projectQuery = useProject(source?.project_id ?? "");
+  const projectName = projectQuery.data?.name ?? "프로젝트";
   const { data: profile, isLoading, isError, refetch } = useSourceProfile(sourceId);
   const runProfile = useRunSourceProfile(sourceId);
 
@@ -40,7 +42,7 @@ export function SourceProfilingPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
+          { label: projectName, to: `/projects/${source.project_id}` },
           { label: "Sources", to: `/projects/${source.project_id}/sources` },
           { label: source.file_name, to: `/projects/${source.project_id}/sources/${source.id}` },
           { label: "컬럼 프로파일" },

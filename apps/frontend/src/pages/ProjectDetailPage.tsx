@@ -21,6 +21,7 @@ import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
 import { formatDateTime } from "../shared/lib/format";
 import { ProjectStatus } from "../shared/api/types";
@@ -64,12 +65,11 @@ export function ProjectDetailPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: project.name },
         ]}
       />
       <PageHeader title={project.name} description={project.description ?? "No description"}>
-        <HanaBadge tone={statusToTone(project.status)}>{project.status}</HanaBadge>
+        <StatusBadge token={project.status} tone={statusToTone(project.status)} />
       </PageHeader>
       <MetricGrid>
         <MetricCard label="Sources" value={project.source_count}>

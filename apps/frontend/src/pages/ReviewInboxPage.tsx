@@ -7,6 +7,7 @@ import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaCard, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
 import {
   BadgeRow,
@@ -64,12 +65,11 @@ export function ReviewInboxPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Review inbox" },
+          { label: "Review" },
         ]}
       />
-      <PageHeader title="Review Inbox" description="Candidate decisions stay separate from published facts until publish eligibility passes.">
+      <PageHeader title="검수 인박스" description="Candidate decisions stay separate from published facts until publish eligibility passes.">
         <Mvp3ActionLink to={`/projects/${projectId}/publish`}>Publish queue</Mvp3ActionLink>
       </PageHeader>
       <Mvp3Workflow current="Review inbox" action={<Mvp3ActionLink to={`/projects/${projectId}/quality`}>Quality dashboard</Mvp3ActionLink>} />
@@ -167,13 +167,13 @@ export function ReviewInboxPage() {
                       </td>
                       <td>
                         <BadgeRow>
-                          <HanaBadge tone={statusToTone(reviewStatus)}>{reviewStatus}</HanaBadge>
-                          <HanaBadge tone={statusToTone(publishStatus)}>{publishStatus}</HanaBadge>
+                          <StatusBadge token={reviewStatus} tone={statusToTone(reviewStatus)} />
+                          <StatusBadge token={publishStatus} tone={statusToTone(publishStatus)} />
                         </BadgeRow>
                       </td>
                       <td>
                         <CandidateName>
-                          <HanaBadge tone={statusToTone(task.validation_status)}>{task.validation_status}</HanaBadge>
+                          <StatusBadge token={task.validation_status} tone={statusToTone(task.validation_status)} />
                           <HanaBadge tone={severityTone(validationSeverity)}>{validationSeverity}</HanaBadge>
                           <span>{validationMessage}</span>
                         </CandidateName>
@@ -194,7 +194,7 @@ export function ReviewInboxPage() {
                       </td>
                       <td>
                         <BadgeRow>
-                          <HanaBadge tone={evidenceState === "PRESENT" ? "success" : "danger"}>{evidenceState}</HanaBadge>
+                          <StatusBadge token={evidenceState} tone={evidenceState === "PRESENT" ? "success" : "danger"} />
                           <span>{task.evidence_count}</span>
                         </BadgeRow>
                       </td>

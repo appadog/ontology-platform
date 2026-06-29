@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import styled from "styled-components";
 import { Link } from "react-router-dom";
-import { HanaBadge } from "../shared/ui/hana";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import {
   PublishedEntity,
   PublishedGraphSnapshot,
@@ -62,9 +62,7 @@ export function ReasonBadges({ reasons }: { reasons: PublishEligibilityReasonCod
   return (
     <BadgeRow>
       {reasons.map((reason) => (
-        <HanaBadge key={reason} tone={eligibilityTone(reason)}>
-          {reason}
-        </HanaBadge>
+        <StatusBadge key={reason} token={reason} tone={eligibilityTone(reason)} />
       ))}
     </BadgeRow>
   );

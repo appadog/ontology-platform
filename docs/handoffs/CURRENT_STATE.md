@@ -4,9 +4,9 @@
 
 ## Latest Wave
 
-- Current wave: `wave-034`
-- Overall status: `MVP6.3 BENCHMARK COMPARISON THIN IMPLEMENTATION CLOSED (PASS)`
-- 기준일: 2026-06-26
+- Current wave: `wave-036`
+- Overall status: `UI/UX FULL-PRODUCT REVIEW REMEDIATION CLOSED (P1+P2+P3 + D3/D6 full rollout, PASS)`
+- 기준일: 2026-06-29
 
 ## Latest Decisions
 
@@ -155,6 +155,18 @@
 - No-mutation verified at three layers: response `BenchmarkMutationGuard` all-false; benchmark module imports only read paths and writes only its own `_comparisons` store; data-level all 13 candidate/published/prompt/extraction/review tables show 0 rows after the full flow. MVP6.1 metric names/error types reused verbatim (no renames).
 - MVP6.3 regression PASS: 56 backend tests (project/ontology + MVP3/4/5/6.1/6.2/6.3) and the MVP6.1 evaluation actual smoke pass; additive-only; candidate/published separation intact.
 - MVP6.3 P1/P2 non-blocking follow-ups: document the SQLite smoke-boot nuance (backend defaults to Postgres:5432), regenerate the stale full-runtime `openapi-mvp2-draft.json` snapshot to include benchmark/learning paths, and add a divergent-run seed for richer delta UI demos. None block closeout.
+- Wave35 ran a full-product UI/UX review remediation by user direction (review at `docs/pm/UIUX_REVIEW_FULL_PRODUCT.md`: 0 P0 / 4 P1 / 6 P2 / 4 P3 from 123 real screenshots across 29 routes x 6 resolutions). User asked to remediate all P1+P2+P3 with PM deciding first, then Frontend referencing those decisions.
+- Wave35 PM, Frontend, and QA reports are accepted as PASS. Backend NOT RUN (no API/DTO/enum change). Sequence was PM -> Frontend -> QA.
+- PM froze all UI/UX decisions in `docs/pm/UIUX_REMEDIATION_DECISIONS.md` (D1 LNB IA, D2 Dashboard Hero copy, D3 copy-language policy/glossary, D4 breadcrumb rule, D5 Quality info priority, D6 status-token badge guide). LNB IA recorded as a durable boundary in ADR 0010.
+- LNB IA frozen as two zones: Global (Dashboard/Projects/Admin) always; Project zone (header = project name) with 4 ordered groups Build (Ontology/Sources/Extraction/Candidates) / Review (Review/Quality) / Publish (Publish/Published Graph) / Analyze (Search/RAG/Evaluation/Learning Insights/Benchmark/External API). LNB = destination (one active item per route), in-screen tabs = sub-views, breadcrumb authoritative; no project selected -> global zone + muted hint, no redirect. Korean is primary UI language; status enums/tokens stay intentional English shown as badge + Korean secondary label.
+- Frontend implemented all 10 Frontend Action Items (FE6-027..FE6-036). P1 horizontal-overflow fixes verified by QA at 0 overflow (scrollWidth==clientWidth) for Candidate Results and Ontology Modeler at all 6 resolutions (before: modeler 1280 +84px, candidate +30/48/70px). LNB now reaches all MVP4-6 screens under a selected project with exactly one active item. 28 FE tests pass, build PASS, mock smokes (mvp4/5/6/benchmark/learning) PASS, regression clean.
+- Wave35 QA verdict PASS (P1 4/4, P2 5/5, P3 3/3). Two items are only partially rolled out: full D3 page-title Koreanization (FE6-034) and full-screen D6 badge rollout (FE6-035) are blocked by frozen smoke assertions that hardcode English H1 titles (`getByRole heading name`) and exact status-token text (`getByText exact:true`). QA recommends a small Wave36 follow-up: token-aware smoke updates (swap H1 strings; relax `exact:true` to substring/regex while KEEPING the token markers) plus completing the rollout — judged safe/mechanical, not a regression-masking change.
+- Wave35 minor non-blocking findings: global `Projects` NavLink also gets `aria-current="page"` on project routes (React Router partial match, a11y nit); `recent_activity[].status` is additive client-computed (no contract change).
+- Wave36 completed the two partially-rolled-out items as PASS: FE6-034 (D3 full Korean page titles across all screens) and FE6-035 (D6 full status-token badge rollout), plus FE6-037 (single active LNB item / single `aria-current`). Backend NOT RUN.
+- D3/D6 rollout is now full, not smoke-safe-only. Smoke/test changes were token-aware: only English H1 `getByRole heading name` literals were swapped 1:1 to the frozen Korean titles across 10 smokes; zero `getByText(TOKEN, exact:true)` markers were deleted or relaxed (badging keeps the token in its own span, verified by diff + passing smokes). Not regression-masking.
+- Wave36 QA independently caught a real gap FE missed — the org Admin Console still had an English H1 `Admin Console`; QA fixed it to `관리자 콘솔` per D3, then re-verified. With that, D3 is fully complete.
+- Wave36 final verification: `npm run test` 28/28 PASS, `npm run build` clean, all 5 mock smokes (mvp4/mvp5/mvp6/benchmark/learning) PASS, 0 horizontal overflow retained for Candidate Results + Ontology Modeler at all 6 resolutions; git clean; no leftover listeners.
+- Only deferred UI/UX item: run the `*:actual` smokes on the next backend-up gate (their Korean H1 assertions are already reconciled; no contract change).
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -233,17 +245,17 @@
 | MVP6.3 Benchmark Comparison Contract | Closed in Wave33. PM freeze + ADR 0009, Backend contract draft + `openapi-mvp6-3-draft.json` (4 paths/30 schemas), Frontend UX/API requirements, and QA `INT6_3` checklist (C1-C12 planning / R1-R10 runtime) all agree; 10 FE DTO gaps resolved; no runtime leakage. | PM6-017, BE6-023, FE6-022, INT6-021 |
 | MVP6.3 Benchmark Comparison Thin Runtime/UI | Closed in Wave34. Five operations / four endpoint families, process-local persist by `comparison_id`, deltas+epsilon, 3-level comparability, confusion matrix NOT_APPLICABLE/`__NONE__`, cell drilldown pagination, all-false mutation guard. FE UI + types/mocks; actual smoke PASS (zero drift); no-mutation 3 layers; 56-test regression. | BE6-024~BE6-027, FE6-023~FE6-026, INT6-022~INT6-025 |
 | MVP6.3 Wave34 P1/P2 Follow-ups | Non-blocking. Document SQLite smoke-boot nuance (backend defaults to Postgres:5432); regenerate stale `openapi-mvp2-draft.json` full-runtime snapshot (omits benchmark+learning paths); add divergent-run seed for richer delta UI demo. | BE6/QA cleanup |
+| UI/UX Review Remediation P1+P2+P3 | Closed in Wave35 (PASS). PM decisions (D1-D6) + ADR 0010; Frontend FE6-027..036 all implemented; P1 overflow 0 at 6 resolutions; LNB reaches MVP4-6; QA P1 4/4, P2 5/5, P3 3/3; regression clean. | PM6-019, FE6-027~FE6-036, INT6-026~INT6-028 |
+| UI/UX Rollout Follow-up | Closed in Wave36 (PASS). D3 full Korean page titles + D6 full status-badge rollout complete across all screens; single active LNB (FE6-037) fixed; org Admin Console H1 gap caught+fixed by QA; smoke changes token-aware (no markers lost); 28 tests/build/5 smokes PASS, 0 overflow retained. | FE6-034, FE6-035, FE6-037, INT6-029, INT6-030 |
 
 ## Next Gate
 
-MVP6.2 Active Learning P0 is closed (Wave32). This completes the currently frozen MVP6 P0 scope (MVP6.1 Gold Set/Benchmark Studio + MVP6.2 Active Learning). Remaining MVP6 roadmap themes are separate future slices that each require a PM freeze before implementation:
+Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison. Full-product UI/UX review remediation closed across Wave35 (P1+P2+P3) and Wave36 (full D3/D6 rollout + single-active LNB), all PASS.
 
-1. Optional Wave33 cleanup: the two MVP6.2 P1 follow-ups (promote always-populated optional draft fields to `required`; regenerate stale `openapi-mvp2-draft.json`). Non-blocking.
-2. MVP6.3 Benchmark Comparison is closed (Wave33 planning + Wave34 implementation both PASS). Closed MVP6 themes so far: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison.
-3. Next MVP6 theme requires a PM contract-first freeze before implementation (PM picks the smallest coherent P0). Remaining candidates: Gold Set authoring policy + dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance workflow, impact simulation, copilot/agent runtime, connector/plugin SDK, multi-tenant runtime, ontology packs, advanced visualization). Each is a larger step than 6.3.
-4. Alternatively: sweep the accumulated MVP6.x P1/P2 follow-ups (stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, strict-required field promotion, divergent-run seed) in one hardening wave, or resume the paused Wave27 release/demo packaging.
-
-Commander awaiting direction on the next theme (or a hardening/packaging track).
+Awaiting user direction on the next track:
+1. Next MVP6 theme (PM contract-first freeze first): Gold Set authoring/dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance, impact simulation, copilot/agents, connector/plugin SDK, multi-tenant, ontology packs, advanced viz).
+2. Sweep accumulated MVP6.x P1/P2 follow-ups (stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, strict-required field promotion, divergent-run seed) in one hardening wave.
+3. Resume the paused Wave27 release/demo packaging.
 
 ## Latest Role Reports
 
@@ -376,6 +388,12 @@ Commander awaiting direction on the next theme (or a hardening/packaging track).
 | Backend | wave-034 | `PASS / MVP6.3 THIN RUNTIME READY` | benchmark module: 5 ops, deltas+epsilon, 3-level comparability, confusion matrix NOT_APPLICABLE/`__NONE__`, cell drilldown pagination, all-false guard; 13+4 tests, ruff clean, 0 OpenAPI mismatch |
 | Frontend | wave-034 | `PASS / BENCHMARK COMPARISON UI READY` | Project-scoped UI, run-selection->deltas->confusion matrix->cell drilldown, honest states; 28 tests/build/mock smoke PASS; actual smoke later run by QA |
 | QA | wave-034 | `PASS / MVP6.3 CLOSEOUT` | INT6-022~025 PASS; actual smoke booted+PASS zero drift; no-mutation 3 layers; 56-test regression; R1-R10 PASS |
+| PM | wave-035 | `PASS / UI-UX DECISIONS FROZEN` | D1-D6 in `UIUX_REMEDIATION_DECISIONS.md`; LNB IA two-zone (ADR 0010); Hero copy; Korean-primary policy; PM6-019 + FE6-027~036 |
+| Backend | wave-035 | `NOT RUN / NO BACKEND WORK` | Frontend/UX wave; no API/DTO/enum change needed |
+| Frontend | wave-035 | `PASS / UI-UX REMEDIATION READY` | FE6-027~036 all implemented; P1 overflow 0 at 6 resolutions; LNB reaches MVP4-6; 28 tests/build/mock smokes PASS; D3/D6 full rollout deferred to Wave36 (smoke assertions) |
+| QA | wave-035 | `PASS / WAVE36 ROLLOUT FOLLOW-UP RECOMMENDED` | P1 4/4, P2 5/5, P3 3/3; independent responsive re-test 0 overflow; LNB reachability confirmed; regression clean; token-aware smoke update recommended for full D3/D6 |
+| Frontend | wave-036 | `PASS / D3+D6 FULL ROLLOUT` | All page H1 KO, all status tokens badged, FE6-037 single-active LNB; fixed interrupted-run build breakage; smoke H1 swapped token-aware; 28 tests/build/5 smokes PASS, 0 overflow |
+| QA | wave-036 | `PASS / UI-UX REMEDIATION CLOSEOUT` | INT6-029/030 PASS; caught+fixed org Admin Console EN H1; verified token-aware (no markers lost); regression+responsive clean; Wave35+36 closeout approved |
 
 ## Report Index
 
@@ -415,3 +433,5 @@ Commander awaiting direction on the next theme (or a hardening/packaging track).
 | wave-032 | `wave-032/PM_REPORT.md` | `wave-032/BACKEND_REPORT.md` | `wave-032/FRONTEND_REPORT.md` | `wave-032/QA_REPORT.md` | `wave-032/NEXT_ORDERS.md` |
 | wave-033 | `wave-033/PM_REPORT.md` | `wave-033/BACKEND_REPORT.md` | `wave-033/FRONTEND_REPORT.md` | `wave-033/QA_REPORT.md` | `wave-033/NEXT_ORDERS.md` |
 | wave-034 | `wave-034/PM_REPORT.md` | `wave-034/BACKEND_REPORT.md` | `wave-034/FRONTEND_REPORT.md` | `wave-034/QA_REPORT.md` | `wave-034/NEXT_ORDERS.md` |
+| wave-035 | `wave-035/PM_REPORT.md` | not run | `wave-035/FRONTEND_REPORT.md` | `wave-035/QA_REPORT.md` | `wave-035/NEXT_ORDERS.md` |
+| wave-036 | not run | not run | `wave-036/FRONTEND_REPORT.md` | `wave-036/QA_REPORT.md` | `wave-036/NEXT_ORDERS.md` |

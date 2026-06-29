@@ -172,19 +172,20 @@ async function runBrowserSmoke(seed, apiState) {
 
   try {
     await assertFrontendRoute(page, reviewRoute, "review-inbox", [
-      { name: "review inbox title", run: () => page.getByRole("heading", { name: "Review Inbox" }).waitFor() },
+      // Wave36 D3: page H1 Koreanized (UIUX_REMEDIATION_DECISIONS §3.2). 1:1 swap.
+      { name: "review inbox title", run: () => page.getByRole("heading", { name: "검수 인박스" }).waitFor() },
       { name: "review task queue marker", run: () => page.getByText("review tasks").first().waitFor() },
       { name: "wrapped queue response", run: () => page.getByText("Queue response").waitFor() },
     ]);
 
     await assertFrontendRoute(page, workbenchRoute, "review-workbench", [
-      { name: "workbench title", run: () => page.getByRole("heading", { name: "Review Workbench" }).waitFor() },
+      { name: "workbench title", run: () => page.getByRole("heading", { name: "검수 워크벤치" }).waitFor() },
       { name: "seeded task candidate", run: () => page.getByText(apiState.reviewTask.candidate_display_name).first().waitFor() },
       { name: "decision actions", run: () => page.getByText("Decision actions").waitFor() },
     ]);
 
     await assertFrontendRoute(page, publishRoute, "publish-queue", [
-      { name: "publish queue title", run: () => page.getByRole("heading", { name: "Publish Queue" }).waitFor() },
+      { name: "publish queue title", run: () => page.getByRole("heading", { name: "게시 대기열" }).waitFor() },
       { name: "candidate eligibility", run: () => page.getByText("Candidate eligibility").waitFor() },
       ...apiState.reasonCodes.map((reason) => ({
         name: `reason code ${reason}`,
@@ -193,7 +194,7 @@ async function runBrowserSmoke(seed, apiState) {
     ]);
 
     await assertFrontendRoute(page, publishedGraphRoute, "published-graph", [
-      { name: "published graph title", run: () => page.getByRole("heading", { name: "Published Graph" }).waitFor() },
+      { name: "published graph title", run: () => page.getByRole("heading", { name: "게시 그래프 탐색기" }).waitFor() },
       { name: "published facts marker", run: () => page.getByText("PUBLISHED FACTS", { exact: true }).waitFor() },
       { name: "current snapshot", run: () => page.getByRole("heading", { name: "Current snapshot" }).waitFor() },
       { name: "published facts list", run: () => page.getByText("Published entities and relations").waitFor() },
@@ -204,7 +205,7 @@ async function runBrowserSmoke(seed, apiState) {
     ]);
 
     await assertFrontendRoute(page, qualityRoute, "quality-dashboard", [
-      { name: "quality title", run: () => page.getByRole("heading", { name: "Quality Dashboard" }).waitFor() },
+      { name: "quality title", run: () => page.getByRole("heading", { name: "품질 대시보드" }).waitFor() },
       { name: "typed candidate metrics", run: () => page.getByRole("heading", { name: "Candidates", exact: true }).waitFor() },
       { name: "typed validation metrics", run: () => page.getByRole("heading", { name: "Validation", exact: true }).waitFor() },
       { name: "typed review metrics", run: () => page.getByRole("heading", { name: "Review", exact: true }).waitFor() },

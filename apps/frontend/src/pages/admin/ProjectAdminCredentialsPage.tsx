@@ -32,7 +32,7 @@ export function ProjectAdminCredentialsPage() {
   return (
     <>
       <Breadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: projectQuery.data.project_name, to: `/projects/${projectId}/admin` }, { label: "Credentials" }]} />
-      <PageHeader title="API Keys and Service Accounts" description="One-time reveal is isolated from persistent masked credential views.">
+      <PageHeader title="API 키 및 서비스 계정" description="One-time reveal is isolated from persistent masked credential views.">
         <HanaBadge tone="warning">no credential material persisted</HanaBadge>
       </PageHeader>
       <AdminScopeContext project={projectQuery.data} />

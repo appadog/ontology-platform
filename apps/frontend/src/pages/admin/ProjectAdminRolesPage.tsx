@@ -46,7 +46,7 @@ export function ProjectAdminRolesPage() {
   return (
     <>
       <Breadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: projectQuery.data.project_name, to: `/projects/${projectId}/admin` }, { label: "Roles" }]} />
-      <PageHeader title="Role and Permission Management" description="Assignments are first-class resources with previewed permission outcomes." />
+      <PageHeader title="역할 및 권한 관리" description="Assignments are first-class resources with previewed permission outcomes." />
       <AdminScopeContext project={projectQuery.data} />
       <ProjectAdminTabs projectId={projectId} />
       <AdminTwoColumn>

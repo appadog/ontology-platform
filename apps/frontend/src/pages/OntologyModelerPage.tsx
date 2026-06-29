@@ -13,6 +13,7 @@ import {
   useDeleteOntologyRelation,
   useOntologyGraph,
   useOntologyVersions,
+  useProject,
   useUpdateOntologyClass,
   useUpdateOntologyProperty,
   useUpdateOntologyRelation,
@@ -22,6 +23,7 @@ import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 
 const dataTypeOptions: PropertyDataType[] = ["STRING", "TEXT", "INTEGER", "FLOAT", "BOOLEAN", "DATE", "DATETIME", "URI"];
 const cardinalityOptions: Cardinality[] = [
@@ -47,6 +49,8 @@ function toNumber(value: string, fallback: number) {
 export function OntologyModelerPage() {
   const theme = useTheme();
   const { projectId = "" } = useParams();
+  const projectQuery = useProject(projectId);
+  const projectName = projectQuery.data?.name ?? "프로젝트";
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState("");
   const [selectedRelationId, setSelectedRelationId] = useState("");
@@ -271,7 +275,7 @@ export function OntologyModelerPage() {
           <GraphNodeLabel>
             <strong>{graphNode.label}</strong>
             <span>{graphNode.class_id}</span>
-            <HanaBadge tone={statusToTone(graphNode.status)}>{graphNode.status}</HanaBadge>
+            <StatusBadge token={graphNode.status} tone={statusToTone(graphNode.status)} />
           </GraphNodeLabel>
         ),
       },
@@ -333,11 +337,11 @@ export function OntologyModelerPage() {
       <>
         <Breadcrumbs
           items={[
-            { label: "Projects", to: "/projects" },
+            { label: projectName, to: `/projects/${projectId}` },
             { label: "Ontology" },
           ]}
         />
-        <PageHeader title="Ontology Modeler" description="Draft version을 만들면 class, property, relation을 구성할 수 있습니다.">
+        <PageHeader title="Ontology 모델러" description="Draft version을 만들면 class, property, relation을 구성할 수 있습니다.">
           <HanaButton
             variant="primary"
             type="button"
@@ -718,12 +722,12 @@ export function OntologyModelerPage() {
       <>
         <Breadcrumbs
           items={[
-            { label: "Projects", to: "/projects" },
+            { label: projectName, to: `/projects/${projectId}` },
             { label: "Ontology" },
           ]}
         />
-        <PageHeader title="Ontology Modeler" description="Draft graph에 class를 추가해 모델링을 시작합니다.">
-          <HanaBadge tone={statusToTone(graph.version_status)}>{graph.version_status}</HanaBadge>
+        <PageHeader title="Ontology 모델러" description="Draft graph에 class를 추가해 모델링을 시작합니다.">
+          <StatusBadge token={graph.version_status} tone={statusToTone(graph.version_status)} />
         </PageHeader>
         {authoringPanel}
         <PageState
@@ -741,12 +745,12 @@ export function OntologyModelerPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
+          { label: projectName, to: `/projects/${projectId}` },
           { label: "Ontology" },
         ]}
       />
-      <PageHeader title="Ontology Modeler" description="Draft graph에서 class, property, relation을 생성하고 다듬습니다.">
-        <HanaBadge tone={statusToTone(graph.version_status)}>{graph.version_status}</HanaBadge>
+      <PageHeader title="Ontology 모델러" description="Draft graph에서 class, property, relation을 생성하고 다듬습니다.">
+        <StatusBadge token={graph.version_status} tone={statusToTone(graph.version_status)} />
         {!isDraftVersion && (
           <HanaButton type="button" variant="primary" disabled={createVersion.isPending} onClick={() => createVersion.mutate({ created_by: "dev-admin" })}>
             <Plus aria-hidden="true" />
@@ -781,7 +785,7 @@ export function OntologyModelerPage() {
               >
                 <strong>{graphNode.label}</strong>
                 <span>{graphNode.class_id}</span>
-                <HanaBadge tone={statusToTone(graphNode.status)}>{graphNode.status}</HanaBadge>
+                <StatusBadge token={graphNode.status} tone={statusToTone(graphNode.status)} />
               </button>
             ))}
           </EntityList>
@@ -795,7 +799,7 @@ export function OntologyModelerPage() {
         <RightPanel>
           <PanelHeader>
             <h2>{selectedNode.label}</h2>
-            <HanaBadge tone={statusToTone(selectedNode.status)}>{selectedNode.status}</HanaBadge>
+            <StatusBadge token={selectedNode.status} tone={statusToTone(selectedNode.status)} />
           </PanelHeader>
           <PanelSection>
             <SectionTitle>Class detail</SectionTitle>
@@ -1038,7 +1042,7 @@ const ModelerGrid = styled.div`
   gap: 14px;
   min-height: 680px;
 
-  @media (max-width: 1180px) {
+  @media (max-width: 1280px) {
     grid-template-columns: 260px minmax(0, 1fr);
 
     > aside:last-child {

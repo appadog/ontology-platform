@@ -2322,6 +2322,8 @@ export interface DashboardSummary {
     id: string;
     label: string;
     timestamp: string;
+    /** UPPER_SNAKE status token for the activity, rendered as a D6 badge. */
+    status?: string;
   }>;
 }
 

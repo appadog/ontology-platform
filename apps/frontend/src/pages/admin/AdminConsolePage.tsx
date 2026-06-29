@@ -35,7 +35,7 @@ export function AdminConsolePage() {
     <div data-testid="mvp5-admin-shell">
       <Breadcrumbs items={[{ label: "Admin" }]} />
       <PageHeader
-        title="Admin Console"
+        title="관리자 콘솔"
         description={`${organizationQuery.data.organization_name} - ${organizationQuery.data.environment ?? "local"} - ${organizationQuery.data.auth_mode}`}
       >
         <HanaBadge tone="warning">Dry-run first governance</HanaBadge>

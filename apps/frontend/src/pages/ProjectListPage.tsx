@@ -6,6 +6,7 @@ import { useCreateProject, useProjects } from "../shared/api/queries";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
 
 export function ProjectListPage() {
@@ -55,7 +56,7 @@ export function ProjectListPage() {
 
   return (
     <>
-      <PageHeader title="Projects" description="데이터 구축 작업의 최상위 작업 공간을 만들고 선택합니다.">
+      <PageHeader title="프로젝트" description="데이터 구축 작업의 최상위 작업 공간을 만들고 선택합니다.">
         <HanaButton variant="primary" type="button" onClick={() => setShowCreateForm((current) => !current)}>
           <Plus aria-hidden="true" />
           New Project
@@ -109,7 +110,7 @@ export function ProjectListPage() {
                       </ProjectLink>
                     </td>
                     <td>
-                      <HanaBadge tone={statusToTone(project.status)}>{project.status}</HanaBadge>
+                      <StatusBadge token={project.status} tone={statusToTone(project.status)} />
                     </td>
                     <td>{project.source_count}</td>
                     <td>{project.ontology_version_count}</td>

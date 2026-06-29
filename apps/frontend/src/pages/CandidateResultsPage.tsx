@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { useParams } from "react-router-dom";
-import { useCandidateEntities, useCandidateEvidence, useCandidateRelations, useExtractionJob } from "../shared/api/queries";
+import { useCandidateEntities, useCandidateEvidence, useCandidateRelations, useExtractionJob, useProject } from "../shared/api/queries";
 import { CandidateEntity, CandidateListFilters, CandidateRelation, CandidateValidationCode, ValidationStatus } from "../shared/api/types";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
 import { DataLink, Field, FormGrid, InlineList, KeyValueGrid, Mono, MutedText, TableWrap, WorkflowStage, formatPercent } from "./mvp2Shared";
 
@@ -42,6 +43,7 @@ export function CandidateResultsPage() {
     };
   }, [evidenceFilter, validationFilter]);
   const jobQuery = useExtractionJob(jobId);
+  const projectQuery = useProject(jobQuery.data?.project_id ?? "");
   const entitiesQuery = useCandidateEntities(jobId, filters);
   const relationsQuery = useCandidateRelations(jobId, filters);
   const filteredEntities = useMemo(
@@ -110,14 +112,13 @@ export function CandidateResultsPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
-          { label: "Extraction", to: `/projects/${jobQuery.data.project_id}/extraction-jobs` },
-          { label: jobQuery.data.id, to: `/extraction-jobs/${jobQuery.data.id}` },
-          { label: "Candidates" },
+          { label: projectQuery.data?.name ?? "프로젝트", to: `/projects/${jobQuery.data.project_id}` },
+          { label: "Candidates", to: `/projects/${jobQuery.data.project_id}/extraction-jobs` },
+          { label: `작업 #${shortId(jobQuery.data.id)}` },
         ]}
       />
-      <PageHeader title="Candidate Results" description="Candidate를 검토하고 Evidence로 판단 근거를 확인합니다.">
-        <HanaBadge tone={statusToTone(jobQuery.data.status)}>{jobQuery.data.status}</HanaBadge>
+      <PageHeader title="후보 결과" description="Candidate를 검토하고 Evidence로 판단 근거를 확인합니다.">
+        <StatusBadge token={jobQuery.data.status} tone={statusToTone(jobQuery.data.status)} />
         <DataLink to={`/extraction-jobs/${jobQuery.data.id}`}>Job으로 돌아가기</DataLink>
       </PageHeader>
       <WorkflowStage current="Candidates" action={<DataLink to={`/extraction-jobs/${jobQuery.data.id}`}>Extraction 상태 보기</DataLink>} />
@@ -183,7 +184,7 @@ export function CandidateResultsPage() {
                   <HanaBadge tone="neutral">{row.kind}</HanaBadge>
                 </CandidateCardHeader>
                 <CardSignalRow>
-                  <HanaBadge tone={statusToTone(row.candidate.validation_status)}>{row.candidate.validation_status}</HanaBadge>
+                  <StatusBadge token={row.candidate.validation_status} tone={statusToTone(row.candidate.validation_status)} />
                   {row.candidate.validation_codes.length === 0 ? <HanaBadge tone="success">NO_CODE</HanaBadge> : null}
                   {row.candidate.validation_codes.map((code) => (
                     <HanaBadge key={code} tone="warning">
@@ -236,13 +237,13 @@ export function CandidateResultsPage() {
                         <td>{formatPercent(candidate.confidence)}</td>
                         <td>
                           <StatusStack>
-                            <HanaBadge tone={statusToTone(candidate.validation_status)}>{candidate.validation_status}</HanaBadge>
+                            <StatusBadge token={candidate.validation_status} tone={statusToTone(candidate.validation_status)} />
                             {candidate.validation_codes.map((code) => (
                               <HanaBadge key={code} tone="warning">
                                 {code}
                               </HanaBadge>
                             ))}
-                            <HanaBadge tone={statusToTone(candidate.publish_status)}>{candidate.publish_status}</HanaBadge>
+                            <StatusBadge token={candidate.publish_status} tone={statusToTone(candidate.publish_status)} />
                           </StatusStack>
                         </td>
                         <td>{renderEvidenceLinks(candidate.evidence_ids, candidate, "Entity", jobQuery.data.id)}</td>
@@ -298,13 +299,13 @@ export function CandidateResultsPage() {
                         <td>{formatPercent(candidate.confidence)}</td>
                         <td>
                           <StatusStack>
-                            <HanaBadge tone={statusToTone(candidate.validation_status)}>{candidate.validation_status}</HanaBadge>
+                            <StatusBadge token={candidate.validation_status} tone={statusToTone(candidate.validation_status)} />
                             {candidate.validation_codes.map((code) => (
                               <HanaBadge key={code} tone="warning">
                                 {code}
                               </HanaBadge>
                             ))}
-                            <HanaBadge tone={statusToTone(candidate.publish_status)}>{candidate.publish_status}</HanaBadge>
+                            <StatusBadge token={candidate.publish_status} tone={statusToTone(candidate.publish_status)} />
                           </StatusStack>
                         </td>
                         <td>{renderEvidenceLinks(candidate.evidence_ids, candidate, "Relation", jobQuery.data.id)}</td>
@@ -332,9 +333,10 @@ export function CandidateResultsPage() {
                 </div>
                 <StatusStack>
                   <HanaBadge tone="neutral">{selectedCandidateRow.kind}</HanaBadge>
-                  <HanaBadge tone={statusToTone(selectedCandidateRow.candidate.validation_status)}>
-                    {selectedCandidateRow.candidate.validation_status}
-                  </HanaBadge>
+                  <StatusBadge
+                    token={selectedCandidateRow.candidate.validation_status}
+                    tone={statusToTone(selectedCandidateRow.candidate.validation_status)}
+                  />
                   <HanaBadge tone="progress">{formatPercent(selectedCandidateRow.candidate.confidence)}</HanaBadge>
                 </StatusStack>
               </SelectedSummary>
@@ -352,9 +354,10 @@ export function CandidateResultsPage() {
                 <dt>Validation</dt>
                 <dd>
                   <StatusStack>
-                    <HanaBadge tone={statusToTone(selectedCandidateRow.candidate.validation_status)}>
-                      {selectedCandidateRow.candidate.validation_status}
-                    </HanaBadge>
+                    <StatusBadge
+                      token={selectedCandidateRow.candidate.validation_status}
+                      tone={statusToTone(selectedCandidateRow.candidate.validation_status)}
+                    />
                     {selectedCandidateRow.candidate.validation_codes.map((code) => (
                       <HanaBadge key={code} tone="warning">
                         {code}
@@ -365,12 +368,14 @@ export function CandidateResultsPage() {
                 <dt>Review / Publish</dt>
                 <dd>
                   <StatusStack>
-                    <HanaBadge tone={statusToTone(selectedCandidateRow.candidate.review_status)}>
-                      {selectedCandidateRow.candidate.review_status}
-                    </HanaBadge>
-                    <HanaBadge tone={statusToTone(selectedCandidateRow.candidate.publish_status)}>
-                      {selectedCandidateRow.candidate.publish_status}
-                    </HanaBadge>
+                    <StatusBadge
+                      token={selectedCandidateRow.candidate.review_status}
+                      tone={statusToTone(selectedCandidateRow.candidate.review_status)}
+                    />
+                    <StatusBadge
+                      token={selectedCandidateRow.candidate.publish_status}
+                      tone={statusToTone(selectedCandidateRow.candidate.publish_status)}
+                    />
                   </StatusStack>
                 </dd>
                 <dt>Retry dedupe</dt>
@@ -652,6 +657,17 @@ const CardActionRow = styled.div`
 `;
 
 const CandidateTableCard = styled(HanaCard)`
+  /* Card stays pinned to page width; the table scrolls horizontally inside it
+     (FE6-027). The 8-column candidate table gets a sensible min-width so the
+     Context column is never cramped on mid widths. */
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  table {
+    min-width: 980px;
+  }
+
   @media (max-width: 760px) {
     display: none;
   }

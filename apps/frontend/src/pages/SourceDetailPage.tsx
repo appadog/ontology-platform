@@ -1,17 +1,20 @@
 import { BarChart3, FileSearch, FileText, Sparkles } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
-import { useSource, useSourcePreview } from "../shared/api/queries";
+import { useProject, useSource, useSourcePreview } from "../shared/api/queries";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaCard, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatBytes, formatDateTime } from "../shared/lib/format";
 import { WorkflowStage } from "./mvp2Shared";
 
 export function SourceDetailPage() {
   const { sourceId = "" } = useParams();
   const { data: source, isLoading, isError, refetch } = useSource(sourceId);
+  const projectQuery = useProject(source?.project_id ?? "");
+  const projectName = projectQuery.data?.name ?? "프로젝트";
   const shouldLoadPreview = source?.preview_status === "READY";
   const { data: preview, isLoading: isPreviewLoading, isError: isPreviewError } = useSourcePreview(sourceId, shouldLoadPreview);
 
@@ -42,14 +45,14 @@ export function SourceDetailPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
+          { label: projectName, to: `/projects/${source.project_id}` },
           { label: "Sources", to: `/projects/${source.project_id}/sources` },
           { label: source.file_name },
         ]}
       />
       <PageHeader title={source.file_name} description="업로드 파일 상태를 확인하고 다음 extraction 준비 단계로 이동합니다.">
-        <HanaBadge tone={statusToTone(source.status)}>{source.status}</HanaBadge>
-        <HanaBadge tone={statusToTone(source.preview_status)}>{source.preview_status}</HanaBadge>
+        <StatusBadge token={source.status} tone={statusToTone(source.status)} />
+        <StatusBadge token={source.preview_status} tone={statusToTone(source.preview_status)} />
         <HeaderLink to={`/projects/${source.project_id}/sources/${source.id}/profile`}>컬럼 프로파일</HeaderLink>
         <HeaderLink to={`/projects/${source.project_id}/sources/${source.id}/chunks`}>구간 보기</HeaderLink>
       </PageHeader>
@@ -62,15 +65,16 @@ export function SourceDetailPage() {
           <ReadinessItem data-priority="primary">
             <strong>{isTabularSource ? "컬럼 프로파일 / 미리보기" : "구간 보기"}</strong>
             <span>{isTabularSource ? "컬럼 구조와 샘플 행을 먼저 확인합니다." : "문서 구간과 Evidence 기준 위치를 먼저 확인합니다."}</span>
-            <HanaBadge tone={isTabularSource ? statusToTone(source.preview_status) : statusToTone(source.status)}>
-              {isTabularSource ? source.preview_status : source.status}
-            </HanaBadge>
+            <StatusBadge
+              token={isTabularSource ? source.preview_status : source.status}
+              tone={isTabularSource ? statusToTone(source.preview_status) : statusToTone(source.status)}
+            />
             <HeaderLink to={primaryReadinessPath}>{primaryReadinessLabel}</HeaderLink>
           </ReadinessItem>
           <ReadinessItem>
             <strong>{isTabularSource ? "구간 보기" : "컬럼 프로파일 / 미리보기"}</strong>
             <span>{isTabularSource ? "필요하면 행과 셀 기준 위치를 확인합니다." : "문서형 Source는 미리보기보다 구간 확인이 우선입니다."}</span>
-            <HanaBadge tone="neutral">{isTabularSource ? source.status : source.preview_status}</HanaBadge>
+            <StatusBadge token={isTabularSource ? source.status : source.preview_status} tone="neutral" />
             <HeaderLink to={isTabularSource ? `/projects/${source.project_id}/sources/${source.id}/chunks` : `/projects/${source.project_id}/sources/${source.id}/profile`}>
               {isTabularSource ? "구간 보기" : "컬럼 프로파일 보기"}
             </HeaderLink>

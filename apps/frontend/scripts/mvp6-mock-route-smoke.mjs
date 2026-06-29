@@ -46,7 +46,10 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
 
 try {
   await assertRoute(page, `/projects/${projectId}/evaluation-datasets`, "evaluation-datasets-mvp6", [
-    { name: "evaluation title", run: () => page.getByRole("heading", { name: "Evaluation Datasets" }).waitFor() },
+    // Wave36 D3: page H1 Koreanized (UIUX_REMEDIATION_DECISIONS §3.2). 1:1 swap;
+    // still asserts the page title rendered. Card sub-titles (Gold Set Manager,
+    // etc.) stay English by design and are unchanged below.
+    { name: "evaluation title", run: () => page.getByRole("heading", { name: "평가 데이터셋" }).waitFor() },
     { name: "mvp6 marker", run: () => page.getByText("MVP6.1", { exact: true }).waitFor() },
     { name: "deterministic marker", run: () => page.getByText("DETERMINISTIC_MOCK", { exact: true }).first().waitFor() },
     { name: "gold set manager", run: () => page.getByRole("heading", { name: "Gold Set Manager" }).waitFor() },

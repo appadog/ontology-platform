@@ -6,6 +6,9 @@ export function HanaSelect(props: SelectHTMLAttributes<HTMLSelectElement>) {
 }
 
 const Select = styled.select`
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 38px;
   padding: 0 36px 0 12px;
   border: 1px solid ${({ theme }) => theme.color.border};

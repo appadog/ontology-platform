@@ -325,7 +325,8 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 
 try {
   await assertRoute(page, `/projects/${seed.project.id}/evaluation-datasets/${seed.dataset.id}`, "evaluation-datasets-mvp6-actual", [
-    { name: "evaluation title", run: () => page.getByRole("heading", { name: "Evaluation Datasets" }).waitFor() },
+    // Wave36 D3: page H1 Koreanized (UIUX_REMEDIATION_DECISIONS section 3.2). 1:1 swap.
+    { name: "evaluation title", run: () => page.getByRole("heading", { name: "평가 데이터셋" }).waitFor() },
     { name: "mvp6 marker", run: () => page.getByText("MVP6.1", { exact: true }).waitFor() },
     { name: "actual dataset", run: () => page.getByText(seed.dataset.name, { exact: true }).first().waitFor() },
     { name: "actual sample", run: () => page.getByText(seed.sample.title, { exact: true }).first().waitFor() },

@@ -47,12 +47,11 @@ export function IntegratedSearchPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
           { label: "Search" },
         ]}
       />
-      <PageHeader title="Integrated Search" description={`${projectQuery.data.name} · grouped published graph, source, evidence, and lineage results`}>
+      <PageHeader title="통합 검색" description={`${projectQuery.data.name} · grouped published graph, source, evidence, and lineage results`}>
         <PageActions>
           {vectorQuery.data ? <StateBadge state={vectorQuery.data.status} /> : <HanaBadge tone="muted">VECTOR UNKNOWN</HanaBadge>}
           <Mvp3ActionLink to={`/projects/${projectId}/rag`}>Ask with citations</Mvp3ActionLink>

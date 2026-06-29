@@ -41,7 +41,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 try {
   // Summary
   const summaryRoute = await gotoRoute(page, `/projects/${projectId}/learning-insights`, "learning-insights-summary");
-  await page.getByRole("heading", { name: "Learning Insights" }).waitFor();
+  await page.getByRole("heading", { name: "학습 인사이트" }).waitFor();
   await page.getByText("MVP6.2", { exact: true }).waitFor();
   await page.getByText("Recommendation only · audit-only", { exact: true }).waitFor();
   await page.getByText("RELATION_DIRECTION_CORRECTION", { exact: true }).first().waitFor();
@@ -88,7 +88,7 @@ try {
 
   // Decision history timeline
   await clickSection(page, "Decision History");
-  await page.getByRole("heading", { name: "Learning Insights" }).waitFor();
+  await page.getByRole("heading", { name: "학습 인사이트" }).waitFor();
   const historyPath = await screenshot(page, "learning-insights-history");
   result.routes.push({ name: "learning-insights-history", path: summaryRoute.path, status: 200, assertions: ["history timeline"], screenshotPath: historyPath });
 } finally {

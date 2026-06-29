@@ -45,6 +45,7 @@ import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard } from "../shared/ui/hana";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
 import { PageState } from "../shared/ui/platform/PageState";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { CardBody, CompactTable, KeyValue, Mvp3ActionLink, Muted, Stack } from "./mvp3Shared";
 import { Mvp4Grid, Mvp4Panel, Mvp4TwoColumn, PageActions, StateBadge } from "./mvp4Shared";
 
@@ -185,12 +186,11 @@ export function EvaluationDatasetsPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Evaluation datasets" },
+          { label: "Evaluation" },
         ]}
       />
-      <PageHeader title="Evaluation Datasets" description={`${projectQuery.data.name} · Gold Set / Benchmark Studio`}>
+      <PageHeader title="평가 데이터셋" description={`${projectQuery.data.name} · Gold Set / Benchmark Studio`}>
         <PageActions>
           <HanaBadge tone="success">MVP6.1</HanaBadge>
           <HanaBadge tone="neutral">DETERMINISTIC_MOCK</HanaBadge>
@@ -723,19 +723,23 @@ function CandidateContext({ candidate }: { candidate?: EvaluationCandidateRef | 
 }
 
 function EvaluationStatusBadge({ status }: { status: EvaluationRun["status"] | EvaluationMetric["status"] }) {
+  // D6 (UIUX_REMEDIATION_DECISIONS §6): render the status token as a badge with
+  // icon + Korean secondary label. Keep the caller-computed tone (this surface
+  // treats RUNNING/PENDING as warning rather than the D6 info default) by passing
+  // the `tone` override; the English token text is preserved as the API truth.
   if (status === "SUCCEEDED" || status === "SUCCESS" || status === "MEASURED") {
-    return <HanaBadge tone="success">{status}</HanaBadge>;
+    return <StatusBadge token={status} tone="success" />;
   }
 
   if (status === "RUNNING" || status === "PENDING") {
-    return <HanaBadge tone="warning">{status}</HanaBadge>;
+    return <StatusBadge token={status} tone="warning" />;
   }
 
   if (status === "FAILED") {
-    return <HanaBadge tone="danger">{status}</HanaBadge>;
+    return <StatusBadge token={status} tone="danger" />;
   }
 
-  return <HanaBadge tone="neutral">{status}</HanaBadge>;
+  return <StatusBadge token={status} tone="neutral" />;
 }
 
 const WorkflowBand = styled.nav`

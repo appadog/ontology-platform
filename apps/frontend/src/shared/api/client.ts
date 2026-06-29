@@ -868,13 +868,15 @@ function buildDashboardSummary(projects: ProjectSummary[], sources: SourceData[]
   const recentActivity = [
     ...sources.map((source) => ({
       id: `source-${source.id}`,
-      label: `${source.file_name} ${source.preview_status}`,
+      label: source.file_name,
       timestamp: source.uploaded_at,
+      status: source.preview_status,
     })),
     ...projects.map((project) => ({
       id: `project-${project.id}`,
-      label: `${project.name} ${project.status}`,
+      label: project.name,
       timestamp: project.updated_at,
+      status: project.status,
     })),
   ]
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())

@@ -14,6 +14,7 @@ import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
 import {
   BadgeRow,
@@ -78,13 +79,11 @@ export function PublishQueuePage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Review inbox", to: `/projects/${projectId}/review` },
-          { label: "Publish queue" },
+          { label: "Publish" },
         ]}
       />
-      <PageHeader title="Publish Queue" description="Only eligible approved or modified candidates move into the published graph snapshot.">
+      <PageHeader title="게시 대기열" description="Only eligible approved or modified candidates move into the published graph snapshot.">
         <Mvp3ActionLink to={`/projects/${projectId}/published-graph`}>Published graph</Mvp3ActionLink>
       </PageHeader>
       <Mvp3Workflow current="Publish queue" action={<Mvp3ActionLink to={`/projects/${projectId}/review`}>Review inbox</Mvp3ActionLink>} />
@@ -143,16 +142,16 @@ export function PublishQueuePage() {
                       </td>
                       <td>
                         <BadgeRow>
-                          <HanaBadge tone={statusToTone(candidate.review_status)}>{candidate.review_status}</HanaBadge>
-                          <HanaBadge tone={statusToTone(candidate.publish_status)}>{candidate.publish_status}</HanaBadge>
+                          <StatusBadge token={candidate.review_status} tone={statusToTone(candidate.review_status)} />
+                          <StatusBadge token={candidate.publish_status} tone={statusToTone(candidate.publish_status)} />
                         </BadgeRow>
                       </td>
                       <td>
-                        <HanaBadge tone={statusToTone(candidate.validation_status)}>{candidate.validation_status}</HanaBadge>
+                        <StatusBadge token={candidate.validation_status} tone={statusToTone(candidate.validation_status)} />
                       </td>
                       <td>
                         <BadgeRow>
-                          <HanaBadge tone={candidate.has_evidence ? "success" : "danger"}>{candidate.has_evidence ? "PRESENT" : "MISSING"}</HanaBadge>
+                          <StatusBadge token={candidate.has_evidence ? "PRESENT" : "MISSING"} tone={candidate.has_evidence ? "success" : "danger"} />
                           <span>{candidate.has_warning_reason ? "warning reason" : "no warning reason"}</span>
                         </BadgeRow>
                       </td>
@@ -208,9 +207,10 @@ export function PublishQueuePage() {
                         </Metric>
                       </JobStats>
                       <BadgeRow>
-                        <HanaBadge tone={selectedJob.status === "SUCCESS" ? "success" : selectedJob.status === "FAILED" ? "danger" : "progress"}>
-                          {selectedJob.status}
-                        </HanaBadge>
+                        <StatusBadge
+                          token={selectedJob.status}
+                          tone={selectedJob.status === "SUCCESS" ? "success" : selectedJob.status === "FAILED" ? "danger" : "progress"}
+                        />
                         <span>{formatDateTime(selectedJob.created_at)}</span>
                       </BadgeRow>
                       <HanaButton

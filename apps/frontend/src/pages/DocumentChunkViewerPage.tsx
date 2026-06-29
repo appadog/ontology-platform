@@ -2,7 +2,7 @@ import { FileSearch, Play } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import styled from "styled-components";
-import { useParseSource, useSource, useSourceSegments } from "../shared/api/queries";
+import { useParseSource, useProject, useSource, useSourceSegments } from "../shared/api/queries";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard } from "../shared/ui/hana";
@@ -14,6 +14,8 @@ export function DocumentChunkViewerPage() {
   const { sourceId = "" } = useParams();
   const [selectedSegmentId, setSelectedSegmentId] = useState("");
   const { data: source, isLoading: isSourceLoading, isError: isSourceError, refetch: refetchSource } = useSource(sourceId);
+  const projectQuery = useProject(source?.project_id ?? "");
+  const projectName = projectQuery.data?.name ?? "프로젝트";
   const { data: segments, isLoading, isError, refetch } = useSourceSegments(sourceId);
   const parseSource = useParseSource(sourceId);
   const selectedSegment = useMemo(
@@ -44,13 +46,13 @@ export function DocumentChunkViewerPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
+          { label: projectName, to: `/projects/${source.project_id}` },
           { label: "Sources", to: `/projects/${source.project_id}/sources` },
           { label: source.file_name, to: `/projects/${source.project_id}/sources/${source.id}` },
           { label: "Chunks" },
         ]}
       />
-      <PageHeader title="Document Chunks" description="Source에서 evidence가 연결될 row, cell, paragraph, chunk를 확인합니다.">
+      <PageHeader title="문서 청크" description="Source에서 evidence가 연결될 row, cell, paragraph, chunk를 확인합니다.">
         <HanaBadge tone="muted">Evidence anchors</HanaBadge>
         <HanaButton type="button" onClick={() => parseSource.mutate()} disabled={parseSource.isPending}>
           <Play aria-hidden="true" />

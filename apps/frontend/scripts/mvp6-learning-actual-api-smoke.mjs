@@ -148,7 +148,8 @@ try {
   if (!response?.ok()) {
     throw new Error(`Route ${path} failed: ${response?.status() ?? "no response"}`);
   }
-  await page.getByRole("heading", { name: "Learning Insights" }).waitFor();
+  // Wave36 D3: page H1 Koreanized (UIUX_REMEDIATION_DECISIONS section 3.2). 1:1 swap.
+  await page.getByRole("heading", { name: "학습 인사이트" }).waitFor();
   await page.getByText("MVP6.2", { exact: true }).waitFor();
   await page.getByText("RELATION_DIRECTION_CORRECTION", { exact: true }).first().waitFor();
   await screenshot(page, "learning-insights-actual-summary");

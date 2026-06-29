@@ -39,6 +39,7 @@ import {
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaSelect } from "../shared/ui/hana";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { PageState } from "../shared/ui/platform/PageState";
 import { CardBody, CompactTable, KeyValue, Muted, Stack } from "./mvp3Shared";
 import { Mvp4Grid, Mvp4Panel, PageActions } from "./mvp4Shared";
@@ -121,13 +122,11 @@ export function BenchmarkComparisonPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectName, to: `/projects/${projectId}` },
-          { label: "Evaluation", to: `/projects/${projectId}/evaluation-datasets` },
-          { label: "Benchmark Comparison" },
+          { label: "Benchmark" },
         ]}
       />
-      <PageHeader title="Benchmark Comparison" description={`${projectName} · Compare evaluation runs side by side`}>
+      <PageHeader title="벤치마크 비교" description={`${projectName} · Compare evaluation runs side by side`}>
         <PageActions>
           <HanaBadge tone="success">MVP6.3</HanaBadge>
           <HanaBadge tone="neutral">Read-only analysis</HanaBadge>
@@ -224,7 +223,7 @@ function RunBuilder({
                     <strong>{run.model_name ?? run.id}</strong>
                     <span>{run.id}</span>
                     <RunChips>
-                      <HanaBadge tone="success">{run.status}</HanaBadge>
+                      <StatusBadge token={run.status} tone="success" />
                       <HanaBadge tone="neutral">{run.model_provider ?? "provider n/a"}</HanaBadge>
                       <span>{run.prompt_version_id ?? "prompt n/a"}</span>
                       <span>{run.ontology_version_id ?? "ontology n/a"}</span>
@@ -245,7 +244,7 @@ function RunBuilder({
                   <strong>{run.model_name ?? run.id}</strong>
                   <span>{run.id}</span>
                   <RunChips>
-                    <HanaBadge tone="danger">{run.status}</HanaBadge>
+                    <StatusBadge token={run.status} tone="danger" />
                     <span>Not eligible — only terminal-success runs can be compared</span>
                   </RunChips>
                 </RunMeta>
@@ -398,7 +397,7 @@ function ComparisonDetail({ comparisonId }: { comparisonId: string }) {
                   <tr key={excluded.run_id}>
                     <td>{excluded.run_id}</td>
                     <td>
-                      <HanaBadge tone="warning">{excluded.exclusion_reason}</HanaBadge>
+                      <StatusBadge token={excluded.exclusion_reason} tone="warning" />
                     </td>
                     <td>{excluded.detail ?? "—"}</td>
                   </tr>

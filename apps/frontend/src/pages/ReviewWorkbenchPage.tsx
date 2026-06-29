@@ -8,6 +8,7 @@ import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
 import {
   BadgeRow,
@@ -154,15 +155,14 @@ export function ReviewWorkbenchPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Review inbox", to: `/projects/${projectId}/review` },
+          { label: "Review", to: `/projects/${projectId}/review` },
           { label: task.candidate_display_name },
         ]}
       />
-      <PageHeader title="Review Workbench" description={task.candidate_display_name}>
-        <HanaBadge tone={statusToTone(reviewStatus)}>{reviewStatus}</HanaBadge>
-        <HanaBadge tone={statusToTone(publishStatus)}>{publishStatus}</HanaBadge>
+      <PageHeader title="검수 워크벤치" description={task.candidate_display_name}>
+        <StatusBadge token={reviewStatus} tone={statusToTone(reviewStatus)} />
+        <StatusBadge token={publishStatus} tone={statusToTone(publishStatus)} />
         <Mvp3ActionLink to={`/projects/${projectId}/publish`}>Publish queue</Mvp3ActionLink>
       </PageHeader>
       <Mvp3Workflow current="Workbench" action={<Mvp3ActionLink to={`/projects/${projectId}/review`}>Back to inbox</Mvp3ActionLink>} />
@@ -187,7 +187,7 @@ export function ReviewWorkbenchPage() {
                 <dd>{taskAny.source_context_label ?? "Actual API task context"}</dd>
                 <dt>Evidence state</dt>
                 <dd>
-                  <HanaBadge tone={evidenceState === "PRESENT" ? "success" : "danger"}>{evidenceState}</HanaBadge>
+                  <StatusBadge token={evidenceState} tone={evidenceState === "PRESENT" ? "success" : "danger"} />
                 </dd>
               </KeyValue>
             </EvidencePanel>
@@ -283,7 +283,7 @@ export function ReviewWorkbenchPage() {
                 decisions.map((decision) => (
                   <HistoryItem key={decision.id}>
                     <BadgeRow>
-                      <HanaBadge tone={statusToTone(decision.resulting_review_status)}>{decision.decision}</HanaBadge>
+                      <StatusBadge token={decision.decision} tone={statusToTone(decision.resulting_review_status)} />
                       <span>{formatDateTime(decision.created_at)}</span>
                     </BadgeRow>
                     <strong>{decision.reviewer_display_name ?? decision.reviewer_id}</strong>

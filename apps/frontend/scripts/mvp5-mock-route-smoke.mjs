@@ -57,7 +57,8 @@ try {
   ]);
 
   await assertRoute(page, "/admin/projects", "admin-project-index", [
-    { name: "project index title", run: () => page.getByRole("heading", { name: "Project Admin Index" }).waitFor() },
+    // Wave36 D3: page H1 Koreanized (UIUX_REMEDIATION_DECISIONS §3.2). 1:1 swap.
+    { name: "project index title", run: () => page.getByRole("heading", { name: "프로젝트 관리자 인덱스" }).waitFor() },
     { name: "project contextual link", run: () => page.getByText("Corporate Knowledge Graph").first().waitFor() },
   ]);
 

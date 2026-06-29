@@ -33,6 +33,7 @@ import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard } from "../shared/ui/hana";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { PageState } from "../shared/ui/platform/PageState";
 import { CardBody, KeyValue, Muted, Stack } from "./mvp3Shared";
 import { PageActions } from "./mvp4Shared";
@@ -192,12 +193,11 @@ export function LearningInsightsPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
           { label: "Learning Insights" },
         ]}
       />
-      <PageHeader title="Learning Insights" description={`${projectQuery.data.name} · Active learning recommendation & audit loop`}>
+      <PageHeader title="학습 인사이트" description={`${projectQuery.data.name} · Active learning recommendation & audit loop`}>
         <PageActions>
           <HanaBadge tone="neutral">MVP6.2</HanaBadge>
           <HanaBadge tone="warning">Recommendation only · audit-only</HanaBadge>
@@ -321,7 +321,7 @@ export function LearningInsightsPage() {
                 >
                   <RowHead>
                     <strong>{suggestion.title}</strong>
-                    <HanaBadge tone={stateTone(suggestion.state)}>{suggestion.state}</HanaBadge>
+                    <StatusBadge token={suggestion.state} tone={stateTone(suggestion.state)} />
                   </RowHead>
                   <RowMeta>
                     <HanaBadge tone="neutral">{suggestion.suggestion_kind}</HanaBadge>
@@ -355,7 +355,7 @@ export function LearningInsightsPage() {
                     <HanaBadge tone={riskTone(preview.risk_label)}>{preview.risk_label}</HanaBadge>
                   </RowHead>
                   <RowMeta>
-                    <HanaBadge tone="warning">{preview.preview_status}</HanaBadge>
+                    <StatusBadge token={preview.preview_status} tone="warning" />
                     <span>Not enforced</span>
                   </RowMeta>
                 </QueueRow>
@@ -379,7 +379,7 @@ export function LearningInsightsPage() {
                   <TimelineBody>
                     <RowHead>
                       <strong>{note.suggestion_snapshot.title}</strong>
-                      <HanaBadge tone={stateTone(suggestion.state)}>{suggestion.state}</HanaBadge>
+                      <StatusBadge token={suggestion.state} tone={stateTone(suggestion.state)} />
                     </RowHead>
                     <KeyValue>
                       <dt>Command</dt>
@@ -421,7 +421,7 @@ export function LearningInsightsPage() {
           <ModalCard>
             <ModalHeader>
               <strong>{decisionModal.decision === "ACCEPT" ? "Accept suggestion" : "Dismiss suggestion"}</strong>
-              <HanaBadge tone={stateTone(decisionModal.suggestion.state)}>{decisionModal.suggestion.state}</HanaBadge>
+              <StatusBadge token={decisionModal.suggestion.state} tone={stateTone(decisionModal.suggestion.state)} />
             </ModalHeader>
             <p>{decisionModal.suggestion.title}</p>
             <SafetyBox>
@@ -541,7 +541,7 @@ function SuggestionDetail({
     <DetailPanel>
       <RowHead>
         <strong>{suggestion.title}</strong>
-        <HanaBadge tone={stateTone(suggestion.state)}>{suggestion.state}</HanaBadge>
+        <StatusBadge token={suggestion.state} tone={stateTone(suggestion.state)} />
       </RowHead>
       <BadgeRow>
         <HanaBadge tone="neutral">{suggestion.suggestion_kind}</HanaBadge>
@@ -653,7 +653,7 @@ function AutoApprovalDetail({ preview }: { preview: AutoApprovalCandidatePreview
       </KeyValue>
       {preview.historical_match_preview.outcomes.map((outcome) => (
         <ExampleBox key={`${outcome.artifact_id}-${outcome.outcome}`}>
-          <HanaBadge tone={outcome.outcome === "WOULD_MATCH" ? "success" : "warning"}>{outcome.outcome}</HanaBadge>
+          <StatusBadge token={outcome.outcome} tone={outcome.outcome === "WOULD_MATCH" ? "success" : "warning"} />
           <Muted>{outcome.reason}</Muted>
         </ExampleBox>
       ))}

@@ -28,12 +28,11 @@ export function ExternalApiDocsPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
           { label: "External API" },
         ]}
       />
-      <PageHeader title="External Read-only API" description={`${projectQuery.data.name} · ${versionLabel(docs.published_graph_version_ref)}`}>
+      <PageHeader title="외부 API" description={`${projectQuery.data.name} · ${versionLabel(docs.published_graph_version_ref)}`}>
         <PageActions>
           <StateBadge state={docs.auth_mode} />
           <HanaBadge tone="success">READ ONLY</HanaBadge>

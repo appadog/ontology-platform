@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import styled from "styled-components";
-import { HanaBadge } from "../shared/ui/hana";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import {
   EvaluationDatasetStatus,
   ExternalApiAuthMode,
@@ -77,7 +77,11 @@ export function stateTone(
 }
 
 export function StateBadge({ state }: { state: Parameters<typeof stateTone>[0] }) {
-  return <HanaBadge tone={stateTone(state)}>{state}</HanaBadge>;
+  // D6 (FE6-035): render the state token as the shared StatusBadge (icon +
+  // UPPER_SNAKE token + Korean gloss). Keep the domain-derived tone via the
+  // override so MVP4 state coloring (e.g. ERROR -> danger, ACTIVE -> success)
+  // is preserved; the badge still shows the exact token text.
+  return <StatusBadge token={state} tone={stateTone(state)} />;
 }
 
 export function Mvp4StatePanel({ title, children }: { title: string; children: ReactNode }) {

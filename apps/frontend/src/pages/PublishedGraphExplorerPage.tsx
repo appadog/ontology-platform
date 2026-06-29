@@ -40,12 +40,11 @@ export function PublishedGraphExplorerPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Published graph" },
+          { label: "Published Graph" },
         ]}
       />
-      <PageHeader title="Published Graph Explorer" description={`${versionLabel(graph.published_graph_version_ref)} · published facts only`}>
+      <PageHeader title="게시 그래프 탐색기" description={`${versionLabel(graph.published_graph_version_ref)} · published facts only`}>
         <PageActions>
           <StateBadge state={graph.state} />
           <HanaBadge tone="success">PUBLISHED ONLY</HanaBadge>

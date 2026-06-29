@@ -1,10 +1,11 @@
 import { Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useCreateExtractionJob, useOntologyVersions, usePromptTemplates, usePromptVersions, useSources } from "../shared/api/queries";
+import { useCreateExtractionJob, useOntologyVersions, useProject, usePromptTemplates, usePromptVersions, useSources } from "../shared/api/queries";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, HanaSelect } from "../shared/ui/hana";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { PageState } from "../shared/ui/platform/PageState";
 import { ButtonSlot, Field, FormGrid, InlineList, KeyValueGrid, Mono, MutedText } from "./mvp2Shared";
 
@@ -43,6 +44,7 @@ type FixtureId = (typeof fixtureOptions)[number]["id"];
 
 export function ExtractionJobCreatePage() {
   const { projectId = "" } = useParams();
+  const projectQuery = useProject(projectId);
   const navigate = useNavigate();
   const [sourceId, setSourceId] = useState("");
   const [ontologyVersionId, setOntologyVersionId] = useState("");
@@ -163,9 +165,9 @@ export function ExtractionJobCreatePage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
+          { label: projectQuery.data?.name ?? "프로젝트", to: `/projects/${projectId}` },
           { label: "Extraction", to: `/projects/${projectId}/extraction-jobs` },
-          { label: "추출 작업 만들기" },
+          { label: "새 작업" },
         ]}
       />
       <PageHeader title="추출 작업 만들기" description="Source, Ontology 버전, 프롬프트 버전을 선택해 반복 가능한 Candidate 추출 작업을 만듭니다.">
@@ -261,7 +263,7 @@ export function ExtractionJobCreatePage() {
           <dd>
             <InlineList>
               <HanaBadge tone={selectedFixture.tone}>{selectedFixture.label}</HanaBadge>
-              <HanaBadge tone={selectedFixture.tone}>{selectedFixture.expectedStatus}</HanaBadge>
+              <StatusBadge token={selectedFixture.expectedStatus} tone={selectedFixture.tone} />
               <MutedText>
                 <Mono>{selectedFixture.id}</Mono> · {selectedFixture.summary}
               </MutedText>

@@ -14,7 +14,7 @@ export function AdminProjectsPage() {
   return (
     <>
       <Breadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: "Projects" }]} />
-      <PageHeader title="Project Admin Index" description="Select a project before entering project-scoped admin routes." />
+      <PageHeader title="프로젝트 관리자 인덱스" description="Select a project before entering project-scoped admin routes." />
       <AdminScopeContext project={projectsQuery.data[0]} />
       <AdminTable>
         <table>

@@ -36,7 +36,7 @@ export function ProjectAdminPage() {
   return (
     <div data-testid="mvp5-admin-shell">
       <Breadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: "Projects", to: "/admin/projects" }, { label: project.project_name }]} />
-      <PageHeader title="Project Admin" description="Project-scoped governance, credentials, policy, operations, retention, backup, and audit controls.">
+      <PageHeader title="프로젝트 관리자" description="Project-scoped governance, credentials, policy, operations, retention, backup, and audit controls.">
         <HanaBadge tone={project.permission_summary?.read_only ? "warning" : "success"}>{project.permission_summary?.read_only ? "read-only" : "ADMIN_READY"}</HanaBadge>
       </PageHeader>
       <AdminScopeContext project={project} />

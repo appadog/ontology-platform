@@ -32,12 +32,11 @@ export function PromptPerformancePage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
           { label: "Prompt performance" },
         ]}
       />
-      <PageHeader title="Prompt and Model Performance" description={`${projectQuery.data.name} · generated ${new Date(performanceQuery.data.generated_at).toLocaleString()}`}>
+      <PageHeader title="프롬프트·모델 성능" description={`${projectQuery.data.name} · generated ${new Date(performanceQuery.data.generated_at).toLocaleString()}`}>
         <PageActions>
           <HanaBadge tone="success">COMPARISON</HanaBadge>
           <Mvp3ActionLink to={`/projects/${projectId}/evaluation-datasets`}>Datasets</Mvp3ActionLink>

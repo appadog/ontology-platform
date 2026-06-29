@@ -1,17 +1,19 @@
 import { Play, RotateCcw } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
-import { useExtractionJob, useExtractionJobs, useModelRuns, useRetryExtractionJob, useRunExtractionJob } from "../shared/api/queries";
+import { useExtractionJob, useExtractionJobs, useModelRuns, useProject, useRetryExtractionJob, useRunExtractionJob } from "../shared/api/queries";
 import type { ExtractionJobStatus } from "../shared/api/types";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
 import { ButtonSlot, DataLink, KeyValueGrid, Mono, SecondaryActionLink, TableWrap, WorkflowStage } from "./mvp2Shared";
 
 export function ExtractionJobMonitorPage() {
   const { projectId = "", jobId = "" } = useParams();
+  const projectQuery = useProject(projectId);
   const listQuery = useExtractionJobs(projectId);
   const detailQuery = useExtractionJob(jobId);
   const modelRunsQuery = useModelRuns(jobId);
@@ -46,13 +48,13 @@ export function ExtractionJobMonitorPage() {
       <>
         <Breadcrumbs
           items={[
-            { label: "Projects", to: "/projects" },
+            { label: projectQuery.data?.name ?? "프로젝트", to: `/projects/${activeJob.project_id}` },
             { label: "Extraction", to: `/projects/${activeJob.project_id}/extraction-jobs` },
-            { label: activeJob.id },
+            { label: `작업 #${shortId(activeJob.id)}` },
           ]}
         />
         <PageHeader title="추출 작업 모니터" description="실행 상태와 후보 결과로 이어지는 길을 확인합니다.">
-          <HanaBadge tone={statusToTone(activeJob.status)}>{activeJob.status}</HanaBadge>
+          <StatusBadge token={activeJob.status} tone={statusToTone(activeJob.status)} />
           <ButtonSlot>
             <HanaButton type="button" onClick={() => runJob.mutate()} disabled={runJob.isPending || !canRunJob}>
               <Play aria-hidden="true" />
@@ -134,7 +136,7 @@ export function ExtractionJobMonitorPage() {
                         <Mono>{run.id}</Mono>
                       </td>
                       <td>
-                        <HanaBadge tone={statusToTone(run.status)}>{run.status}</HanaBadge>
+                        <StatusBadge token={run.status} tone={statusToTone(run.status)} />
                       </td>
                       <td>{formatProvider(run.provider)}</td>
                       <td>
@@ -187,7 +189,7 @@ export function ExtractionJobMonitorPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
+          { label: projectQuery.data?.name ?? "프로젝트", to: `/projects/${projectId}` },
           { label: "Extraction" },
         ]}
       />
@@ -228,7 +230,7 @@ export function ExtractionJobMonitorPage() {
                       <DataLink to={`/extraction-jobs/${job.id}`}>{shortId(job.id)}</DataLink>
                     </td>
                     <td>
-                      <HanaBadge tone={statusToTone(job.status)}>{job.status}</HanaBadge>
+                      <StatusBadge token={job.status} tone={statusToTone(job.status)} />
                     </td>
                     <td>{formatProvider(job.provider)}</td>
                     <td>

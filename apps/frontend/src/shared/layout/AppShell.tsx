@@ -1,8 +1,8 @@
 import { PropsWithChildren, useEffect, useMemo } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ChevronDown, CircleUserRound } from "lucide-react";
 import styled from "styled-components";
-import { navigationItems } from "./navigation";
+import { globalNavItems, projectNavGroups, resolveActiveSection, type NavItem } from "./navigation";
 import { useProjects } from "../api/queries";
 import { HanaBadge, HanaSelect, statusToTone } from "../ui/hana";
 
@@ -33,6 +33,31 @@ export function AppShell({ children }: PropsWithChildren) {
     }
   }, [routeProjectId, selectedProject?.id]);
 
+  const activeSection = resolveActiveSection(location.pathname);
+  const projectId = selectedProject?.id;
+  const renderNavItem = (item: NavItem) => {
+    // FE6-037: drive both the visual `.active` class AND `aria-current` from the
+    // single resolved section (resolveActiveSection) so exactly one LNB item is
+    // current. We use a plain Link instead of NavLink because NavLink's built-in
+    // path-prefix matching marks the global `Projects` item (to=/projects)
+    // aria-current on every /projects/:p/... sub-route, and it also overrides any
+    // explicitly-passed aria-current for items whose `to` does not equal the full
+    // pathname (e.g. Candidates -> /extraction-jobs). Computing it ourselves keeps
+    // class + aria-current consistent for every item.
+    const isActive = activeSection === item.section;
+    return (
+      <Link
+        key={item.section}
+        to={item.to(projectId)}
+        aria-current={isActive ? "page" : undefined}
+        className={isActive ? "active" : undefined}
+      >
+        <item.icon aria-hidden="true" />
+        {item.label}
+      </Link>
+    );
+  };
+
   return (
     <Shell>
       <Sidebar>
@@ -41,21 +66,17 @@ export function AppShell({ children }: PropsWithChildren) {
           <span>Data Platform</span>
         </Brand>
         <Nav aria-label="Application navigation">
-          {navigationItems.map((item) => {
-            const path = resolveNavigationPath(item.path, selectedProject?.id);
-
-            return (
-              <NavLink
-                key={item.path}
-                to={path}
-                end={item.path === "/dashboard" || item.path === "/projects"}
-                className={({ isActive }) => (isActive || isNavigationItemActive(item.path, location.pathname) ? "active" : undefined)}
-              >
-                <item.icon aria-hidden="true" />
-                {item.label}
-              </NavLink>
-            );
-          })}
+          {globalNavItems.map(renderNavItem)}
+          {projectId ? (
+            projectNavGroups.map((group) => (
+              <NavGroupBlock key={group.label}>
+                <GroupLabel>{group.label}</GroupLabel>
+                {group.items.map(renderNavItem)}
+              </NavGroupBlock>
+            ))
+          ) : (
+            <ProjectHint role="note">프로젝트를 선택하면 작업 메뉴가 표시됩니다</ProjectHint>
+          )}
         </Nav>
       </Sidebar>
       <MainArea>
@@ -98,49 +119,6 @@ export function AppShell({ children }: PropsWithChildren) {
       </MainArea>
     </Shell>
   );
-}
-
-function resolveNavigationPath(path: string, projectId?: string) {
-  switch (path) {
-    case "/ontology":
-      return projectId ? `/projects/${projectId}/ontology` : "/projects";
-    case "/sources":
-      return projectId ? `/projects/${projectId}/sources` : "/projects";
-    case "/extraction":
-      return projectId ? `/projects/${projectId}/extraction-jobs` : "/projects";
-    case "/candidates":
-      return projectId ? `/projects/${projectId}/extraction-jobs` : "/projects";
-    default:
-      return path;
-  }
-}
-
-function isNavigationItemActive(path: string, pathname: string) {
-  if (path === "/projects") {
-    return /^\/projects\/[^/]+$/.test(pathname);
-  }
-
-  if (path === "/ontology") {
-    return pathname.includes("/ontology");
-  }
-
-  if (path === "/sources") {
-    return pathname.includes("/sources");
-  }
-
-  if (path === "/extraction") {
-    return pathname.includes("/extraction");
-  }
-
-  if (path === "/candidates") {
-    return pathname.includes("/candidates") || pathname.includes("/candidate-evidence");
-  }
-
-  if (path === "/admin") {
-    return pathname.startsWith("/admin") || pathname.includes("/admin");
-  }
-
-  return false;
 }
 
 const Shell = styled.div`
@@ -212,6 +190,50 @@ const Nav = styled.nav`
   }
 
   @media (max-width: 860px) {
+    /* Collapsed top grid: global items + each group's items become a responsive
+       grid; group headers (BUILD/REVIEW/...) still span full width so grouping
+       survives (D1 §1.7). */
+    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+
+    > a {
+      justify-content: center;
+      padding: 0 8px;
+    }
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const NavGroupBlock = styled.div`
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 0 12px;
+    border-radius: ${({ theme }) => theme.radius.sm};
+    color: ${({ theme }) => theme.color.textMuted};
+    font-weight: 800;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &.active {
+      background: ${({ theme }) => theme.color.primarySoft};
+      color: ${({ theme }) => theme.color.primary};
+    }
+  }
+
+  @media (max-width: 860px) {
+    grid-column: 1 / -1;
     grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
 
     a {
@@ -222,6 +244,32 @@ const Nav = styled.nav`
 
   @media (max-width: 560px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const GroupLabel = styled.span`
+  padding: 6px 12px 2px;
+  color: ${({ theme }) => theme.color.textMuted};
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  @media (max-width: 860px) {
+    grid-column: 1 / -1;
+  }
+`;
+
+const ProjectHint = styled.p`
+  margin: 12px 0 0;
+  padding: 0 12px;
+  color: ${({ theme }) => theme.color.textMuted};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  line-height: 1.5;
+
+  @media (max-width: 860px) {
+    grid-column: 1 / -1;
   }
 `;
 
@@ -317,6 +365,13 @@ const Content = styled.main`
   min-width: 0;
   margin: 0 auto;
   padding: 28px;
+
+  /* FE6-036: at very wide viewports raise the max-width so the content does not
+     leave a large empty right gutter (the 1920 alignment issue). Gutters stay
+     symmetric within the content column. */
+  @media (min-width: 1700px) {
+    width: min(1600px, 100%);
+  }
 
   @media (max-width: 760px) {
     padding: 20px 16px;

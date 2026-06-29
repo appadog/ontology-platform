@@ -2,16 +2,18 @@ import { ChangeEvent, useState } from "react";
 import { Upload } from "lucide-react";
 import styled from "styled-components";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useSources, useUploadSource } from "../shared/api/queries";
+import { useProject, useSources, useUploadSource } from "../shared/api/queries";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatBytes, formatDateTime } from "../shared/lib/format";
 import { SourceType } from "../shared/api/types";
 
 export function SourceManagerPage() {
   const { projectId = "" } = useParams();
+  const projectQuery = useProject(projectId);
   const navigate = useNavigate();
   const { data: sources, isLoading, isError, refetch } = useSources(projectId);
   const uploadSource = useUploadSource(projectId);
@@ -73,12 +75,11 @@ export function SourceManagerPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
-          { label: "Project", to: `/projects/${projectId}` },
+          { label: projectQuery.data?.name ?? "프로젝트", to: `/projects/${projectId}` },
           { label: "Sources" },
         ]}
       />
-      <PageHeader title="Sources" description="프로젝트의 CSV, Excel, PDF, TXT 원천 데이터 상태와 다음 처리 단계를 확인합니다.">
+      <PageHeader title="소스" description="프로젝트의 CSV, Excel, PDF, TXT 원천 데이터 상태와 다음 처리 단계를 확인합니다.">
         <HanaButton variant="primary" type="button" disabled={!canUpload} onClick={handleUpload}>
           <Upload aria-hidden="true" />
           {uploadSource.isPending ? "업로드 중" : "Source 업로드"}
@@ -146,10 +147,10 @@ export function SourceManagerPage() {
                       <HanaBadge tone="neutral">{source.source_type}</HanaBadge>
                     </td>
                     <td>
-                      <HanaBadge tone={statusToTone(source.status)}>{source.status}</HanaBadge>
+                      <StatusBadge token={source.status} tone={statusToTone(source.status)} />
                     </td>
                     <td>
-                      <HanaBadge tone={statusToTone(source.preview_status)}>{source.preview_status}</HanaBadge>
+                      <StatusBadge token={source.preview_status} tone={statusToTone(source.preview_status)} />
                     </td>
                     <td>
                       <SourceLink to={`/projects/${projectId}/sources/${source.id}`}>

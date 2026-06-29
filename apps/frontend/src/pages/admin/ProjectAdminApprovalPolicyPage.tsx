@@ -39,7 +39,7 @@ export function ProjectAdminApprovalPolicyPage() {
   return (
     <>
       <Breadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: projectQuery.data.project_name, to: `/projects/${projectId}/admin` }, { label: "Approval policy" }]} />
-      <PageHeader title="Automatic Approval Policy" description="Dry-run is separate from enforce preview and cannot bypass review or publish gates.">
+      <PageHeader title="자동 승인 정책" description="Dry-run is separate from enforce preview and cannot bypass review or publish gates.">
         <HanaBadge tone="warning">{policyQuery.data.mode}</HanaBadge>
       </PageHeader>
       <AdminScopeContext project={projectQuery.data} />

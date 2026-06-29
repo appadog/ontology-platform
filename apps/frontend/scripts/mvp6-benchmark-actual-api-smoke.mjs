@@ -152,7 +152,8 @@ try {
   if (!response?.ok()) {
     throw new Error(`Route ${path} failed: ${response?.status() ?? "no response"}`);
   }
-  await page.getByRole("heading", { name: "Benchmark Comparison" }).waitFor();
+  // Wave36 D3: page H1 Koreanized (UIUX_REMEDIATION_DECISIONS section 3.2). 1:1 swap.
+  await page.getByRole("heading", { name: "벤치마크 비교" }).waitFor();
   await page.getByRole("heading", { name: "Select runs to compare" }).waitFor();
   await screenshot(page, "benchmark-actual-builder");
 

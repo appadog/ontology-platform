@@ -38,7 +38,7 @@ export function ProjectAdminRetentionBackupPage() {
   return (
     <>
       <Breadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: projectQuery.data.project_name, to: `/projects/${projectId}/admin` }, { label: "Retention and backup" }]} />
-      <PageHeader title="Retention and Backup Governance" description="Deletion and restore remain dry-run-first with confirmation and audit preview." />
+      <PageHeader title="보존 및 백업 거버넌스" description="Deletion and restore remain dry-run-first with confirmation and audit preview." />
       <AdminScopeContext project={projectQuery.data} />
       <ProjectAdminTabs projectId={projectId} />
       <AdminPanel data-testid="mvp5-retention-policy-table">

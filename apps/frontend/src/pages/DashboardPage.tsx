@@ -1,14 +1,37 @@
 import styled from "styled-components";
 import { PageHeader } from "../shared/layout/PageHeader";
-import { useDashboardSummary } from "../shared/api/queries";
+import { useDashboardSummary, useProjects } from "../shared/api/queries";
 import { PageState } from "../shared/ui/platform/PageState";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
 import { HanaCard } from "../shared/ui/hana";
-import { ActionLink, SecondaryActionLink, WorkflowStage } from "./mvp2Shared";
+import { ActionLink, SecondaryActionLink } from "./mvp2Shared";
+
+const recentProjectStorageKey = "ontology-platform:recent-project-id";
+
+// D2 (docs/pm/UIUX_REMEDIATION_DECISIONS.md §2): frozen Hero copy.
+const heroValuePoints = [
+  {
+    lead: "후보와 게시를 분리합니다",
+    body: "추출 결과는 후보 그래프에 먼저 쌓이고, 검수를 통과한 항목만 게시 그래프로 올라갑니다.",
+  },
+  {
+    lead: "모든 항목에 근거가 남습니다",
+    body: "엔티티·관계·속성마다 원천 문서 근거를 연결해 추적과 감사가 가능합니다.",
+  },
+  {
+    lead: "품질과 개선을 함께 추적합니다",
+    body: "품질 지표, 벤치마크 비교, 학습 인사이트로 추출·검수 품질을 지속적으로 개선합니다.",
+  },
+];
 
 export function DashboardPage() {
   const { data, isLoading, isError, refetch } = useDashboardSummary();
+  const { data: projects = [] } = useProjects();
+
+  const recentProjectId = typeof window === "undefined" ? "" : window.localStorage.getItem(recentProjectStorageKey) ?? "";
+  const recentProject = projects.find((project) => project.id === recentProjectId) ?? projects[0];
 
   if (isLoading) {
     return <PageState kind="loading" title="대시보드를 불러오는 중" description="프로젝트와 최근 작업 상태를 준비하고 있습니다." />;
@@ -28,9 +51,25 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="Dashboard" description="프로젝트, 원천 데이터, 온톨로지 draft 상태를 빠르게 확인합니다.">
-        <ActionLink to="/projects">Projects 열기</ActionLink>
-      </PageHeader>
+      <PageHeader title="대시보드" description="프로젝트, 원천 데이터, 온톨로지 draft 상태를 빠르게 확인합니다." />
+      <Hero aria-label="제품 소개">
+        <HeroHeadline>문서에서 추출한 지식을 검수·게시하고, 품질을 추적하는 온톨로지 운영 플랫폼</HeroHeadline>
+        <HeroSubline>
+          LLM 추출 결과를 바로 쓰지 않고 후보 단계에서 검증한 뒤 게시해, 근거가 남는 신뢰할 수 있는 지식 그래프를 만듭니다.
+        </HeroSubline>
+        <ValuePoints>
+          {heroValuePoints.map((point) => (
+            <ValuePoint key={point.lead}>
+              <strong>{point.lead}</strong>
+              <span>{point.body}</span>
+            </ValuePoint>
+          ))}
+        </ValuePoints>
+        <HeroActions>
+          <ActionLink to="/projects">프로젝트 시작하기</ActionLink>
+          {recentProject ? <SecondaryActionLink to={`/projects/${recentProject.id}`}>최근 프로젝트 열기</SecondaryActionLink> : null}
+        </HeroActions>
+      </Hero>
       <MetricGrid>
         <MetricCard label="Active Projects" value={data.active_project_count}>
           운영 중인 작업 공간
@@ -45,8 +84,7 @@ export function DashboardPage() {
           초안 relation 정의
         </MetricCard>
       </MetricGrid>
-      <WorkflowStage current="Project" action={<SecondaryActionLink to="/projects">Project 선택</SecondaryActionLink>} />
-      <HanaCard title="Recent activity" description="최근 프로젝트와 원천 데이터 작업을 확인합니다.">
+      <HanaCard title="최근 활동" description="최근 프로젝트와 원천 데이터 작업을 확인합니다.">
         <ActivityList>
           {data.recent_activity.length === 0 ? (
             <PageState
@@ -61,7 +99,10 @@ export function DashboardPage() {
           ) : (
             data.recent_activity.map((activity) => (
               <li key={activity.id}>
-                <span>{activity.label}</span>
+                <ActivityMain>
+                  <span>{activity.label}</span>
+                  {activity.status ? <StatusBadge token={activity.status} /> : null}
+                </ActivityMain>
                 <time dateTime={activity.timestamp}>{formatDateTime(activity.timestamp)}</time>
               </li>
             ))
@@ -70,11 +111,86 @@ export function DashboardPage() {
       </HanaCard>
       <Notice>
         <span>새 작업 공간이 필요하신가요?</span>
-        <SecondaryActionLink to="/projects">Project 만들기 또는 선택</SecondaryActionLink>
+        <SecondaryActionLink to="/projects">프로젝트 만들기 또는 선택</SecondaryActionLink>
       </Notice>
     </>
   );
 }
+
+const Hero = styled.section`
+  display: grid;
+  gap: 16px;
+  padding: 28px;
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  box-shadow: ${({ theme }) => theme.shadow.soft};
+
+  @media (max-width: 760px) {
+    padding: 20px;
+  }
+`;
+
+const HeroHeadline = styled.h2`
+  margin: 0;
+  max-width: 880px;
+  font-size: 26px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+
+  @media (max-width: 760px) {
+    font-size: 22px;
+  }
+`;
+
+const HeroSubline = styled.p`
+  margin: 0;
+  max-width: 880px;
+  color: ${({ theme }) => theme.color.textMuted};
+  font-size: ${({ theme }) => theme.typography.fontSize.md};
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+`;
+
+const ValuePoints = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 4px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ValuePoint = styled.div`
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.color.surface};
+
+  strong {
+    color: ${({ theme }) => theme.color.text};
+    overflow-wrap: anywhere;
+  }
+
+  span {
+    color: ${({ theme }) => theme.color.textMuted};
+    font-size: ${({ theme }) => theme.typography.fontSize.sm};
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+`;
+
+const HeroActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+`;
 
 const MetricGrid = styled.div`
   display: grid;
@@ -110,10 +226,6 @@ const ActivityList = styled.ul`
     }
   }
 
-  span {
-    font-weight: 700;
-  }
-
   time {
     color: ${({ theme }) => theme.color.textMuted};
     white-space: nowrap;
@@ -125,6 +237,19 @@ const ActivityList = styled.ul`
       flex-direction: column;
       gap: 6px;
     }
+  }
+`;
+
+const ActivityMain = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+
+  span {
+    font-weight: 700;
+    overflow-wrap: anywhere;
   }
 `;
 

@@ -50,7 +50,7 @@ export function ProjectAdminImportExportPage() {
   return (
     <>
       <Breadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: project.project_name, to: `/projects/${projectId}/admin` }, { label: "Import/export" }]} />
-      <PageHeader title="Ontology Import/export" description="JSON export and import dry-run preview. Import apply is not available in Wave26.">
+      <PageHeader title="Ontology 가져오기/내보내기" description="JSON export and import dry-run preview. Import apply is not available in Wave26.">
         <HanaBadge tone="warning">Dry-run only</HanaBadge>
         <HanaBadge tone="neutral">JSON P0</HanaBadge>
       </PageHeader>

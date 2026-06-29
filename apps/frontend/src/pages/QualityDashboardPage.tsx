@@ -1,10 +1,11 @@
 import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
 import { useProject, useQualityMetrics, useQualitySummary } from "../shared/api/queries";
-import { QualityMetric, QualitySummary } from "../shared/api/types";
+import { QualityMetric, QualityMetricGroup, QualityMetricsResponse, QualitySummary } from "../shared/api/types";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaCard } from "../shared/ui/hana";
+import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { PageState } from "../shared/ui/platform/PageState";
 import { formatDateTime } from "../shared/lib/format";
 import { CardBody, CompactTable, KeyValue, Mvp3ActionLink, Muted, Mvp3Workflow, Stack } from "./mvp3Shared";
@@ -51,12 +52,11 @@ export function QualityDashboardPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Projects", to: "/projects" },
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Quality dashboard" },
+          { label: "Quality" },
         ]}
       />
-      <PageHeader title="Quality Dashboard" description={`${versionLabel(metrics.published_graph_version_ref)} · ${formatDateTime(metrics.generated_at)}`}>
+      <PageHeader title="품질 대시보드" description={`${versionLabel(metrics.published_graph_version_ref)} · ${formatDateTime(metrics.generated_at)}`}>
         <PageActions>
           <HanaBadge tone="success">METRIC GROUPS</HanaBadge>
           <HanaBadge tone="muted">NO COMPOSITE SCORE</HanaBadge>
@@ -66,7 +66,8 @@ export function QualityDashboardPage() {
       </PageHeader>
 
       <Mvp3Workflow current="Quality" />
-      <LegacyQualitySummary summary={summaryQuery.data} />
+
+      <QualitySummaryStrip summary={summaryQuery.data} metrics={metrics} />
 
       <QualityContext>
         <Mvp4StatePanel title="Project context">
@@ -93,6 +94,10 @@ export function QualityDashboardPage() {
                     <span>{metric.label}</span>
                     <small>{metric.trend === null || metric.trend === undefined ? "Trend unavailable" : `Trend ${pct(metric.trend)}`}</small>
                     {metric.published_graph_version_ref?.is_current === false ? <HanaBadge tone="warning">SELECTED VERSION</HanaBadge> : null}
+                    {/* D5: per-metric numerator/denominator/formula trust
+                        context — the explainable evidence the product promotes.
+                        Kept visible beneath the always-visible summary strip;
+                        the strip is the at-a-glance layer above it. */}
                     <MetricTrustContext metric={metric} />
                     {metric.drilldown ? <DrilldownLink to={drilldownPath(projectId, metric.drilldown.target)}>{metric.drilldown.label ?? "Open drilldown"}</DrilldownLink> : null}
                   </MetricItem>
@@ -132,9 +137,68 @@ export function QualityDashboardPage() {
           </CompactTable>
         </HanaCard>
       </FormulaGrid>
+
+      <CollapseSection>
+        <summary>MVP3 candidate / validation / review / publish summary</summary>
+        <LegacyQualitySummary summary={summaryQuery.data} />
+      </CollapseSection>
     </>
   );
 }
+
+// D5 §5.1: the always-visible top summary strip. Five items in order:
+// 1) published-graph readiness / freshness, 2) Completeness, 3) Consistency,
+// 4) Traceability (evidence coverage — the product differentiator), 5)
+// Validation pass rate. Each shows the measured value or an explicit
+// NOT_AVAILABLE state (no fake zero).
+function QualitySummaryStrip({ summary, metrics }: { summary: QualitySummary; metrics: QualityMetricsResponse }) {
+  const headlineRate = (group: QualityMetricGroup) => {
+    const g = metrics.metric_groups.find((mg) => mg.group === group);
+    const m = g?.metrics?.[0];
+    if (!m || (m.value === null && m.rate === null)) {
+      return null;
+    }
+    return valueLabel(m.value ?? null, m.rate ?? null);
+  };
+
+  const completeness = headlineRate("COMPLETENESS");
+  const consistency = headlineRate("CONSISTENCY");
+  const traceability = headlineRate("TRACEABILITY");
+
+  const passed = summary.validation_counts.passed.value;
+  const warning = summary.validation_counts.warning?.value ?? 0;
+  const failed = summary.validation_counts.failed.value;
+
+  const readinessTone = failed > 0 ? "danger" : warning > 0 ? "warning" : "success";
+  const readinessToken = failed > 0 ? "FAILED" : warning > 0 ? "WARNING" : "PUBLISHED";
+
+  return (
+    <SummaryStrip aria-label="Quality summary">
+      <SummaryItem>
+        <SummaryLabel>게시 그래프 상태</SummaryLabel>
+        <StatusBadge token={readinessToken} tone={readinessTone} />
+        <SummaryMeta>{versionLabel(metrics.published_graph_version_ref)} · {formatDateTime(metrics.generated_at)}</SummaryMeta>
+      </SummaryItem>
+      <SummaryItem>
+        <SummaryLabel>완전성 (Completeness)</SummaryLabel>
+        {completeness ? <SummaryValue>{completeness}</SummaryValue> : <HanaBadge tone="muted">NOT_AVAILABLE</HanaBadge>}
+      </SummaryItem>
+      <SummaryItem>
+        <SummaryLabel>일관성 (Consistency)</SummaryLabel>
+        {consistency ? <SummaryValue>{consistency}</SummaryValue> : <HanaBadge tone="muted">NOT_AVAILABLE</HanaBadge>}
+      </SummaryItem>
+      <SummaryItem>
+        <SummaryLabel>추적성 (Traceability)</SummaryLabel>
+        {traceability ? <SummaryValue>{traceability}</SummaryValue> : <HanaBadge tone="muted">NOT_AVAILABLE</HanaBadge>}
+      </SummaryItem>
+      <SummaryItem>
+        <SummaryLabel>검증 통과율 (Validation)</SummaryLabel>
+        <SummaryMeta>통과 {passed} · 경고 {warning} · 실패 {failed}</SummaryMeta>
+      </SummaryItem>
+    </SummaryStrip>
+  );
+}
+
 
 function LegacyQualitySummary({ summary }: { summary: QualitySummary }) {
   return (
@@ -252,6 +316,63 @@ function drilldownPath(projectId: string, target: string) {
   }
   return `/projects/${projectId}/published-graph`;
 }
+
+const SummaryStrip = styled.section`
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.lg};
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  box-shadow: ${({ theme }) => theme.shadow.soft};
+
+  @media (max-width: 980px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const SummaryItem = styled.div`
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-width: 0;
+`;
+
+const SummaryLabel = styled.span`
+  color: ${({ theme }) => theme.color.textMuted};
+  font-size: ${({ theme }) => theme.typography.fontSize.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+`;
+
+const SummaryValue = styled.strong`
+  font-size: ${({ theme }) => theme.typography.fontSize.xl};
+`;
+
+const SummaryMeta = styled.span`
+  color: ${({ theme }) => theme.color.textMuted};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  overflow-wrap: anywhere;
+`;
+
+const CollapseSection = styled.details`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.md};
+
+  > summary {
+    cursor: pointer;
+    padding: ${({ theme }) => theme.spacing.md} 0;
+    color: ${({ theme }) => theme.color.text};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  }
+`;
 
 const QualityContext = styled.div`
   display: grid;
