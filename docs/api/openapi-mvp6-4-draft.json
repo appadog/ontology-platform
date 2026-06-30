@@ -1,0 +1,2673 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP6.4 Gold Set Authoring Planning API",
+    "description": "Planning-only OpenAPI artifact for MVP6.4 Gold Set authoring + dataset revisioning. Expert-owned, candidate/analysis-layer authoring over closed MVP6.1 evaluation datasets. Additive; does not replace any prior MVP1-MVP6.3 OpenAPI draft. Wave39 contract-first planning only: no runtime code, models, migrations, or tests. Reuses MVP6.1 EvaluationDataset/EvaluationSample/GoldEntity/GoldRelation/GoldEvidenceRef shapes (mirrored here, not renamed). Frozen by docs/pm/MVP6_4_GOLD_SET_AUTHORING_BRIEF.md and docs/adr/0011.",
+    "version": "0.6.4-draft"
+  },
+  "tags": [
+    {
+      "name": "MVP6.4 Gold Set Authoring",
+      "description": "Additive expert-owned gold-set authoring + dataset revisioning over MVP6.1 evaluation datasets. Every authoring/import response carries an all-false GoldAuthoringMutationGuard; runs are never re-pinned; FROZEN revisions are immutable; gold items/evidence are archived, never hard-deleted."
+    }
+  ],
+  "paths": {
+    "/api/v1/projects/{project_id}/evaluation-datasets/{dataset_id}/authoring": {
+      "get": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Open a dataset as owner (authoring overview)",
+        "description": "Authoring overview: active revision, gold status counts, run-pin summary, capabilities. All-false mutation guard.",
+        "operationId": "getDatasetAuthoringOverview",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/GoldItemStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authoring overview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetAuthoringOverview"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-datasets/{dataset_id}/gold-entities/{gold_entity_id}": {
+      "patch": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Edit a gold entity",
+        "description": "Edit a gold entity (label, normalized_value, ontology_class_id, embedded evidence). Records an EDIT audit entry. Rejected if the item belongs to a FROZEN revision.",
+        "operationId": "editGoldEntity",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          },
+          {
+            "$ref": "#/components/parameters/GoldEntityId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoldEntityEditRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gold entity edited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldEntityMutationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Gold item immutable / invalid transition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-datasets/{dataset_id}/gold-entities/{gold_entity_id}/archive": {
+      "post": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Archive a gold entity",
+        "description": "Soft-archive a gold entity (GoldItemStatus.ARCHIVED). Never hard-deletes; retained for traceability.",
+        "operationId": "archiveGoldEntity",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          },
+          {
+            "$ref": "#/components/parameters/GoldEntityId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoldItemArchiveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gold entity archived",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldEntityMutationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Gold item immutable / invalid transition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-datasets/{dataset_id}/gold-entities/{gold_entity_id}/restore": {
+      "post": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Restore an archived gold entity",
+        "description": "Restore a previously archived gold entity (owner-reversible).",
+        "operationId": "restoreGoldEntity",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          },
+          {
+            "$ref": "#/components/parameters/GoldEntityId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gold entity restored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldEntityMutationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Gold item invalid transition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-datasets/{dataset_id}/gold-relations/{gold_relation_id}": {
+      "patch": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Edit a gold relation",
+        "description": "Edit a gold relation (ontology_relation_id, endpoints, embedded evidence). Records an EDIT audit entry. Rejected if the item belongs to a FROZEN revision.",
+        "operationId": "editGoldRelation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          },
+          {
+            "$ref": "#/components/parameters/GoldRelationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoldRelationEditRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gold relation edited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldRelationMutationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Gold item immutable / invalid transition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-datasets/{dataset_id}/gold-relations/{gold_relation_id}/archive": {
+      "post": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Archive a gold relation",
+        "description": "Soft-archive a gold relation. Never hard-deletes; retained for traceability.",
+        "operationId": "archiveGoldRelation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          },
+          {
+            "$ref": "#/components/parameters/GoldRelationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoldItemArchiveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gold relation archived",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldRelationMutationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Gold item immutable / invalid transition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-datasets/{dataset_id}/gold-relations/{gold_relation_id}/restore": {
+      "post": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Restore an archived gold relation",
+        "description": "Restore a previously archived gold relation (owner-reversible).",
+        "operationId": "restoreGoldRelation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          },
+          {
+            "$ref": "#/components/parameters/GoldRelationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gold relation restored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldRelationMutationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Gold item invalid transition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-datasets/{dataset_id}/gold-evidence": {
+      "post": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Attach standalone gold evidence",
+        "description": "Attach a first-class GoldEvidence object to a gold item (EVIDENCE_ATTACH). Rejected if target belongs to a FROZEN revision.",
+        "operationId": "attachGoldEvidence",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoldEvidenceAttachRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Gold evidence attached",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldEvidenceMutationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Gold item immutable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "List standalone gold evidence",
+        "description": "List standalone GoldEvidence objects in the dataset.",
+        "operationId": "listGoldEvidence",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/GoldItemStatus"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gold evidence list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldEvidenceListResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/gold-evidence/{evidence_id}": {
+      "get": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Retrieve gold evidence",
+        "description": "Retrieve one standalone GoldEvidence object.",
+        "operationId": "getGoldEvidence",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EvidenceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gold evidence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldEvidence"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Edit gold evidence",
+        "description": "Edit a standalone GoldEvidence object (EVIDENCE_EDIT; locator/offsets/quote/source). Rejected if target belongs to a FROZEN revision.",
+        "operationId": "editGoldEvidence",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EvidenceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoldEvidenceEditRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gold evidence edited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldEvidenceMutationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Gold item immutable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/gold-evidence/{evidence_id}/archive": {
+      "post": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Archive gold evidence",
+        "description": "Soft-archive a standalone GoldEvidence object. Never hard-deletes.",
+        "operationId": "archiveGoldEvidence",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EvidenceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoldItemArchiveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gold evidence archived",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldEvidenceMutationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Gold item immutable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-datasets/{dataset_id}/revisions": {
+      "post": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Cut a new dataset revision",
+        "description": "Snapshot current samples + gold items into a new revision (REVISION_CUT). With activate=true the new revision becomes ACTIVE and the prior ACTIVE is FROZEN. Never rewrites any EvaluationRun.dataset_version_id.",
+        "operationId": "cutDatasetRevision",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetRevisionCutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Revision cut",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetRevisionMutationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dataset archived",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "List dataset revisions",
+        "description": "List revisions with status, counts, run-pin count, and frozen reason.",
+        "operationId": "listDatasetRevisions",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          },
+          {
+            "name": "revision_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DatasetRevisionStatus"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revision list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetRevisionListResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dataset-revisions/{revision_id}": {
+      "get": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Retrieve a dataset revision",
+        "description": "Retrieve one revision (snapshot summary, immutability, pinned-run refs).",
+        "operationId": "getDatasetRevision",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RevisionId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetRevision"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dataset-revisions/{revision_id}/activate": {
+      "post": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Activate a dataset revision",
+        "description": "Activate a DRAFT revision as the dataset's ACTIVE (REVISION_ACTIVATE); freezes the prior ACTIVE. At most one ACTIVE per dataset.",
+        "operationId": "activateDatasetRevision",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RevisionId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revision activated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetRevisionMutationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision not DRAFT / frozen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dataset-revisions/{revision_id}/export": {
+      "get": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Export a revision as a JSON bundle",
+        "description": "Read-only single-revision JSON snapshot (samples + gold items + evidence). No prompts, candidates, published graph, or secrets.",
+        "operationId": "exportDatasetRevision",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RevisionId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Export bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldSetExportBundle"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/gold-set-imports": {
+      "post": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Dry-run a gold-set bundle import",
+        "description": "Dry-run a bundle import: returns a GoldSetImportCompatibility report. Mutates nothing.",
+        "operationId": "dryRunGoldSetImport",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoldSetImportDryRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Import compatibility report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldSetImportReport"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/gold-set-imports/{import_id}/confirm": {
+      "post": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "Confirm a gold-set import",
+        "description": "Confirm a dry-run with a chosen GoldSetImportStrategy (IMPORT). Always creates a new dataset or new revision; never edits a FROZEN revision; never auto-merges; INCOMPATIBLE is blocked.",
+        "operationId": "confirmGoldSetImport",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ImportId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoldSetImportConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Import confirmed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldSetImportConfirmResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Incompatible / strategy required / warnings not acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evaluation-datasets/{dataset_id}/authoring-audit": {
+      "get": {
+        "tags": [
+          "MVP6.4 Gold Set Authoring"
+        ],
+        "summary": "List authoring audit entries",
+        "description": "List GoldAuthoringAuditEntry rows (actor, action, target ids, before/after, reason, timestamp). Read-only.",
+        "operationId": "listGoldAuthoringAudit",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/GoldAuthoringAction"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldAuthoringAuditListResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (authoring is expert-owner/admin only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ProjectId": {
+        "name": "project_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Project id"
+      },
+      "DatasetId": {
+        "name": "dataset_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Evaluation dataset id"
+      },
+      "RevisionId": {
+        "name": "revision_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Dataset revision id"
+      },
+      "GoldEntityId": {
+        "name": "gold_entity_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Gold entity id"
+      },
+      "GoldRelationId": {
+        "name": "gold_relation_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Gold relation id"
+      },
+      "EvidenceId": {
+        "name": "evidence_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Standalone gold evidence id"
+      },
+      "ImportId": {
+        "name": "import_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Gold-set import dry-run id"
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 50,
+          "maximum": 100
+        },
+        "description": "Page size (default 50, max 100)"
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Opaque pagination cursor"
+      }
+    },
+    "schemas": {
+      "GoldItemStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "ACTIVE",
+          "ARCHIVED"
+        ]
+      },
+      "DatasetRevisionStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "ACTIVE",
+          "FROZEN",
+          "ARCHIVED"
+        ]
+      },
+      "GoldAuthoringAction": {
+        "type": "string",
+        "enum": [
+          "CREATE",
+          "EDIT",
+          "ARCHIVE",
+          "RESTORE",
+          "EVIDENCE_ATTACH",
+          "EVIDENCE_EDIT",
+          "REVISION_CUT",
+          "REVISION_ACTIVATE",
+          "IMPORT"
+        ]
+      },
+      "GoldSetImportCompatibility": {
+        "type": "string",
+        "enum": [
+          "COMPATIBLE",
+          "WARNING",
+          "CONFLICT",
+          "INCOMPATIBLE"
+        ]
+      },
+      "GoldSetImportStrategy": {
+        "type": "string",
+        "enum": [
+          "CREATE_NEW_DATASET",
+          "NEW_REVISION_OF_EXISTING"
+        ]
+      },
+      "RevisionFrozenReason": {
+        "type": "string",
+        "enum": [
+          "NEWER_REVISION_ACTIVATED",
+          "PINNED_BY_RUN"
+        ]
+      },
+      "AuditTargetKind": {
+        "type": "string",
+        "enum": [
+          "GOLD_ENTITY",
+          "GOLD_RELATION",
+          "GOLD_EVIDENCE",
+          "DATASET_REVISION",
+          "DATASET"
+        ]
+      },
+      "GoldAuthoringMutationGuard": {
+        "type": "object",
+        "properties": {
+          "published_graph_mutated": {
+            "type": "boolean",
+            "const": false
+          },
+          "candidate_graph_mutated": {
+            "type": "boolean",
+            "const": false
+          },
+          "prompt_version_mutated": {
+            "type": "boolean",
+            "const": false
+          },
+          "ontology_definition_mutated": {
+            "type": "boolean",
+            "const": false
+          },
+          "extraction_job_started": {
+            "type": "boolean",
+            "const": false
+          },
+          "evaluation_run_started": {
+            "type": "boolean",
+            "const": false
+          },
+          "prior_run_pin_rewritten": {
+            "type": "boolean",
+            "const": false
+          }
+        },
+        "required": [
+          "published_graph_mutated",
+          "candidate_graph_mutated",
+          "prompt_version_mutated",
+          "ontology_definition_mutated",
+          "extraction_job_started",
+          "evaluation_run_started",
+          "prior_run_pin_rewritten"
+        ]
+      },
+      "GoldAuthoringCapabilities": {
+        "type": "object",
+        "properties": {
+          "can_view": {
+            "type": "boolean"
+          },
+          "can_edit_gold_item": {
+            "type": "boolean"
+          },
+          "can_archive_gold_item": {
+            "type": "boolean"
+          },
+          "can_author_evidence": {
+            "type": "boolean"
+          },
+          "can_cut_revision": {
+            "type": "boolean"
+          },
+          "can_activate_revision": {
+            "type": "boolean"
+          },
+          "can_import": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "can_view"
+        ]
+      },
+      "GoldEvidenceRef": {
+        "type": "object",
+        "properties": {
+          "sample_id": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "source_segment_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "locator": {
+            "type": "string",
+            "nullable": true
+          },
+          "offset_start": {
+            "type": "integer",
+            "nullable": true
+          },
+          "offset_end": {
+            "type": "integer",
+            "nullable": true
+          },
+          "quote": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "sample_id"
+        ],
+        "description": "Reused verbatim from MVP6.1 (apps/backend/app/modules/evaluation/schemas.py). Mirrored here so this planning artifact is standalone; field names are not renamed."
+      },
+      "EvaluationSample": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "sample_kind": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "source_segment_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "source_locator": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "content_text": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "dataset_id",
+          "sample_kind",
+          "created_at"
+        ],
+        "description": "Reused verbatim from MVP6.1. Mirrored for a standalone artifact; not redefined/renamed."
+      },
+      "EvaluationDataset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "sample_count": {
+            "type": "integer"
+          },
+          "gold_entity_count": {
+            "type": "integer"
+          },
+          "gold_relation_count": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "owner_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "active_version_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "name",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "description": "Reused verbatim from MVP6.1. owner_id = enforced expert owner; active_version_id = FK to ACTIVE DatasetRevision."
+      },
+      "GoldEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "sample_id": {
+            "type": "string"
+          },
+          "ontology_class_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "normalized_value": {
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/GoldEvidenceRef"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "dataset_id",
+          "sample_id",
+          "ontology_class_id",
+          "label",
+          "normalized_value",
+          "evidence",
+          "created_at"
+        ],
+        "description": "Reused verbatim from MVP6.1; field names unchanged."
+      },
+      "GoldRelation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "sample_id": {
+            "type": "string"
+          },
+          "ontology_relation_id": {
+            "type": "string"
+          },
+          "source_gold_entity_id": {
+            "type": "string"
+          },
+          "target_gold_entity_id": {
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/GoldEvidenceRef"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "dataset_id",
+          "sample_id",
+          "ontology_relation_id",
+          "source_gold_entity_id",
+          "target_gold_entity_id",
+          "evidence",
+          "created_at"
+        ],
+        "description": "Reused verbatim from MVP6.1; field names unchanged."
+      },
+      "GoldItemAuthoringOverlay": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/GoldItemStatus"
+          },
+          "revision_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "evidence_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "archived_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "description": "Additive, optional read-only overlay fields on MVP6.1 GoldEntity/GoldRelation. No MVP6.1 field is renamed."
+      },
+      "GoldEntityAuthoringView": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/GoldEntity"
+          },
+          {
+            "$ref": "#/components/schemas/GoldItemAuthoringOverlay"
+          }
+        ],
+        "description": "MVP6.1 GoldEntity + additive authoring overlay (status/revision_id/evidence_id/updated_at/archived_at)."
+      },
+      "GoldRelationAuthoringView": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/GoldRelation"
+          },
+          {
+            "$ref": "#/components/schemas/GoldItemAuthoringOverlay"
+          }
+        ],
+        "description": "MVP6.1 GoldRelation + additive authoring overlay."
+      },
+      "GoldEvidence": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "revision_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "gold_entity_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "gold_relation_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/GoldItemStatus"
+          },
+          "sample_id": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "source_segment_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "locator": {
+            "type": "string",
+            "nullable": true
+          },
+          "offset_start": {
+            "type": "integer",
+            "nullable": true
+          },
+          "offset_end": {
+            "type": "integer",
+            "nullable": true
+          },
+          "quote": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "archived_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "dataset_id",
+          "status",
+          "sample_id",
+          "created_at"
+        ],
+        "description": "First-class standalone evidence object: GoldEvidenceRef fields (not renamed) + id + lifecycle + target gold item ref (gold_entity_id XOR gold_relation_id)."
+      },
+      "RunRevisionPin": {
+        "type": "object",
+        "properties": {
+          "run_id": {
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "revision_status": {
+            "$ref": "#/components/schemas/DatasetRevisionStatus"
+          },
+          "pin_immutable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "run_id",
+          "pin_immutable"
+        ],
+        "description": "Proves run->revision reproducibility. EvaluationRun.dataset_version_id is never rewritten."
+      },
+      "DatasetRevision": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "revision_number": {
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DatasetRevisionStatus"
+          },
+          "is_immutable": {
+            "type": "boolean"
+          },
+          "frozen_reason": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RevisionFrozenReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sample_count": {
+            "type": "integer"
+          },
+          "gold_entity_count": {
+            "type": "integer"
+          },
+          "gold_relation_count": {
+            "type": "integer"
+          },
+          "gold_evidence_count": {
+            "type": "integer"
+          },
+          "pinned_run_count": {
+            "type": "integer"
+          },
+          "parent_revision_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "activated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "frozen_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "created_by": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "dataset_id",
+          "project_id",
+          "revision_number",
+          "status",
+          "is_immutable",
+          "sample_count",
+          "gold_entity_count",
+          "gold_relation_count",
+          "created_at"
+        ]
+      },
+      "DatasetRevisionSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "revision_number": {
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DatasetRevisionStatus"
+          },
+          "is_immutable": {
+            "type": "boolean"
+          },
+          "frozen_reason": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RevisionFrozenReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pinned_run_count": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "dataset_id",
+          "revision_number",
+          "status",
+          "is_immutable",
+          "created_at"
+        ]
+      },
+      "GoldEntityEditRequest": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "normalized_value": {
+            "type": "string"
+          },
+          "ontology_class_id": {
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/GoldEvidenceRef"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "description": "PATCH semantics; all fields optional but at least one mutating field required. Rejected with 409 GOLD_ITEM_IMMUTABLE on a FROZEN revision."
+      },
+      "GoldRelationEditRequest": {
+        "type": "object",
+        "properties": {
+          "ontology_relation_id": {
+            "type": "string"
+          },
+          "source_gold_entity_id": {
+            "type": "string"
+          },
+          "target_gold_entity_id": {
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/GoldEvidenceRef"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "description": "PATCH semantics; at least one mutating field required."
+      },
+      "GoldItemArchiveRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "GoldEvidenceAttachRequest": {
+        "type": "object",
+        "properties": {
+          "gold_entity_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "gold_relation_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "sample_id": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "source_segment_id": {
+            "type": "string"
+          },
+          "locator": {
+            "type": "string"
+          },
+          "offset_start": {
+            "type": "integer"
+          },
+          "offset_end": {
+            "type": "integer"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sample_id"
+        ],
+        "description": "Requires exactly one of gold_entity_id/gold_relation_id."
+      },
+      "GoldEvidenceEditRequest": {
+        "type": "object",
+        "properties": {
+          "source_id": {
+            "type": "string"
+          },
+          "source_segment_id": {
+            "type": "string"
+          },
+          "locator": {
+            "type": "string"
+          },
+          "offset_start": {
+            "type": "integer"
+          },
+          "offset_end": {
+            "type": "integer"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "DatasetRevisionCutRequest": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          },
+          "activate": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "description": "Snapshots current ACTIVE/DRAFT gold items + samples. activate=true makes the new revision ACTIVE and freezes the prior ACTIVE."
+      },
+      "GoldAuthoringAuditEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "revision_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "action": {
+            "$ref": "#/components/schemas/GoldAuthoringAction"
+          },
+          "actor_id": {
+            "type": "string"
+          },
+          "is_owner": {
+            "type": "boolean"
+          },
+          "target_kind": {
+            "$ref": "#/components/schemas/AuditTargetKind"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "before": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "after": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "dataset_id",
+          "action",
+          "actor_id",
+          "target_kind",
+          "target_id",
+          "created_at"
+        ]
+      },
+      "GoldEntityMutationResponse": {
+        "type": "object",
+        "properties": {
+          "gold_entity": {
+            "$ref": "#/components/schemas/GoldEntityAuthoringView"
+          },
+          "audit_entry": {
+            "$ref": "#/components/schemas/GoldAuthoringAuditEntry"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/GoldAuthoringMutationGuard"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/GoldAuthoringCapabilities"
+          }
+        },
+        "required": [
+          "gold_entity",
+          "audit_entry",
+          "mutation_guard"
+        ]
+      },
+      "GoldRelationMutationResponse": {
+        "type": "object",
+        "properties": {
+          "gold_relation": {
+            "$ref": "#/components/schemas/GoldRelationAuthoringView"
+          },
+          "audit_entry": {
+            "$ref": "#/components/schemas/GoldAuthoringAuditEntry"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/GoldAuthoringMutationGuard"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/GoldAuthoringCapabilities"
+          }
+        },
+        "required": [
+          "gold_relation",
+          "audit_entry",
+          "mutation_guard"
+        ]
+      },
+      "GoldEvidenceMutationResponse": {
+        "type": "object",
+        "properties": {
+          "gold_evidence": {
+            "$ref": "#/components/schemas/GoldEvidence"
+          },
+          "audit_entry": {
+            "$ref": "#/components/schemas/GoldAuthoringAuditEntry"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/GoldAuthoringMutationGuard"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/GoldAuthoringCapabilities"
+          }
+        },
+        "required": [
+          "gold_evidence",
+          "audit_entry",
+          "mutation_guard"
+        ]
+      },
+      "DatasetRevisionMutationResponse": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "$ref": "#/components/schemas/DatasetRevision"
+          },
+          "dataset": {
+            "$ref": "#/components/schemas/EvaluationDataset"
+          },
+          "frozen_revision_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "Id of the prior ACTIVE revision frozen by this cut/activate, if any. No EvaluationRun pin is ever rewritten."
+          },
+          "audit_entry": {
+            "$ref": "#/components/schemas/GoldAuthoringAuditEntry"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/GoldAuthoringMutationGuard"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/GoldAuthoringCapabilities"
+          }
+        },
+        "required": [
+          "revision",
+          "audit_entry",
+          "mutation_guard"
+        ]
+      },
+      "DatasetAuthoringOverview": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "$ref": "#/components/schemas/EvaluationDataset"
+          },
+          "active_revision": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/DatasetRevision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision_count": {
+            "type": "integer"
+          },
+          "gold_status_counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "pinned_runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunRevisionPin"
+            }
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/GoldAuthoringCapabilities"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/GoldAuthoringMutationGuard"
+          }
+        },
+        "required": [
+          "dataset",
+          "revision_count",
+          "gold_status_counts",
+          "pinned_runs",
+          "capabilities",
+          "mutation_guard"
+        ]
+      },
+      "GoldEvidenceListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoldEvidence"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "DatasetRevisionListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetRevisionSummary"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "GoldAuthoringAuditListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoldAuthoringAuditEntry"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "GoldSetExportBundle": {
+        "type": "object",
+        "properties": {
+          "bundle_version": {
+            "type": "string"
+          },
+          "source_project_id": {
+            "type": "string"
+          },
+          "source_dataset_id": {
+            "type": "string"
+          },
+          "source_revision_id": {
+            "type": "string"
+          },
+          "revision_status": {
+            "$ref": "#/components/schemas/DatasetRevisionStatus"
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "exported_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "samples": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvaluationSample"
+            }
+          },
+          "gold_entities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoldEntityAuthoringView"
+            }
+          },
+          "gold_relations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoldRelationAuthoringView"
+            }
+          },
+          "gold_evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoldEvidence"
+            }
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/GoldAuthoringMutationGuard"
+          }
+        },
+        "required": [
+          "bundle_version",
+          "source_project_id",
+          "source_dataset_id",
+          "source_revision_id",
+          "ontology_version_id",
+          "exported_at",
+          "samples",
+          "gold_entities",
+          "gold_relations",
+          "gold_evidence"
+        ],
+        "description": "Read-only single-revision snapshot. No prompts, candidates, published graph, or secrets."
+      },
+      "GoldSetImportDryRunRequest": {
+        "type": "object",
+        "properties": {
+          "bundle": {
+            "$ref": "#/components/schemas/GoldSetExportBundle"
+          }
+        },
+        "required": [
+          "bundle"
+        ]
+      },
+      "GoldSetImportIssue": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/GoldSetImportCompatibility"
+          },
+          "ontology_class_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "ontology_relation_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "sample_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "message"
+        ]
+      },
+      "GoldSetBundleSummary": {
+        "type": "object",
+        "properties": {
+          "bundle_version": {
+            "type": "string"
+          },
+          "source_dataset_id": {
+            "type": "string"
+          },
+          "source_revision_id": {
+            "type": "string"
+          },
+          "sample_count": {
+            "type": "integer"
+          },
+          "gold_entity_count": {
+            "type": "integer"
+          },
+          "gold_relation_count": {
+            "type": "integer"
+          },
+          "gold_evidence_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bundle_version",
+          "sample_count",
+          "gold_entity_count",
+          "gold_relation_count"
+        ]
+      },
+      "GoldSetImportReport": {
+        "type": "object",
+        "properties": {
+          "import_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "compatibility": {
+            "$ref": "#/components/schemas/GoldSetImportCompatibility"
+          },
+          "bundle_summary": {
+            "$ref": "#/components/schemas/GoldSetBundleSummary"
+          },
+          "target_ontology_version_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoldSetImportIssue"
+            }
+          },
+          "allowed_strategies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoldSetImportStrategy"
+            }
+          },
+          "blocking": {
+            "type": "boolean"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/GoldAuthoringMutationGuard"
+          }
+        },
+        "required": [
+          "import_id",
+          "project_id",
+          "compatibility",
+          "bundle_summary",
+          "issues",
+          "allowed_strategies",
+          "blocking",
+          "mutation_guard"
+        ]
+      },
+      "GoldSetImportConfirmRequest": {
+        "type": "object",
+        "properties": {
+          "strategy": {
+            "$ref": "#/components/schemas/GoldSetImportStrategy"
+          },
+          "target_dataset_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "activate": {
+            "type": "boolean",
+            "default": false
+          },
+          "acknowledge_warnings": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "strategy"
+        ],
+        "description": "target_dataset_id required iff strategy=NEW_REVISION_OF_EXISTING. acknowledge_warnings required true when dry-run compatibility=WARNING."
+      },
+      "ImportedCounts": {
+        "type": "object",
+        "properties": {
+          "samples": {
+            "type": "integer"
+          },
+          "gold_entities": {
+            "type": "integer"
+          },
+          "gold_relations": {
+            "type": "integer"
+          },
+          "gold_evidence": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "samples",
+          "gold_entities",
+          "gold_relations",
+          "gold_evidence"
+        ]
+      },
+      "GoldSetImportConfirmResponse": {
+        "type": "object",
+        "properties": {
+          "import_id": {
+            "type": "string"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/GoldSetImportStrategy"
+          },
+          "created_dataset_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_revision_id": {
+            "type": "string"
+          },
+          "created_revision_status": {
+            "$ref": "#/components/schemas/DatasetRevisionStatus"
+          },
+          "imported_counts": {
+            "$ref": "#/components/schemas/ImportedCounts"
+          },
+          "audit_entry": {
+            "$ref": "#/components/schemas/GoldAuthoringAuditEntry"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/GoldAuthoringMutationGuard"
+          }
+        },
+        "required": [
+          "import_id",
+          "strategy",
+          "created_revision_id",
+          "created_revision_status",
+          "imported_counts",
+          "audit_entry",
+          "mutation_guard"
+        ]
+      },
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    }
+  }
+}

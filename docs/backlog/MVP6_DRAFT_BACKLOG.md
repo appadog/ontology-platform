@@ -1,7 +1,7 @@
 # MVP 6 Draft Backlog
 
-Status: `MVP6.3 WAVE33 BENCHMARK COMPARISON CONTRACT-FIRST PLANNING`
-Date: 2026-06-26
+Status: `MVP6.4 WAVE39 GOLD SET AUTHORING + DATASET REVISIONING CONTRACT-FIRST PLANNING`
+Date: 2026-06-30
 
 MVP6 is broad. Wave28 and Wave29 closed MVP6.1 Gold Set / Benchmark Studio.
 Wave30 freezes MVP6.2 Active Learning / Continuous Improvement as a
@@ -330,6 +330,80 @@ Restated Wave34 acceptance gates (all required):
 Backlog IDs: PM `PM6-018`; Backend `BE6-024`~`BE6-027`; Frontend
 `FE6-023`~`FE6-026`; QA `INT6-022`~`INT6-025`.
 
+## Wave39 MVP6.4 Gold Set Authoring + Dataset Revisioning PM Freeze Summary
+
+Wave39 opens the next MVP6 theme as contract-first planning only. The chosen P0
+is **Gold Set authoring policy + dataset revisioning** (commander default;
+closes the last un-closed MVP6.1 P1 cluster: expert ownership + edit/archive,
+dataset revisions, standalone gold-evidence object, import/export). It is the
+smallest coherent extension of the already-closed MVP6.1 evaluation surface —
+the shipped `EvaluationDataset.owner_id`/`active_version_id` and
+`EvaluationRun.dataset_version_id` already exist as hooks; this P0 supplies the
+revision object + ownership/lifecycle policy behind them. Authoring is
+candidate/analysis-layer only and never mutates the published graph, candidates,
+prompts, or the ontology definition. Runtime implementation waits for Wave40
+after Backend contract draft, Frontend field/state/IA review, and a QA
+executable checklist. The full freeze is in
+`docs/pm/MVP6_4_GOLD_SET_AUTHORING_BRIEF.md`; the durable boundary is in
+`docs/adr/0011-mvp6-4-gold-set-authoring-revision-immutability-boundary.md`.
+
+Frozen MVP6.4 P0 demo flow:
+
+```text
+select project
+-> open Gold Set Manager
+-> open a dataset as its expert owner
+-> edit a gold entity/relation OR archive a stale gold item
+-> attach/edit a standalone Gold Evidence object
+-> cut a new dataset revision (prior revision becomes immutable)
+-> export the dataset revision to a portable JSON bundle
+-> import a bundle (dry-run compatibility report -> confirm as new dataset/revision)
+-> confirm an existing run still points at the dataset revision it used
+```
+
+New P0 enums (no new metric names; MVP6.1 shapes reused verbatim by `$ref`):
+
+- `GoldItemStatus`: `DRAFT`, `ACTIVE`, `ARCHIVED` (gold entity + relation
+  lifecycle; archive is soft, never hard-delete).
+- `DatasetRevisionStatus`: `DRAFT`, `ACTIVE`, `FROZEN`, `ARCHIVED`. A revision is
+  `FROZEN` (immutable) once a newer revision is activated OR any run pins it; at
+  most one `ACTIVE` per dataset; runs pin only `ACTIVE`/`FROZEN`, never `DRAFT`.
+- `GoldAuthoringAction`: `CREATE`, `EDIT`, `ARCHIVE`, `RESTORE`,
+  `EVIDENCE_ATTACH`, `EVIDENCE_EDIT`, `REVISION_CUT`, `REVISION_ACTIVATE`,
+  `IMPORT` (audit-only).
+- `GoldSetImportCompatibility`: `COMPATIBLE`, `WARNING`, `CONFLICT`,
+  `INCOMPATIBLE`. Import is dry-run-first; confirm requires a strategy
+  (`CREATE_NEW_DATASET` or `NEW_REVISION_OF_EXISTING`); never auto-merges; never
+  edits a FROZEN revision; `INCOMPATIBLE` is blocked.
+
+Frozen reproducibility/traceability decision: `EvaluationRun.dataset_version_id`
+is never rewritten by any authoring action; prior runs keep their pin and
+metrics; a FROZEN revision is an immutable snapshot, so every old run resolves to
+the exact sample+gold set it was scored against. Gold items/evidence are never
+hard-deleted (archive/freeze only), preserving evidence/version traceability.
+
+Frozen safety boundary: candidate/analysis-layer authoring only. No published
+graph / candidate / prompt / ontology-definition mutation; no extraction or
+evaluation run started; no prior-run pin rewrite; no hard delete; import only
+after explicit confirm. Every authoring/import response exposes an all-false
+`GoldAuthoringMutationGuard` (`published_graph_mutated`,
+`candidate_graph_mutated`, `prompt_version_mutated`,
+`ontology_definition_mutated`, `extraction_job_started`,
+`evaluation_run_started`, `prior_run_pin_rewritten`).
+
+Frozen exclusions: real LLM/provider execution, run execution from authoring UI,
+new metric names / ontology constraint pass-rate, benchmark comparison change,
+MVP3/MVP4/MVP6.2 joins, governance workflow, impact simulation, copilot/agent
+runtime, connector/plugin SDK, multi-tenant runtime, ontology packs, advanced
+visualization, concurrent-edit locking/merge, cross-project/cross-org sharing.
+Durable DB/Alembic persistence is not required for P0 (process-local store with
+`reset_runtime_store()` acceptable); stays P1/P2.
+
+Backlog IDs: PM `PM6-021`; Backend `BE6-028`~`BE6-031`; Frontend
+`FE6-049`~`FE6-052`; QA `INT6-035`~`INT6-038` (QA ID correction Wave39: the
+earlier `INT6-026`~`INT6-029` proposal collided with IDs already consumed by the
+closed UI/UX waves 35–38; re-ranged to `INT6-035`+).
+
 ## PM Backlog
 
 | ID | Priority | Owner | Task | Dependencies | Acceptance draft |
@@ -354,6 +428,7 @@ Backlog IDs: PM `PM6-018`; Backend `BE6-024`~`BE6-027`; Frontend
 | PM6-018 | P0 | PM | Wave34 MVP6.3 implementation scope guard + persist-vs-compute freeze | PM6-017, INT6-021 (C12) | scope unchanged from the frozen P0 flow and 4 endpoint families; persist-vs-compute frozen to option (a) persist a deterministic process-local comparison record keyed by `comparison_id` (mirrors MVP6.1 `_runs` store, satisfies list + GET-by-id round-trip R3); all-false `BenchmarkMutationGuard`, no MVP6.1 field/enum rename, comparability flags + `NOT_APPLICABLE`/`__NONE__` semantics preserved, `>=2` terminal-success eligibility with `RunExclusionReason`; no benchmark P1+ scope |
 | PM6-019 | P1 | PM | Wave35 UI/UX review decision set (P1-P3) | `docs/pm/UIUX_REVIEW_FULL_PRODUCT.md` §7 | `docs/pm/UIUX_REMEDIATION_DECISIONS.md` freezes the LNB two-zone IA (Build/Review/Publish/Analyze, exact items+labels+routes, no-project vs selected behavior, LNB-vs-tabs single-location rule), Dashboard Hero/value/CTA copy, copy-language policy + glossary, breadcrumb `프로젝트명 > 섹션 > 항목` standard + per-screen map, Quality top-vs-collapsed priority, and the status-token badge/icon/Korean-label guide; durable LNB IA boundary recorded in ADR 0010; no API/DTO/enum change |
 | PM6-020 | P1 | PM | Wave37 reference-driven design direction (intuitive/easy-to-use) | `https://wwit.design`, `https://ai.codle.io/kr`, PM6-019 (D1-D6), ADR 0010, `MVP6_FRONTEND_UI_STYLE_GUIDE.md` | `docs/pm/DESIGN_DIRECTION_REFERENCE_UPGRADE.md` translates the two references' PRINCIPLES into our operational console: 7 adopted principles (3-tier hierarchy, one card module, whitespace scale, one primary action, restrained single accent, progressive disclosure, outcome-first KO copy); a refined token spec expressed against the real `styles/theme.ts` (add `fontWeight.medium=500/semibold=600/bold=700`, `fontSize.xl=22px`+rename old `xl`->`xxl`, `spacing.section/page`, color roles `accent/surfaceInfo/Success/Warning/Danger/surfaceSelected/surfaceStrong/textOnStrong`, `shadow.card`); a canonical Section+Card module extending `HanaCard` (eyebrow/action/emphasis) + promoting duplicated `ScreenGrid/Split/Stack/CardBody` into one shared module; per-screen-type guidance (Dashboard/list/workbench/empty-loading-error); outcome-first KO microcopy with Dashboard + Review Workbench before/after; and the prioritized P0/P1/P2 change list (FE6-038+) with completion criteria; presentation/token-only, no API/DTO/enum change; not a 35-screen rewrite |
+| PM6-021 | P0 | PM | MVP6.4 Gold Set Authoring + dataset revisioning P0 scope freeze | MVP6.1 closeout, MVP6 roadmap Theme 1 §4.2-4.4, PM6-005 | `docs/pm/MVP6_4_GOLD_SET_AUTHORING_BRIEF.md` freezes the expert-owned authoring P0: demo flow, source artifacts (reuse MVP6.1 shapes by ref, no rename), enums/states (`GoldItemStatus`, `DatasetRevisionStatus`, `GoldAuthoringAction`, `GoldSetImportCompatibility`), the reproducibility decision (runs keep `dataset_version_id` pin, FROZEN revision immutability, no hard delete), import dry-run/confirm policy, the candidate/analysis-only safety boundary + all-false `GoldAuthoringMutationGuard`, and exclusions; durable boundary recorded in ADR 0011; planning-only, no runtime/API/DTO/enum change |
 
 ## Backend Backlog
 
@@ -386,6 +461,10 @@ Backlog IDs: PM `PM6-018`; Backend `BE6-024`~`BE6-027`; Frontend
 | BE6-025 | P0 | Backend | MVP6.3 confusion matrix + cell error-case drilldown | PM6-018, BE6-024 | `GET .../confusion-matrix` per run + `ConfusionMatrixAxis`, `GET .../confusion-matrix/cells/{cell_id}/error-cases` with pagination; cells derive only from existing `EvaluationErrorCase` + implied matches, `NOT_APPLICABLE` empty buckets, `__NONE__` false-pos/neg sentinel, deterministic URL-safe `cell_id` |
 | BE6-026 | P0 | Backend | MVP6.3 OpenAPI export / runtime alignment | PM6-018, BE6-024, BE6-025 | runtime DTO field names + new enums match `openapi-mvp6-3-draft.json` (0 field-name mismatch on shared schemas); MVP6.1 shapes reused by `$ref` with no rename |
 | BE6-027 | P0 | Backend | MVP6.3 no-mutation regression guard | PM6-018, BE6-024 | all responses expose an all-false `BenchmarkMutationGuard`; `>=2` terminal-success eligibility with `excluded_runs[]`/`RunExclusionReason`; focused tests cover endpoints, delta + epsilon boundary, comparability flags, sparse/`__NONE__` matrix, cell drilldown, eligibility/exclusion, no-mutation; MVP6.1 evaluation tests stay green |
+| BE6-028 | P0 | Backend | MVP6.4 Gold Set authoring contract draft | PM6-021, BE6-006 | `docs/api/MVP6_4_GOLD_SET_AUTHORING_API_CONTRACT_DRAFT.md` + `docs/api/openapi-mvp6-4-draft.json` define additive endpoint families for gold-item edit/archive/restore, standalone `GoldEvidence` CRUD, dataset revision create/list/activate, export bundle GET, and import dry-run/confirm; reuse `EvaluationDataset`/`EvaluationSample`/`GoldEntity`/`GoldRelation`/`GoldEvidenceRef` by `$ref` (no rename); new enums `GoldItemStatus`/`DatasetRevisionStatus`/`GoldAuthoringAction`/`GoldSetImportCompatibility`; all-false `GoldAuthoringMutationGuard` on every authoring/import response; planning-only, parses as OpenAPI 3.1.0, additive/disjoint to MVP1-MVP6.3 paths |
+| BE6-029 | P0 | Backend | MVP6.4 dataset revision + run-pin reproducibility contract | PM6-021, BE6-028 | revision lifecycle `DRAFT->ACTIVE->FROZEN->ARCHIVED` with freeze-on-pin / freeze-on-activate; at most one `ACTIVE` per dataset; runs pin only `ACTIVE`/`FROZEN`; `EvaluationRun.dataset_version_id` never rewritten; contract documents how a prior run resolves to its immutable snapshot; capture open questions on exact freeze trigger timing |
+| BE6-030 | P0 | Backend | MVP6.4 import/export compatibility + ownership contract | PM6-021, BE6-028 | export = read-only single-revision JSON bundle (samples + gold items + evidence + ontology version context, no prompts/candidates/published/secrets); import = dry-run report (`GoldSetImportCompatibility`) then explicit confirm with strategy (`CREATE_NEW_DATASET`/`NEW_REVISION_OF_EXISTING`), never auto-merge, never edit FROZEN, `INCOMPATIBLE` blocked; expert-owner (`owner_id`)/admin-only authoring with permission/conflict responses |
+| BE6-031 | P0 | Backend | MVP6.4 no-mutation regression guard | PM6-021, BE6-028 | every authoring/import response exposes all-false `GoldAuthoringMutationGuard` (`published_graph_mutated`, `candidate_graph_mutated`, `prompt_version_mutated`, `ontology_definition_mutated`, `extraction_job_started`, `evaluation_run_started`, `prior_run_pin_rewritten`); archive/freeze instead of hard delete; MVP6.1-6.3 evaluation/benchmark contracts stay stable (no rename) |
 
 ## Frontend Backlog
 
@@ -438,6 +517,10 @@ Backlog IDs: PM `PM6-018`; Backend `BE6-024`~`BE6-027`; Frontend
 | FE6-046 | P2 | Frontend | PageHeader tokenization | PM6-020 §6 | `layout/PageHeader.tsx` reads type/spacing from tokens (no hardcoded 28/18/8px); visual parity; build/test pass |
 | FE6-047 | P2 | Frontend | Optional breakpoint token map | PM6-020 §2.5 | optional centralized `breakpoint` tokens; no overflow regression; skippable |
 | FE6-048 | P2 | Frontend | Analyze screens Section+Card rollout | PM6-020 §4 | Search/RAG/Learning Insights opportunistically adopt the Section module; each passes build/test + 0 overflow; non-blocking |
+| FE6-049 | P0 | Frontend | MVP6.4 Gold Set Manager UX/API requirements | PM6-021, BE6-028 | document Gold Set Manager route/IA (project-scoped, contextual to the existing Evaluation/Gold Set area, no ID-bound pages in the global LNB per ADR 0010), required fields, and first-class loading/empty/error/permission states for gold edit/archive, evidence attach/edit, revision cut/activate, import dry-run/confirm, export, and run->revision pin display; apply closed design language (tokens, Section+Card, KO titles, status badges); list DTO gaps vs Backend draft; planning-only, no route/component/type/mock/smoke code |
+| FE6-050 | P0 | Frontend | MVP6.4 gold authoring + revision UX states | PM6-021, FE6-049 | specify edit form / archive confirm / restore states for gold entity+relation; `DatasetRevisionStatus` badges (DRAFT/ACTIVE editable vs FROZEN/ARCHIVED immutable/read-only); one-ACTIVE-per-dataset rule shown; run cards display the FROZEN revision they pin so users see the basis cannot drift; honest permission-limited state for non-owners |
+| FE6-051 | P0 | Frontend | MVP6.4 import/export UX | PM6-021, FE6-049 | export action -> downloadable bundle summary; import = upload -> dry-run compatibility report rendering all four `GoldSetImportCompatibility` states with per-item notes -> explicit confirm with strategy choice (`CREATE_NEW_DATASET`/`NEW_REVISION_OF_EXISTING`); `INCOMPATIBLE` blocked with reason; no copy implying auto-merge or published-graph effect |
+| FE6-052 | P0 | Frontend | MVP6.4 types/client/mocks alignment plan | PM6-021, BE6-028 | requirements note that Wave40 TS types/client/mocks must match `openapi-mvp6-4-draft.json` exactly and reuse MVP6.1 shapes without rename; enumerate the new authoring DTOs/enums + all-false `GoldAuthoringMutationGuard` display; planning-only |
 
 ## QA / Integration Backlog
 
@@ -468,6 +551,14 @@ Backlog IDs: PM `PM6-018`; Backend `BE6-024`~`BE6-027`; Frontend
 | INT6-023 | P0 | QA | MVP6.3 frontend mock/API acceptance | PM6-018, FE6-023~FE6-026 | validate the mock + actual flow run-selection -> deltas -> confusion matrix -> cell drilldown, including comparability / `NOT_APPLICABLE` / `__NONE__` / not-comparable / excluded-run states |
 | INT6-024 | P0 | QA | MVP6.3 no-mutation guard | PM6-018, BE6-027 | confirm all-false `BenchmarkMutationGuard` at runtime and no candidate/published/prompt/policy/extraction/evaluation/gold mutation; reverify no MVP6.1 field/enum rename |
 | INT6-025 | P0 | QA | Wave34 closeout recommendation | PM6-018, INT6-022~INT6-024 | run selected MVP1-MVP6.2 regression + smokes BE/FE touched; recommend MVP6.3 thin-slice closeout, targeted Wave35 hardening, or PM redesign with exact commands/artifacts and no leftover listeners on 8000/5173 |
+| INT6-035 | P0 | QA | MVP6.4 Gold Set authoring acceptance checklist | PM6-021, BE6-028~BE6-031, FE6-049~FE6-052 | executable `INT6-*` checklist verifies PM/BE/FE agreement on the P0 flow, enums/states, source artifacts (reuse-by-ref, no rename), safety boundary, and exclusions; OpenAPI parse/additivity; planning-only with no runtime leakage under `apps/`/`infra/`; recommends Wave40 thin implementation, hardening, or PM redesign |
+| INT6-036 | P0 | QA | MVP6.4 reproducibility + revision-immutability guard | PM6-021, BE6-029 | checklist asserts prior `EvaluationRun.dataset_version_id` is never rewritten and prior metrics unchanged by authoring; FROZEN revision is immutable (freeze-on-pin / freeze-on-activate); at most one ACTIVE per dataset; runs never pin DRAFT; gold items/evidence are archived/frozen, never hard-deleted |
+| INT6-037 | P0 | QA | MVP6.4 no-mutation + ownership guard | PM6-021, BE6-030, BE6-031 | checklist asserts all-false `GoldAuthoringMutationGuard` on every authoring/import response; no published/candidate/prompt/ontology-definition mutation, no extraction/eval run started; expert-owner/admin-only authoring with permission state; import dry-run-first, explicit confirm, never auto-merge, never edit FROZEN, `INCOMPATIBLE` blocked |
+| INT6-038 | P0 | QA | Wave39 planning recommendation | INT6-035~INT6-037 | confirm brief/ADR/backlog/Backend/Frontend artifacts agree; recommend Wave40 thin implementation, targeted hardening, or PM redesign with exact follow-up gates |
+
+QA ID correction (Wave39): the QA rows above were re-ranged from the PM-proposed
+`INT6-026`~`INT6-029` to `INT6-035`~`INT6-038` because `INT6-026`~`INT6-034` were
+already consumed by the closed UI/UX waves 35–38 (see `CURRENT_STATE.md`).
 
 ## Scope Limits
 

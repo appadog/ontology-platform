@@ -4,8 +4,8 @@
 
 ## Latest Wave
 
-- Current wave: `wave-038`
-- Overall status: `DESIGN UPGRADE P2 POLISH CLOSED (PASS) — DESIGN-UPGRADE TRACK (W37+W38) COMPLETE`
+- Current wave: `wave-039`
+- Overall status: `MVP6.4 GOLD SET AUTHORING CONTRACT-FIRST PLANNING PASS / WAVE40 THIN IMPLEMENTATION READY`
 - 기준일: 2026-06-29
 
 ## Latest Decisions
@@ -175,6 +175,14 @@
 - Wave38 completed the deferred design P2 polish as PASS: FE6-046 (PageHeader tokenized: `28px`->`fontSize.xl`, `1.2`->`lineHeight.tight`, `8px`->`spacing.sm` exact aliases, visual parity, additive `eyebrow` prop), FE6-048 (Analyze screens Search/RAG/Learning Insights adopted emphasis="default" flat cards + exact-hex surface-token swaps, one strong summary per screen, no color/layout shift). FE6-047 (breakpoint token map) SKIPPED with rationale — the design doc marks it advisory/skippable and a refactor would risk the 0-overflow invariant for no user-visible gain; QA judged the skip acceptable. Frontend/UX wave; Backend NOT RUN.
 - Wave38 QA verdict PASS (closeout): 31/31 tests, build clean, mock smokes (mvp4/mvp6/benchmark/learning incl. search+rag) PASS, 0 horizontal overflow retained at all resolutions for Candidate Results + Ontology Modeler + the touched Analyze screens, no regression of KO titles / status badges / single active LNB / Wave37 tokens, no API/DTO change.
 - The reference-driven design-upgrade track (Wave37 P0/P1 + Wave38 P2) is COMPLETE. Only non-blocking carry-over: run the design `*:actual` smokes at the next backend-up gate (mock coverage representative; no contract change).
+- Wave39 opened the next MVP6 theme as contract-first planning by user direction. PM chose **MVP6.4 Gold Set authoring policy + dataset revisioning** as the smallest coherent next P0 — it closes the last open MVP6.1 P1 cluster and is purely additive to the shipped evaluation surface (`EvaluationDataset.owner_id/active_version_id`, `EvaluationRun.dataset_version_id` hooks already exist).
+- Wave39 PM, Backend, Frontend, QA reports accepted as PASS (planning). Runtime acceptance is `NOT RUNNABLE` by design until Wave40.
+- MVP6.4 P0 demo flow frozen: open dataset as expert owner -> edit/archive gold item -> attach/edit standalone Gold Evidence -> cut new dataset revision (prior becomes FROZEN/immutable) -> export JSON bundle -> import dry-run compatibility report -> confirm-with-strategy -> confirm an existing run still pins the revision it used.
+- MVP6.4 enums frozen: `GoldItemStatus` (DRAFT/ACTIVE/ARCHIVED), `DatasetRevisionStatus` (DRAFT/ACTIVE/FROZEN/ARCHIVED; at most one ACTIVE; FROZEN=immutable), `GoldAuthoringAction` (9 audit actions), `GoldSetImportCompatibility` (COMPATIBLE/WARNING/CONFLICT/INCOMPATIBLE), and Backend-delegated `GoldSetImportStrategy` (CREATE_NEW_DATASET/NEW_REVISION_OF_EXISTING). MVP6.1 shapes reused by `$ref`/`allOf` overlay with no renames; no new metric names.
+- MVP6.4 durable boundary recorded in ADR 0011: dataset-revision immutability + run-pinning — `EvaluationRun.dataset_version_id` is never rewritten by any authoring action, edits land only in DRAFT/new revisions, gold items/evidence are archived/frozen never hard-deleted; so every old run resolves to the exact snapshot it was scored against. Authoring is candidate/analysis-layer only (no published-graph/candidate/prompt mutation), expert-owner/admin-only, every authoring/import response carries an all-false 7-flag `GoldAuthoringMutationGuard`. Import is dry-run-first; INCOMPATIBLE blocked; no auto-merge.
+- MVP6.4 OpenAPI planning artifact `docs/api/openapi-mvp6-4-draft.json` parses as 3.1.0 version `0.6.4-draft` with 5 endpoint families (17 paths / 20 operations / 45 schemas), disjoint-additive to MVP1-MVP6.3. Frontend reconciled to the Backend draft with 0 enum/DTO mismatches; all 8 FE blocking DTO gaps resolved (4 optional non-blocking confirmations remain for Wave40).
+- Wave40 PM-freeze gate (recorded, like MVP6.3's C12): exact freeze-on-pin trigger timing — the draft assumes `pinned_run_count > 0 => immutable even while ACTIVE`, in mild tension with "at most one ACTIVE / FROZEN=immutable". PM must freeze the single rule before runtime so QA gate R5 tests one behavior.
+- Backlog ID-range correction: PM proposed QA IDs `INT6-026..029` but those are consumed by the closed UI/UX waves (35-38); QA re-ranged this theme's checklist to `INT6-035..038` and fixed the stale references in `docs/backlog/MVP6_DRAFT_BACKLOG.md`.
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -258,13 +266,22 @@
 | Reference-driven Design Upgrade | Closed in Wave37 (PASS). 7 principles from wwit.design/ai.codle.io applied to the console; additive tokens (lgPlus 22px, semibold 600), HanaCard additive props, shared Section/Layout dedup, Dashboard/Workbench/Candidate/Sources/Benchmark + empty-CTA. QA verified in DOM; no regression; 31 tests/build/5 smokes PASS. | PM6-020, FE6-038~FE6-045, INT6-031, INT6-032 |
 | Design Upgrade P2 Follow-ups | Closed in Wave38 (PASS). FE6-046 PageHeader tokenized, FE6-048 Analyze screens Section+Card/emphasis adopted; FE6-047 breakpoint map skipped (advisory, QA-accepted). No regression; 31 tests/build/smokes PASS, 0 overflow. | FE6-046~FE6-048, INT6-033, INT6-034 |
 | Design `*:actual` smokes | Non-blocking carry-over. Run the design/UI `*:actual` smokes at the next backend-up gate; no contract change, mock coverage representative. | FE/QA cleanup |
+| MVP6.4 Gold Set Authoring Contract | Closed in Wave39 (planning PASS). PM brief + ADR 0011, Backend contract + `openapi-mvp6-4-draft.json` (17 paths/45 schemas), Frontend UX/API requirements (0 DTO mismatch), QA `INT6_4` checklist (C1-C12 / R1-R12) all agree; no runtime leakage. | PM6-021, BE6-028~031, FE6-049~052, INT6-035~038 |
+| MVP6.4 Thin Runtime/UI | Open for Wave40. Implement the 5 frozen endpoint families, gold item edit/archive, standalone Gold Evidence, dataset revision cut/activate (FROZEN immutability + run-pinning), export/import dry-run+confirm, audit log; all-false mutation guard; owner/admin-only; reuse MVP6.1 shapes (no rename); mock+actual smoke. PM must FIRST freeze the freeze-on-pin rule (Wave40 gate). | BE6-032+, FE6-053+, INT6-039+ |
 
 ## Next Gate
 
 Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison. UI/UX work closed across Wave35 (review remediation P1+P2+P3), Wave36 (full D3/D6 rollout + single-active LNB), and Wave37 (reference-driven design language upgrade) — all PASS.
 
-The reference-driven design-upgrade track (Wave37 + Wave38) is complete. Awaiting user direction on the next track:
-0. Non-blocking carry-over: run design `*:actual` smokes at the next backend-up gate.
+MVP6.4 Gold Set authoring contract-first planning (Wave39) is PASS. **Wave40 = MVP6.4 thin implementation** is the next gate.
+
+## Wave40 Gate (MVP6.4 Gold Set authoring thin implementation)
+1. PM: FIRST freeze the freeze-on-pin rule (does a revision become immutable while still ACTIVE once `pinned_run_count > 0`, or only on FROZEN?) — resolve the tension with "at most one ACTIVE / FROZEN=immutable". Confirm Wave40 scope guard; no scope expansion.
+2. Backend: implement the 5 frozen endpoint families (gold item edit/archive/restore, standalone Gold Evidence CRUD, DatasetRevision cut/list/get/activate with FROZEN immutability + run-pinning, export GET + import dry-run/confirm, authoring audit log), reusing MVP6.1 shapes by `$ref` (no rename), all-false `GoldAuthoringMutationGuard`, owner/admin-only authz, focused tests, OpenAPI export/alignment.
+3. Frontend: implement Gold Set Manager UI contextual under Evaluation (no LNB ID-page) per `MVP6_4_FRONTEND_UX_REQUIREMENTS.md` + the closed design language; types/client/mocks; mock + actual smoke.
+4. QA: validate against `INT6_4` runtime gates R1-R12, mutation guard, reproducibility (run pins never rewritten), and MVP1-MVP6.3 regression; recommend closeout or hardening.
+
+Non-blocking carry-over: run design/UI `*:actual` smokes at the next backend-up gate.
 1. Next MVP6 theme (PM contract-first freeze first): Gold Set authoring/dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance, impact simulation, copilot/agents, connector/plugin SDK, multi-tenant, ontology packs, advanced viz).
 2. Sweep accumulated MVP6.x P1/P2 follow-ups (stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, strict-required field promotion, divergent-run seed) in one hardening wave.
 3. Resume the paused Wave27 release/demo packaging.
@@ -412,6 +429,10 @@ The reference-driven design-upgrade track (Wave37 + Wave38) is complete. Awaitin
 | QA | wave-037 | `PASS / DESIGN UPGRADE CLOSEOUT` | INT6-031/032 PASS; 7 principles verified in DOM; tokens additive; no regression (KO titles/badges/single LNB/0 overflow); benchmark smoke token-aware |
 | Frontend | wave-038 | `PASS / DESIGN P2 POLISH READY` | FE6-046 PageHeader tokenized (visual parity); FE6-048 Analyze screens emphasis/surface tokens; FE6-047 skipped w/ rationale; 31 tests/build/smokes PASS, 0 overflow |
 | QA | wave-038 | `PASS / DESIGN-UPGRADE TRACK CLOSEOUT` | INT6-033/034 PASS; FE6-046/048 verified, FE6-047 skip acceptable; no regression; Wave37+38 design track closed |
+| PM | wave-039 | `PASS / MVP6.4 THEME FROZEN` | Chose Gold Set authoring + dataset revisioning; brief + ADR 0011 (revision immutability/run-pinning); PM6-021/BE6-028~031/FE6-049~052 |
+| Backend | wave-039 | `PASS / MVP6.4 CONTRACT DRAFT READY` | 5 endpoint families, `openapi-mvp6-4-draft.json` 0.6.4-draft (17 paths/45 schemas), all-false GoldAuthoringMutationGuard; MVP6.1 reuse no rename; Open Q1 freeze-on-pin -> Wave40 gate |
+| Frontend | wave-039 | `PASS / MVP6.4 UX REQUIREMENTS READY` | Gold Set Manager contextual under Evaluation (no LNB ID-page); permission/immutability/import-compat states; 0 DTO mismatch vs Backend; design language applied |
+| QA | wave-039 | `PASS / WAVE40 THIN IMPLEMENTATION RECOMMENDED` | INT6_4 checklist C1-C12/R1-R12 (IDs re-ranged INT6-035~038); artifacts agree; OpenAPI parse+asserts pass; no runtime leakage; freeze-on-pin = Wave40 PM gate |
 
 ## Report Index
 
@@ -455,3 +476,4 @@ The reference-driven design-upgrade track (Wave37 + Wave38) is complete. Awaitin
 | wave-036 | not run | not run | `wave-036/FRONTEND_REPORT.md` | `wave-036/QA_REPORT.md` | `wave-036/NEXT_ORDERS.md` |
 | wave-037 | `wave-037/PM_REPORT.md` | not run | `wave-037/FRONTEND_REPORT.md` | `wave-037/QA_REPORT.md` | `wave-037/NEXT_ORDERS.md` |
 | wave-038 | not run | not run | `wave-038/FRONTEND_REPORT.md` | `wave-038/QA_REPORT.md` | `wave-038/NEXT_ORDERS.md` |
+| wave-039 | `wave-039/PM_REPORT.md` | `wave-039/BACKEND_REPORT.md` | `wave-039/FRONTEND_REPORT.md` | `wave-039/QA_REPORT.md` | `wave-039/NEXT_ORDERS.md` |
