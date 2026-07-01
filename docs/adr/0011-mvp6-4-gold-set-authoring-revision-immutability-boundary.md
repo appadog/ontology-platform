@@ -40,10 +40,17 @@ that pattern for an authoring surface confined to the evaluation/analysis layer.
   evidence, cut/activate dataset revisions, or confirm imports. Other roles get
   read access plus a permission state.
 - **Dataset revisions are immutable once relied upon.** A `DatasetRevision`
-  moves `DRAFT -> ACTIVE -> FROZEN -> ARCHIVED`. A revision becomes `FROZEN`
-  (immutable) when a newer revision is activated OR when any `EvaluationRun`
-  pins it. At most one `ACTIVE` revision per dataset. Authoring edits land in a
-  `DRAFT`/new revision, never in a `FROZEN` one.
+  moves `DRAFT -> ACTIVE -> FROZEN -> ARCHIVED`. A revision **transitions to
+  `FROZEN`** (immutable) when a newer revision is activated OR the moment any
+  `EvaluationRun` pins it (`pinned_run_count > 0`, `frozen_reason=PINNED_BY_RUN`).
+  FROZEN is a status transition, not a flag on ACTIVE: there is no
+  ACTIVE-but-immutable state, so `is_immutable == status in {FROZEN, ARCHIVED}`
+  always holds and "at most one `ACTIVE` per dataset" is never contradicted. If
+  the pinned revision was ACTIVE, the dataset has no ACTIVE revision until a new
+  one is cut/activated. Authoring edits land in a `DRAFT`/new revision, never in
+  a `FROZEN` one; mutating a FROZEN revision returns `409 REVISION_FROZEN` /
+  `409 GOLD_ITEM_IMMUTABLE`. (Freeze-on-pin rule frozen by PM in Wave40 /
+  PM6-022.)
 - **Run-pinning preserves evaluation reproducibility.**
   `EvaluationRun.dataset_version_id` is never rewritten by any authoring action.
   Editing gold items, cutting a revision, archiving, or importing does not

@@ -1,9 +1,13 @@
 # INT6.4 MVP6.4 Gold Set Authoring + Dataset Revisioning Acceptance Checklist
 
-Status: `WAVE39 QA CONTRACT-FIRST PLANNING ACCEPTANCE`
-Date: 2026-06-30
+Status: `WAVE40 QA THIN-IMPLEMENTATION RUNTIME ACCEPTANCE — PASS (R1–R12 all PASS)`
+Date: 2026-07-01
 Owner: QA / Integration
-Backlog: `INT6-035` (theme `PM6-021`; Backend `BE6-028`~`BE6-031`; Frontend `FE6-049`~`FE6-052`)
+Backlog: `INT6-035`..`INT6-038` (Wave39 planning); `INT6-039`..`INT6-042` (Wave40 runtime — this update)
+Wave40 runtime verdict: **PASS** — all 12 runtime gates R1–R12 PASS; freeze-on-pin
+FROZEN-transition confirmed; run-pin never rewritten (independently verified);
+all-false guard + 0-row no-mutation confirmed; regression green. See Runtime
+Acceptance Gates below and `docs/handoffs/wave-040/QA_REPORT.md`.
 
 This checklist turns `INT6-035`~`INT6-038` into contract-first acceptance
 criteria for MVP6.4 **Gold Set authoring policy + dataset revisioning** — an
@@ -315,25 +319,27 @@ Exit criterion: `PASS` when no MVP6.4 runtime implementation exists under
 | C12.2 | No standalone `GoldEvidence` object in runtime (only pre-existing `GoldEvidenceRef`) | PASS | `rg 'GoldEvidence\b' apps \| rg -v GoldEvidenceRef` → 0 matches; the broad search only hit pre-existing MVP6.1 `GoldEvidenceRef` and one MVP6.3 benchmark comment string ("No run executed, no gold set authored, no graph mutated"). |
 | C12.3 | `git diff --check` clean; only docs/backlog/checklist edited | PASS | `git diff --check` exit 0; Wave39 edits are PM/Backend/Frontend planning docs + this checklist + the two backlog edits. |
 
-## Runtime Acceptance Gates (NOT RUNNABLE until Wave40)
+## Runtime Acceptance Gates (Wave40 QA verdicts — `INT6-039`..`042`)
 
-These gates are added now so Wave40 implementation has an executable target. They
-are **`NOT RUNNABLE`** in Wave39 by design — no MVP6.4 runtime exists.
+Wave40 opened the thin implementation, so these gates are now executed. QA
+verdicts below are independent (QA re-ran backend tests + a standalone
+reproducibility/no-mutation script + a standalone runtime-OpenAPI compare + the
+FE mock/actual smokes; not merely trusting the role reports).
 
-| ID | Gate | Status |
-|---|---|---|
-| R1 | All 5 endpoint families exist in the running app and respond per contract (authoring overview / gold edit-archive-restore / evidence CRUD / revision cut-list-get-activate / export-import-dry-run-confirm / audit) | NOT RUNNABLE (Wave40) |
-| R2 | Runtime DTO field names + enums match `openapi-mvp6-4-draft.json` (0 field-name mismatch on shared schemas; MVP6.1 shapes reused by `$ref` with no rename; 5 new enums + helper enums exact) | NOT RUNNABLE (Wave40) |
-| R3 | Ownership gate: dataset `owner_id`/admin → authoring succeeds; non-owner authoring → `403 PERMISSION_DENIED`; reads open to members; `capabilities` hint matches enforcement | NOT RUNNABLE (Wave40) |
-| R4 | Gold item edit/archive/restore lifecycle (`DRAFT`/`ACTIVE`/`ARCHIVED`); archive is soft + reversible; no hard-delete (row retained) | NOT RUNNABLE (Wave40) |
-| R5 | Revision immutability: FROZEN per the **Wave40 PM-freeze ruling** (freeze-on-pin vs freeze-on-activate); edit/activate on FROZEN → `409 GOLD_ITEM_IMMUTABLE`/`REVISION_FROZEN`; at most one ACTIVE; runs never pin DRAFT | NOT RUNNABLE (Wave40) |
-| R6 | Reproducibility: after edit/archive/cut/import, every prior `EvaluationRun.dataset_version_id` + its metrics are byte-identical (never rewritten); old run resolves to its immutable snapshot | NOT RUNNABLE (Wave40) |
-| R7 | Standalone `GoldEvidence` CRUD preserves all `GoldEvidenceRef` fields; embedded `evidence` back-compat retained; archive not delete; authority rule (Open Q3) honored | NOT RUNNABLE (Wave40) |
-| R8 | Export returns a `GoldSetExportBundle` with no prompts/candidates/published/secrets; round-trips through import dry-run | NOT RUNNABLE (Wave40) |
-| R9 | Import dry-run mutates nothing; confirm requires strategy; `INCOMPATIBLE` blocked; `CONFLICT` needs strategy (no auto-merge); `WARNING` needs ack; always creates NEW dataset/revision, never edits FROZEN | NOT RUNNABLE (Wave40) |
-| R10 | `mutation_guard` all-false at runtime; published/candidate/prompt/extraction/review/eval-run tables unchanged (0 rows touched) after the full authoring + import flow | NOT RUNNABLE (Wave40) |
-| R11 | Authoring audit entries recorded for every action (9 `GoldAuthoringAction`) with actor/target/before-after/reason/timestamp; audit read-only | NOT RUNNABLE (Wave40) |
-| R12 | MVP1–MVP6.3 regression green; additive-only; no path renamed/removed; MVP6.1 Evaluation page still reads `GoldEntity`/`GoldRelation`/`GoldEvidenceRef`/`EvaluationRun` unchanged | NOT RUNNABLE (Wave40) |
+| ID | Gate | Verdict | QA evidence (Wave40) |
+|---|---|---|---|
+| R1 | All 5 endpoint families exist in the running app and respond per contract (authoring overview / gold edit-archive-restore / evidence CRUD / revision cut-list-get-activate / export-import-dry-run-confirm / audit) | PASS | Standalone `app.openapi()` compare: all 17 MVP6.4 draft paths present in runtime (`missing=[]`). `test_openapi_alignment_with_draft` asserts the 11 canonical paths; `smoke:mvp6:goldset:actual` drove all 5 families live (12/12 API checks). |
+| R2 | Runtime DTO field names + enums match `openapi-mvp6-4-draft.json` (0 field-name mismatch on shared schemas; MVP6.1 shapes reused by `$ref` with no rename; 5 new enums + helper enums exact) | PASS | Standalone compare: 7 enums (`GoldItemStatus`/`DatasetRevisionStatus`/`GoldAuthoringAction`/`GoldSetImportCompatibility`/`GoldSetImportStrategy`/`RevisionFrozenReason`/`AuditTargetKind`) literal-match; `GoldEvidenceRef` 7 fields verbatim; `git status` shows evaluation module + `core/enums.py` unmodified (no MVP6.1 rename). |
+| R3 | Ownership gate: dataset `owner_id`/admin → authoring succeeds; non-owner authoring → `403 PERMISSION_DENIED`; reads open to members; `capabilities` hint matches enforcement | PASS | `test_non_owner_authoring_forbidden` + `test_admin_actor_can_author`; actual smoke `non-owner-403` = `403 PERMISSION_DENIED`; non-owner overview `can_view=true`/`can_edit_gold_item=false`. |
+| R4 | Gold item edit/archive/restore lifecycle (`DRAFT`/`ACTIVE`/`ARCHIVED`); archive is soft + reversible; no hard-delete (row retained) | PASS | `test_edit_archive_restore_gold_entity` (ARCHIVED row still counted in overview, then restored); actual smoke `archive-restore-gold-entity`. Service uses `status=ARCHIVED`+`archived_at`, never deletes the dict entry. |
+| R5 | Revision immutability: FROZEN per the **PM-frozen ruling (FROZEN transition on first pin; no ACTIVE-but-immutable)**; edit/activate on FROZEN → `409 GOLD_ITEM_IMMUTABLE`/`REVISION_FROZEN`; at most one ACTIVE; runs never pin DRAFT | PASS | `test_freeze_on_pin_transition_and_vacated_active` (ACTIVE→FROZEN(PINNED_BY_RUN), `is_immutable==status in {FROZEN,ARCHIVED}`, ACTIVE slot vacated to null), `test_frozen_revision_item_mutation_409`, `test_activate_frozen_rejected`; actual smoke `activate-frozen-blocked` + `edit-on-frozen-revision-blocked`. |
+| R6 | Reproducibility: after edit/archive/cut/import, every prior `EvaluationRun.dataset_version_id` is byte-identical (never rewritten); old run resolves to its immutable snapshot | PASS | Independent QA script: original run pin `...-v1`; after edit+archive+restore+cut-activate battery the pin is UNCHANGED and v1 stays `FROZEN`/`is_immutable=true`. `pin_run_to_revision` rejects a rewrite (`test_run_pin_never_rewritten`). |
+| R7 | Standalone `GoldEvidence` CRUD preserves all `GoldEvidenceRef` fields; embedded `evidence` back-compat retained; archive not delete | PASS | `test_gold_evidence_crud` (all 7 ref fields present, XOR-target 400, edit, archive-not-delete still 200 with ARCHIVED). Attach mirrors `evidence_id` onto the target gold item (back-compat). |
+| R8 | Export returns a `GoldSetExportBundle` with no prompts/candidates/published/secrets; round-trips through import dry-run | PASS | `test_export_bundle_shape` (`bundle_version=gold-set-bundle/1.0`, no `candidates`/`prompts` keys, all-false guard); actual smoke `export-bundle` → `import-dry-run`. |
+| R9 | Import dry-run mutates nothing; confirm requires strategy; `INCOMPATIBLE` blocked; `CONFLICT` needs strategy (no auto-merge); `WARNING` needs ack; always creates NEW dataset/revision, never edits FROZEN | PASS | `test_import_{dry_run_compatible_then_confirm,warning_requires_ack,conflict_state,incompatible_blocked}`; actual smoke `import-incompatible-blocked` = `409 IMPORT_INCOMPATIBLE`. Confirm always creates a new DRAFT revision. |
+| R10 | `mutation_guard` all-false at runtime; published/candidate/prompt/extraction/review/eval-run tables unchanged (0 rows) after the full authoring + import flow | PASS | Independent QA script: all 13 candidate/publish/prompt/extraction/review tables = 0 rows after full authoring battery; all-false guard asserted on every mutating response (tests + `_assert_guard`); standalone compare confirms 7 guard flags all `const/default:false`. |
+| R11 | Authoring audit entries recorded for every action (9 `GoldAuthoringAction`) with actor/target/before-after/reason/timestamp; audit read-only | PASS | `test_audit_log_records_actions` (EDIT+ARCHIVE recorded, actor/target_kind/created_at present, action filter works). Every service mutation path calls `_audit_entry`; `list_audit` is read-only. |
+| R12 | MVP1–MVP6.3 regression green; additive-only; no path renamed/removed; MVP6.1 Evaluation page still reads `GoldEntity`/`GoldRelation`/`GoldEvidenceRef`/`EvaluationRun` unchanged | PASS | Full backend suite `77 passed`; ruff clean; `router.py` diff = +2 additive lines; FE `43 passed`, build clean, mock smokes mvp6/benchmark/learning PASS, goldset responsive 0 overflow. |
 
 ## Validation Commands (Wave39 QA — executed)
 

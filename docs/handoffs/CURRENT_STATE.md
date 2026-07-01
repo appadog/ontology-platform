@@ -4,9 +4,9 @@
 
 ## Latest Wave
 
-- Current wave: `wave-039`
-- Overall status: `MVP6.4 GOLD SET AUTHORING CONTRACT-FIRST PLANNING PASS / WAVE40 THIN IMPLEMENTATION READY`
-- 기준일: 2026-06-29
+- Current wave: `wave-040`
+- Overall status: `MVP6.4 GOLD SET AUTHORING + DATASET REVISIONING THIN IMPLEMENTATION CLOSED (PASS)`
+- 기준일: 2026-06-30
 
 ## Latest Decisions
 
@@ -183,6 +183,13 @@
 - MVP6.4 OpenAPI planning artifact `docs/api/openapi-mvp6-4-draft.json` parses as 3.1.0 version `0.6.4-draft` with 5 endpoint families (17 paths / 20 operations / 45 schemas), disjoint-additive to MVP1-MVP6.3. Frontend reconciled to the Backend draft with 0 enum/DTO mismatches; all 8 FE blocking DTO gaps resolved (4 optional non-blocking confirmations remain for Wave40).
 - Wave40 PM-freeze gate (recorded, like MVP6.3's C12): exact freeze-on-pin trigger timing — the draft assumes `pinned_run_count > 0 => immutable even while ACTIVE`, in mild tension with "at most one ACTIVE / FROZEN=immutable". PM must freeze the single rule before runtime so QA gate R5 tests one behavior.
 - Backlog ID-range correction: PM proposed QA IDs `INT6-026..029` but those are consumed by the closed UI/UX waves (35-38); QA re-ranged this theme's checklist to `INT6-035..038` and fixed the stale references in `docs/backlog/MVP6_DRAFT_BACKLOG.md`.
+- Wave40 implemented and closed the MVP6.4 Gold Set authoring + dataset revisioning thin slice as PASS. PM (freeze-on-pin gate), Backend, Frontend, QA all accepted.
+- PM froze the freeze-on-pin rule (PM6-022): when `pinned_run_count > 0` a revision TRANSITIONS to `status=FROZEN` (`frozen_reason=PINNED_BY_RUN`, `is_immutable=true`) — a status transition, not an orthogonal flag, so `is_immutable == (status in {FROZEN, ARCHIVED})` always holds and a pinned ACTIVE revision vacates its ACTIVE slot (no ACTIVE-but-immutable state). Recorded in the brief + ADR 0011.
+- Backend `apps/backend/app/modules/goldset_authoring/` implements the 5 frozen endpoint families (gold item edit/archive/restore, standalone GoldEvidence CRUD, DatasetRevision cut/list/get/activate, export + import dry-run/confirm, authoring audit log) with a deterministic process-local store + reset hook. 21 goldset + 4 evaluation + 77 full-suite tests pass, ruff clean; runtime OpenAPI matches the draft (17/17 paths, 7 enums, all-false 7-flag `GoldAuthoringMutationGuard`). Additive; no MVP6.1 renames (router +2 lines).
+- Frontend Gold Set Manager UI is contextual under Evaluation (no new global LNB entry), covering the full P0 flow with honest permission/immutability/import-compat states and visible reproducibility (each run shows its pinned FROZEN revision). Design language applied (Section+Card, KO titles, D6 badges). 43 FE tests, build clean; `smoke:mvp6:goldset:mock` (9 routes) + `smoke:mvp6:goldset:actual` (12 API checks) both PASS.
+- QA verdict PASS (R1-R12 all pass, 12/12). Reproducibility independently confirmed: a standalone script captured a run's pin, ran a full edit/archive/restore/cut/activate battery, and the pin was unchanged with v1 still FROZEN. Data-level no-mutation confirmed (all 13 candidate/published/prompt/extraction/review tables 0 rows after the flow). Regression clean; Wave35-38 UI invariants intact.
+- Freeze-on-pin gate (Wave39 open item) is now RESOLVED and implemented. `EvaluationRun.dataset_version_id` never rewritten; FROZEN/ARCHIVED mutation returns 409; owner/admin-only 403; import dry-run-first, INCOMPATIBLE blocked (409), no auto-merge; archive/freeze never hard-delete.
+- MVP6.4 non-blocking follow-ups: wire the mock gold-item list to goldset fixtures (currently the mock list reads the MVP6.1 evaluation client and shows empty — cosmetic, actual path unaffected); UI-driving `*:actual` smokes at the next FE-actual gate; durable persistence (P1/P2); pagination wiring.
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -267,21 +274,19 @@
 | Design Upgrade P2 Follow-ups | Closed in Wave38 (PASS). FE6-046 PageHeader tokenized, FE6-048 Analyze screens Section+Card/emphasis adopted; FE6-047 breakpoint map skipped (advisory, QA-accepted). No regression; 31 tests/build/smokes PASS, 0 overflow. | FE6-046~FE6-048, INT6-033, INT6-034 |
 | Design `*:actual` smokes | Non-blocking carry-over. Run the design/UI `*:actual` smokes at the next backend-up gate; no contract change, mock coverage representative. | FE/QA cleanup |
 | MVP6.4 Gold Set Authoring Contract | Closed in Wave39 (planning PASS). PM brief + ADR 0011, Backend contract + `openapi-mvp6-4-draft.json` (17 paths/45 schemas), Frontend UX/API requirements (0 DTO mismatch), QA `INT6_4` checklist (C1-C12 / R1-R12) all agree; no runtime leakage. | PM6-021, BE6-028~031, FE6-049~052, INT6-035~038 |
-| MVP6.4 Thin Runtime/UI | Open for Wave40. Implement the 5 frozen endpoint families, gold item edit/archive, standalone Gold Evidence, dataset revision cut/activate (FROZEN immutability + run-pinning), export/import dry-run+confirm, audit log; all-false mutation guard; owner/admin-only; reuse MVP6.1 shapes (no rename); mock+actual smoke. PM must FIRST freeze the freeze-on-pin rule (Wave40 gate). | BE6-032+, FE6-053+, INT6-039+ |
+| MVP6.4 Thin Runtime/UI | Closed in Wave40 (PASS). 5 endpoint families in `goldset_authoring/`; freeze-on-pin FROZEN transition; 409 immutability; owner-only 403; import dry-run/compat/strategy/INCOMPATIBLE-blocked; all-false mutation guard; run-pin never rewritten (reproducibility verified). FE Gold Set Manager UI; mock+actual smoke PASS; R1-R12 12/12; regression clean. | BE6-032~035, FE6-053~056, INT6-039~042 |
+| MVP6.4 Wave40 Follow-ups | Non-blocking. Wire mock gold-item list to goldset fixtures (mock list currently reads MVP6.1 evaluation client -> empty; actual unaffected); UI-driving `*:actual` smokes at next FE-actual gate; durable persistence (P1/P2); pagination wiring. | FE6/BE6 cleanup |
 
 ## Next Gate
 
 Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison. UI/UX work closed across Wave35 (review remediation P1+P2+P3), Wave36 (full D3/D6 rollout + single-active LNB), and Wave37 (reference-driven design language upgrade) — all PASS.
 
-MVP6.4 Gold Set authoring contract-first planning (Wave39) is PASS. **Wave40 = MVP6.4 thin implementation** is the next gate.
+MVP6.4 Gold Set authoring + dataset revisioning is closed (Wave39 planning + Wave40 implementation both PASS). Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison, 6.4 Gold Set authoring + dataset revisioning. UI/UX review remediation + reference-driven design upgrade also closed (Wave35-38).
 
-## Wave40 Gate (MVP6.4 Gold Set authoring thin implementation)
-1. PM: FIRST freeze the freeze-on-pin rule (does a revision become immutable while still ACTIVE once `pinned_run_count > 0`, or only on FROZEN?) — resolve the tension with "at most one ACTIVE / FROZEN=immutable". Confirm Wave40 scope guard; no scope expansion.
-2. Backend: implement the 5 frozen endpoint families (gold item edit/archive/restore, standalone Gold Evidence CRUD, DatasetRevision cut/list/get/activate with FROZEN immutability + run-pinning, export GET + import dry-run/confirm, authoring audit log), reusing MVP6.1 shapes by `$ref` (no rename), all-false `GoldAuthoringMutationGuard`, owner/admin-only authz, focused tests, OpenAPI export/alignment.
-3. Frontend: implement Gold Set Manager UI contextual under Evaluation (no LNB ID-page) per `MVP6_4_FRONTEND_UX_REQUIREMENTS.md` + the closed design language; types/client/mocks; mock + actual smoke.
-4. QA: validate against `INT6_4` runtime gates R1-R12, mutation guard, reproducibility (run pins never rewritten), and MVP1-MVP6.3 regression; recommend closeout or hardening.
-
-Non-blocking carry-over: run design/UI `*:actual` smokes at the next backend-up gate.
+Awaiting user direction on the next track:
+1. Next MVP6 theme (PM contract-first freeze first, PM picks smallest coherent P0): a Theme-3+ slice — governance workflow, impact simulation, copilot/agent runtime, connector/plugin SDK, multi-tenant runtime, ontology packs, or advanced visualization. Each is larger and needs cutting to a minimal auditable P0.
+2. Sweep accumulated MVP6.x non-blocking follow-ups in one hardening wave: mock gold-item list wiring, stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, UI-driving `*:actual` smokes, divergent-run seed, pagination wiring.
+3. Resume the paused Wave27 release/demo packaging.
 1. Next MVP6 theme (PM contract-first freeze first): Gold Set authoring/dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance, impact simulation, copilot/agents, connector/plugin SDK, multi-tenant, ontology packs, advanced viz).
 2. Sweep accumulated MVP6.x P1/P2 follow-ups (stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, strict-required field promotion, divergent-run seed) in one hardening wave.
 3. Resume the paused Wave27 release/demo packaging.
@@ -433,6 +438,10 @@ Non-blocking carry-over: run design/UI `*:actual` smokes at the next backend-up 
 | Backend | wave-039 | `PASS / MVP6.4 CONTRACT DRAFT READY` | 5 endpoint families, `openapi-mvp6-4-draft.json` 0.6.4-draft (17 paths/45 schemas), all-false GoldAuthoringMutationGuard; MVP6.1 reuse no rename; Open Q1 freeze-on-pin -> Wave40 gate |
 | Frontend | wave-039 | `PASS / MVP6.4 UX REQUIREMENTS READY` | Gold Set Manager contextual under Evaluation (no LNB ID-page); permission/immutability/import-compat states; 0 DTO mismatch vs Backend; design language applied |
 | QA | wave-039 | `PASS / WAVE40 THIN IMPLEMENTATION RECOMMENDED` | INT6_4 checklist C1-C12/R1-R12 (IDs re-ranged INT6-035~038); artifacts agree; OpenAPI parse+asserts pass; no runtime leakage; freeze-on-pin = Wave40 PM gate |
+| PM | wave-040 | `PASS / FREEZE-ON-PIN FROZEN` | Rule: pin -> FROZEN status transition (no ACTIVE-but-immutable); scope unchanged; brief/ADR 0011 refined; PM6-022 + BE6-032~035/FE6-053~056/INT6-039~042 |
+| Backend | wave-040 | `PASS / MVP6.4 THIN RUNTIME READY` | goldset_authoring module: 5 endpoint families, freeze-on-pin, 409 immutability, run-pin never rewritten, all-false guard, owner-only 403, import dry-run/compat; 21+4/77 tests, ruff clean, 17/17 OpenAPI |
+| Frontend | wave-040 | `PASS / GOLD SET MANAGER READY` | Contextual-under-Evaluation UI (no new LNB), full P0 flow + honest states + visible reproducibility; 43 tests/build; goldset mock(9) + actual(12) smoke PASS; 0 overflow |
+| QA | wave-040 | `PASS / MVP6.4 CLOSEOUT` | R1-R12 12/12; reproducibility independently verified (pin unchanged, v1 FROZEN); data-level no-mutation (13 tables 0 rows); actual smoke PASS; regression clean |
 
 ## Report Index
 
@@ -477,3 +486,4 @@ Non-blocking carry-over: run design/UI `*:actual` smokes at the next backend-up 
 | wave-037 | `wave-037/PM_REPORT.md` | not run | `wave-037/FRONTEND_REPORT.md` | `wave-037/QA_REPORT.md` | `wave-037/NEXT_ORDERS.md` |
 | wave-038 | not run | not run | `wave-038/FRONTEND_REPORT.md` | `wave-038/QA_REPORT.md` | `wave-038/NEXT_ORDERS.md` |
 | wave-039 | `wave-039/PM_REPORT.md` | `wave-039/BACKEND_REPORT.md` | `wave-039/FRONTEND_REPORT.md` | `wave-039/QA_REPORT.md` | `wave-039/NEXT_ORDERS.md` |
+| wave-040 | `wave-040/PM_REPORT.md` | `wave-040/BACKEND_REPORT.md` | `wave-040/FRONTEND_REPORT.md` | `wave-040/QA_REPORT.md` | `wave-040/NEXT_ORDERS.md` |

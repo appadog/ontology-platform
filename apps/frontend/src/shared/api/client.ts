@@ -88,6 +88,21 @@ import {
   MVP6_BENCHMARK_PROJECT_ID,
 } from "../mocks/mvp6BenchmarkFixtures";
 import {
+  allFalseMutationGuard,
+  buildAuthoringOverview,
+  buildExportBundle,
+  mockGoldsetAuditEntries,
+  mockGoldsetEntities,
+  mockGoldsetEvidence,
+  mockGoldsetRelations,
+  mockGoldsetRevisions,
+  mockImportReports,
+  ownerCapabilities,
+  toRevisionSummary,
+  MVP6_GOLDSET_DATASET_ID,
+  MVP6_GOLDSET_OWNER_ID,
+} from "../mocks/mvp6GoldsetFixtures";
+import {
   AuditEvent,
   AutoApprovalCandidatePreview,
   AutomaticApprovalPolicyDocument,
@@ -133,6 +148,25 @@ import {
   GoldRelation,
   GoldRelationCreateRequest,
   GoldenSetItem,
+  DatasetAuthoringOverview,
+  DatasetRevisionCutRequest,
+  DatasetRevisionListResponse,
+  DatasetRevisionMutationResponse,
+  GoldAuthoringAuditListResponse,
+  GoldEntityEditRequest,
+  GoldEntityMutationResponse,
+  GoldEvidenceAttachRequest,
+  GoldEvidenceEditRequest,
+  GoldEvidenceListResponse,
+  GoldEvidenceMutationResponse,
+  GoldItemArchiveRequest,
+  GoldRelationEditRequest,
+  GoldRelationMutationResponse,
+  GoldSetExportBundle,
+  GoldSetImportConfirmRequest,
+  GoldSetImportConfirmResponse,
+  GoldSetImportDryRunRequest,
+  GoldSetImportReport,
   GraphExploreRequest,
   GraphExploreResponse,
   ModelRun,
@@ -262,6 +296,21 @@ export class BenchmarkComparisonError extends Error {
 // Process-local persisted comparison store keyed by comparison_id (PM C12 = option a).
 let mockMvp6BenchmarkStore: BenchmarkComparison[] = [buildMockMvp6BenchmarkComparison(MVP6_BENCHMARK_PROJECT_ID)];
 let mockMvp6BenchmarkCounter = 0;
+
+// ---- MVP6.4 Gold Set Authoring error + process-local store ----
+export class GoldAuthoringError extends Error {
+  code: string;
+  status: number;
+
+  constructor(message: string, code: string, status: number) {
+    super(message);
+    this.name = "GoldAuthoringError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
+let mockGoldsetImportCounter = 0;
 
 async function delay<T>(value: T): Promise<T> {
   await new Promise((resolve) => globalThis.setTimeout(resolve, 180));
@@ -3405,4 +3454,449 @@ export const apiClient = {
       `/api/v1/benchmark-comparisons/${comparisonId}/confusion-matrix/cells/${cellId}/error-cases${query}`,
     );
   },
+
+  // ---- MVP6.4 Gold Set Authoring + Dataset Revisioning (expert-owned) ----
+  // Candidate/analysis-layer only. Every authoring/import response carries the
+  // all-false GoldAuthoringMutationGuard. EvaluationRun.dataset_version_id is
+  // never rewritten. Owner/admin-only; non-owners get a read-only capability hint.
+
+  async getDatasetAuthoringOverview(projectId: string, datasetId: string): Promise<DatasetAuthoringOverview> {
+    if (USE_MOCK_API) {
+      return delay(buildAuthoringOverview(ownerCapabilities));
+    }
+
+    return request<DatasetAuthoringOverview>(
+      `/api/v1/projects/${projectId}/evaluation-datasets/${datasetId}/authoring`,
+    );
+  },
+
+  async listGoldEvidence(datasetId: string): Promise<GoldEvidenceListResponse> {
+    if (USE_MOCK_API) {
+      return delay({ items: mockGoldsetEvidence.map((item) => ({ ...item })), next_cursor: null });
+    }
+
+    return request<GoldEvidenceListResponse>(`/api/v1/evaluation-datasets/${datasetId}/gold-evidence`);
+  },
+
+  async listDatasetRevisions(datasetId: string): Promise<DatasetRevisionListResponse> {
+    if (USE_MOCK_API) {
+      return delay({ items: mockGoldsetRevisions.map(toRevisionSummary), next_cursor: null });
+    }
+
+    return request<DatasetRevisionListResponse>(`/api/v1/evaluation-datasets/${datasetId}/revisions`);
+  },
+
+  async listGoldAuthoringAudit(datasetId: string): Promise<GoldAuthoringAuditListResponse> {
+    if (USE_MOCK_API) {
+      return delay({ items: mockGoldsetAuditEntries.map((entry) => ({ ...entry })), next_cursor: null });
+    }
+
+    return request<GoldAuthoringAuditListResponse>(
+      `/api/v1/evaluation-datasets/${datasetId}/authoring-audit`,
+    );
+  },
+
+  async editGoldEntity(
+    datasetId: string,
+    goldEntityId: string,
+    payload: GoldEntityEditRequest,
+  ): Promise<GoldEntityMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGoldsetEntities.find((entity) => entity.id === goldEntityId);
+      if (!existing) {
+        throw new GoldAuthoringError("Gold entity was not found.", "GOLD_ITEM_NOT_FOUND", 404);
+      }
+      const updated = {
+        ...existing,
+        label: payload.label ?? existing.label,
+        normalized_value: payload.normalized_value ?? existing.normalized_value,
+        ontology_class_id: payload.ontology_class_id ?? existing.ontology_class_id,
+        evidence: payload.evidence ?? existing.evidence,
+        updated_at: new Date().toISOString(),
+      };
+      return delay({
+        gold_entity: updated,
+        audit_entry: buildMockGoldAudit("EDIT", "GOLD_ENTITY", goldEntityId, payload.reason),
+        mutation_guard: { ...allFalseMutationGuard },
+        capabilities: ownerCapabilities,
+      });
+    }
+
+    return jsonRequest<GoldEntityMutationResponse>(
+      `/api/v1/evaluation-datasets/${datasetId}/gold-entities/${goldEntityId}`,
+      { method: "PATCH", body: JSON.stringify(payload) },
+    );
+  },
+
+  async archiveGoldEntity(
+    datasetId: string,
+    goldEntityId: string,
+    payload: GoldItemArchiveRequest = {},
+  ): Promise<GoldEntityMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGoldsetEntities.find((entity) => entity.id === goldEntityId);
+      if (!existing) {
+        throw new GoldAuthoringError("Gold entity was not found.", "GOLD_ITEM_NOT_FOUND", 404);
+      }
+      return delay({
+        gold_entity: { ...existing, status: "ARCHIVED", archived_at: new Date().toISOString() },
+        audit_entry: buildMockGoldAudit("ARCHIVE", "GOLD_ENTITY", goldEntityId, payload.reason),
+        mutation_guard: { ...allFalseMutationGuard },
+        capabilities: ownerCapabilities,
+      });
+    }
+
+    return jsonRequest<GoldEntityMutationResponse>(
+      `/api/v1/evaluation-datasets/${datasetId}/gold-entities/${goldEntityId}/archive`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  async restoreGoldEntity(
+    datasetId: string,
+    goldEntityId: string,
+    payload: GoldItemArchiveRequest = {},
+  ): Promise<GoldEntityMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGoldsetEntities.find((entity) => entity.id === goldEntityId);
+      if (!existing) {
+        throw new GoldAuthoringError("Gold entity was not found.", "GOLD_ITEM_NOT_FOUND", 404);
+      }
+      return delay({
+        gold_entity: { ...existing, status: "ACTIVE", archived_at: null },
+        audit_entry: buildMockGoldAudit("RESTORE", "GOLD_ENTITY", goldEntityId, payload.reason),
+        mutation_guard: { ...allFalseMutationGuard },
+        capabilities: ownerCapabilities,
+      });
+    }
+
+    return jsonRequest<GoldEntityMutationResponse>(
+      `/api/v1/evaluation-datasets/${datasetId}/gold-entities/${goldEntityId}/restore`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  async editGoldRelation(
+    datasetId: string,
+    goldRelationId: string,
+    payload: GoldRelationEditRequest,
+  ): Promise<GoldRelationMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGoldsetRelations.find((relation) => relation.id === goldRelationId);
+      if (!existing) {
+        throw new GoldAuthoringError("Gold relation was not found.", "GOLD_ITEM_NOT_FOUND", 404);
+      }
+      return delay({
+        gold_relation: {
+          ...existing,
+          ontology_relation_id: payload.ontology_relation_id ?? existing.ontology_relation_id,
+          source_gold_entity_id: payload.source_gold_entity_id ?? existing.source_gold_entity_id,
+          target_gold_entity_id: payload.target_gold_entity_id ?? existing.target_gold_entity_id,
+          evidence: payload.evidence ?? existing.evidence,
+          updated_at: new Date().toISOString(),
+        },
+        audit_entry: buildMockGoldAudit("EDIT", "GOLD_RELATION", goldRelationId, payload.reason),
+        mutation_guard: { ...allFalseMutationGuard },
+        capabilities: ownerCapabilities,
+      });
+    }
+
+    return jsonRequest<GoldRelationMutationResponse>(
+      `/api/v1/evaluation-datasets/${datasetId}/gold-relations/${goldRelationId}`,
+      { method: "PATCH", body: JSON.stringify(payload) },
+    );
+  },
+
+  async archiveGoldRelation(
+    datasetId: string,
+    goldRelationId: string,
+    payload: GoldItemArchiveRequest = {},
+  ): Promise<GoldRelationMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGoldsetRelations.find((relation) => relation.id === goldRelationId);
+      if (!existing) {
+        throw new GoldAuthoringError("Gold relation was not found.", "GOLD_ITEM_NOT_FOUND", 404);
+      }
+      return delay({
+        gold_relation: { ...existing, status: "ARCHIVED", archived_at: new Date().toISOString() },
+        audit_entry: buildMockGoldAudit("ARCHIVE", "GOLD_RELATION", goldRelationId, payload.reason),
+        mutation_guard: { ...allFalseMutationGuard },
+        capabilities: ownerCapabilities,
+      });
+    }
+
+    return jsonRequest<GoldRelationMutationResponse>(
+      `/api/v1/evaluation-datasets/${datasetId}/gold-relations/${goldRelationId}/archive`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  async restoreGoldRelation(
+    datasetId: string,
+    goldRelationId: string,
+    payload: GoldItemArchiveRequest = {},
+  ): Promise<GoldRelationMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGoldsetRelations.find((relation) => relation.id === goldRelationId);
+      if (!existing) {
+        throw new GoldAuthoringError("Gold relation was not found.", "GOLD_ITEM_NOT_FOUND", 404);
+      }
+      return delay({
+        gold_relation: { ...existing, status: "ACTIVE", archived_at: null },
+        audit_entry: buildMockGoldAudit("RESTORE", "GOLD_RELATION", goldRelationId, payload.reason),
+        mutation_guard: { ...allFalseMutationGuard },
+        capabilities: ownerCapabilities,
+      });
+    }
+
+    return jsonRequest<GoldRelationMutationResponse>(
+      `/api/v1/evaluation-datasets/${datasetId}/gold-relations/${goldRelationId}/restore`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  async attachGoldEvidence(
+    datasetId: string,
+    payload: GoldEvidenceAttachRequest,
+  ): Promise<GoldEvidenceMutationResponse> {
+    if (USE_MOCK_API) {
+      if (Boolean(payload.gold_entity_id) === Boolean(payload.gold_relation_id)) {
+        throw new GoldAuthoringError(
+          "Provide exactly one of gold_entity_id / gold_relation_id.",
+          "GOLD_EVIDENCE_TARGET_INVALID",
+          422,
+        );
+      }
+      const now = new Date().toISOString();
+      const evidence = {
+        id: `gold-evidence-${mockGoldsetEvidence.length + 1}`,
+        project_id: mockGoldsetDatasetProjectId(),
+        dataset_id: datasetId,
+        revision_id: null,
+        gold_entity_id: payload.gold_entity_id ?? null,
+        gold_relation_id: payload.gold_relation_id ?? null,
+        status: "ACTIVE" as const,
+        sample_id: payload.sample_id,
+        source_id: payload.source_id ?? null,
+        source_segment_id: payload.source_segment_id ?? null,
+        locator: payload.locator ?? null,
+        offset_start: payload.offset_start ?? null,
+        offset_end: payload.offset_end ?? null,
+        quote: payload.quote ?? null,
+        created_at: now,
+        updated_at: now,
+        archived_at: null,
+      };
+      return delay({
+        gold_evidence: evidence,
+        audit_entry: buildMockGoldAudit(
+          "EVIDENCE_ATTACH",
+          "GOLD_EVIDENCE",
+          evidence.id,
+          payload.reason,
+        ),
+        mutation_guard: { ...allFalseMutationGuard },
+        capabilities: ownerCapabilities,
+      });
+    }
+
+    return jsonRequest<GoldEvidenceMutationResponse>(
+      `/api/v1/evaluation-datasets/${datasetId}/gold-evidence`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  async editGoldEvidence(
+    evidenceId: string,
+    payload: GoldEvidenceEditRequest,
+  ): Promise<GoldEvidenceMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGoldsetEvidence.find((item) => item.id === evidenceId);
+      if (!existing) {
+        throw new GoldAuthoringError("Gold evidence was not found.", "GOLD_EVIDENCE_NOT_FOUND", 404);
+      }
+      return delay({
+        gold_evidence: {
+          ...existing,
+          source_id: payload.source_id ?? existing.source_id,
+          source_segment_id: payload.source_segment_id ?? existing.source_segment_id,
+          locator: payload.locator ?? existing.locator,
+          offset_start: payload.offset_start ?? existing.offset_start,
+          offset_end: payload.offset_end ?? existing.offset_end,
+          quote: payload.quote ?? existing.quote,
+          updated_at: new Date().toISOString(),
+        },
+        audit_entry: buildMockGoldAudit("EVIDENCE_EDIT", "GOLD_EVIDENCE", evidenceId, payload.reason),
+        mutation_guard: { ...allFalseMutationGuard },
+        capabilities: ownerCapabilities,
+      });
+    }
+
+    return jsonRequest<GoldEvidenceMutationResponse>(`/api/v1/gold-evidence/${evidenceId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async cutDatasetRevision(
+    datasetId: string,
+    payload: DatasetRevisionCutRequest,
+  ): Promise<DatasetRevisionMutationResponse> {
+    if (USE_MOCK_API) {
+      const now = new Date().toISOString();
+      const nextNumber = mockGoldsetRevisions.length + 1;
+      const status = payload.activate ? "ACTIVE" : "DRAFT";
+      const revision = {
+        id: `${datasetId}-v${nextNumber}`,
+        dataset_id: datasetId,
+        project_id: mockGoldsetDatasetProjectId(),
+        revision_number: nextNumber,
+        status: status as "ACTIVE" | "DRAFT",
+        is_immutable: false,
+        frozen_reason: null,
+        sample_count: 2,
+        gold_entity_count: 3,
+        gold_relation_count: 1,
+        gold_evidence_count: 4,
+        pinned_run_count: 0,
+        parent_revision_id: mockGoldsetRevisions[0]?.id ?? null,
+        ontology_version_id: mockGoldsetRevisions[0]?.ontology_version_id ?? null,
+        created_at: now,
+        activated_at: payload.activate ? now : null,
+        frozen_at: null,
+        created_by: MVP6_GOLDSET_OWNER_ID,
+      };
+      // When the new revision is activated, the prior ACTIVE freezes
+      // (NEWER_REVISION_ACTIVATED). No EvaluationRun.dataset_version_id rewrite.
+      const frozenRevisionId = payload.activate ? mockGoldsetRevisions[0]?.id ?? null : null;
+      return delay({
+        revision,
+        dataset: null,
+        frozen_revision_id: frozenRevisionId,
+        audit_entry: buildMockGoldAudit("REVISION_CUT", "DATASET_REVISION", revision.id, payload.note),
+        mutation_guard: { ...allFalseMutationGuard },
+        capabilities: ownerCapabilities,
+      });
+    }
+
+    return jsonRequest<DatasetRevisionMutationResponse>(
+      `/api/v1/evaluation-datasets/${datasetId}/revisions`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  async activateDatasetRevision(revisionId: string): Promise<DatasetRevisionMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGoldsetRevisions.find((rev) => rev.id === revisionId);
+      if (!existing) {
+        throw new GoldAuthoringError("Revision was not found.", "REVISION_NOT_FOUND", 404);
+      }
+      if (existing.status !== "DRAFT") {
+        throw new GoldAuthoringError("Only a DRAFT revision may be activated.", "REVISION_NOT_DRAFT", 409);
+      }
+      return delay({
+        revision: { ...existing, status: "ACTIVE", activated_at: new Date().toISOString() },
+        dataset: null,
+        frozen_revision_id: mockGoldsetRevisions[0]?.id ?? null,
+        audit_entry: buildMockGoldAudit("REVISION_ACTIVATE", "DATASET_REVISION", revisionId),
+        mutation_guard: { ...allFalseMutationGuard },
+        capabilities: ownerCapabilities,
+      });
+    }
+
+    return jsonRequest<DatasetRevisionMutationResponse>(
+      `/api/v1/dataset-revisions/${revisionId}/activate`,
+      { method: "POST" },
+    );
+  },
+
+  async exportDatasetRevision(revisionId: string): Promise<GoldSetExportBundle> {
+    if (USE_MOCK_API) {
+      return delay(buildExportBundle(revisionId));
+    }
+
+    return request<GoldSetExportBundle>(`/api/v1/dataset-revisions/${revisionId}/export`);
+  },
+
+  async dryRunGoldSetImport(
+    projectId: string,
+    payload: GoldSetImportDryRunRequest,
+  ): Promise<GoldSetImportReport> {
+    if (USE_MOCK_API) {
+      // Deterministic mock: pick the compatibility state from a bundle hint so
+      // the UI/smoke can exercise all four states. Defaults to WARNING.
+      const hint = (payload.bundle?.revision_status as string) ?? "";
+      const key =
+        hint && mockImportReports[hint] ? hint : "WARNING";
+      mockGoldsetImportCounter += 1;
+      return delay({ ...mockImportReports[key] });
+    }
+
+    return jsonRequest<GoldSetImportReport>(`/api/v1/projects/${projectId}/gold-set-imports`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async confirmGoldSetImport(
+    projectId: string,
+    importId: string,
+    payload: GoldSetImportConfirmRequest,
+  ): Promise<GoldSetImportConfirmResponse> {
+    if (USE_MOCK_API) {
+      if (importId === mockImportReports.INCOMPATIBLE.import_id) {
+        throw new GoldAuthoringError(
+          "The dry-run was INCOMPATIBLE; import is blocked.",
+          "IMPORT_INCOMPATIBLE",
+          409,
+        );
+      }
+      const createdDatasetId =
+        payload.strategy === "NEW_REVISION_OF_EXISTING"
+          ? payload.target_dataset_id ?? MVP6_GOLDSET_DATASET_ID
+          : `${MVP6_GOLDSET_DATASET_ID}-import-${mockGoldsetImportCounter || 1}`;
+      return delay({
+        import_id: importId,
+        strategy: payload.strategy,
+        created_dataset_id: createdDatasetId,
+        created_revision_id: `${createdDatasetId}-v${payload.activate ? "active" : "draft"}`,
+        created_revision_status: payload.activate ? "ACTIVE" : "DRAFT",
+        imported_counts: { samples: 2, gold_entities: 3, gold_relations: 1, gold_evidence: 4 },
+        audit_entry: buildMockGoldAudit("IMPORT", "DATASET_REVISION", createdDatasetId),
+        mutation_guard: { ...allFalseMutationGuard },
+      });
+    }
+
+    return jsonRequest<GoldSetImportConfirmResponse>(
+      `/api/v1/projects/${projectId}/gold-set-imports/${importId}/confirm`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
 };
+
+function mockGoldsetDatasetProjectId(): string {
+  return mockGoldsetRevisions[0]?.project_id ?? "project-corp-knowledge";
+}
+
+function buildMockGoldAudit(
+  action: GoldAuthoringAuditListResponse["items"][number]["action"],
+  targetKind: GoldAuthoringAuditListResponse["items"][number]["target_kind"],
+  targetId: string,
+  reason?: string | null,
+): GoldAuthoringAuditListResponse["items"][number] {
+  return {
+    id: `gold-audit-mock-${Date.now()}`,
+    project_id: mockGoldsetDatasetProjectId(),
+    dataset_id: MVP6_GOLDSET_DATASET_ID,
+    revision_id: mockGoldsetRevisions[0]?.id ?? null,
+    action,
+    actor_id: MVP6_GOLDSET_OWNER_ID,
+    is_owner: true,
+    target_kind: targetKind,
+    target_id: targetId,
+    before: null,
+    after: null,
+    reason: reason ?? null,
+    created_at: new Date().toISOString(),
+  };
+}

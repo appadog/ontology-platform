@@ -235,6 +235,7 @@ export function EvaluationDatasetsPage() {
                 </CountRow>
                 <Muted>{dataset.notes ?? "Evaluation dataset metadata only."}</Muted>
                 <Link to={`/projects/${projectId}/evaluation-datasets/${dataset.id}`}>Open dataset context</Link>
+                <Link to={`/projects/${projectId}/evaluation-datasets/${dataset.id}/gold-set`}>정답셋 관리</Link>
               </CardBody>
             </HanaCard>
           ))}

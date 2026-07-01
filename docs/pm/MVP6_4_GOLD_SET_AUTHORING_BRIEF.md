@@ -107,9 +107,14 @@ entry. Archive is a soft, reversible-by-owner transition; it never hard-deletes
 - `DRAFT` — revision being assembled; mutable.
 - `ACTIVE` — the dataset's current authoritative revision (matches
   `EvaluationDataset.active_version_id`). At most one ACTIVE per dataset.
-- `FROZEN` — a superseded revision. **Immutable.** A revision becomes `FROZEN`
-  when a newer revision is activated OR when any `EvaluationRun` pins it. Runs
-  may only pin `ACTIVE` or `FROZEN` revisions, never `DRAFT`.
+- `FROZEN` — a superseded or pinned revision. **Immutable.** A revision
+  **transitions to `FROZEN`** when a newer revision is activated OR the moment
+  any `EvaluationRun` pins it (`pinned_run_count > 0`). FROZEN is a status
+  transition, not an ACTIVE flag — there is no ACTIVE-but-immutable state, so
+  `is_immutable == status in {FROZEN, ARCHIVED}` and "at most one ACTIVE" always
+  hold; if the pinned revision was ACTIVE the dataset has no ACTIVE until a new
+  one is cut/activated. Runs may only pin `ACTIVE` or `FROZEN` revisions, never
+  `DRAFT`. (Freeze-on-pin rule frozen by PM in Wave40 / PM6-022.)
 - `ARCHIVED` — dataset-level archive cascades the revision to archived for
   listing/filtering; still immutable and still retrievable for run lineage.
 

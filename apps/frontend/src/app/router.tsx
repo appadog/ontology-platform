@@ -19,6 +19,7 @@ import { EvaluationDatasetsPage } from "../pages/EvaluationDatasetsPage";
 import { EvidenceViewerPage } from "../pages/EvidenceViewerPage";
 import { ExternalApiDocsPage } from "../pages/ExternalApiDocsPage";
 import { ExtractionJobCreatePage } from "../pages/ExtractionJobCreatePage";
+import { GoldSetManagerPage } from "../pages/GoldSetManagerPage";
 import { ExtractionJobMonitorPage } from "../pages/ExtractionJobMonitorPage";
 import { IntegratedSearchPage } from "../pages/IntegratedSearchPage";
 import { LearningInsightsPage } from "../pages/LearningInsightsPage";
@@ -159,6 +160,10 @@ export const router = createBrowserRouter([
       {
         path: "/projects/:projectId/evaluation-datasets/:datasetId",
         element: <EvaluationDatasetsPage />,
+      },
+      {
+        path: "/projects/:projectId/evaluation-datasets/:datasetId/gold-set",
+        element: <GoldSetManagerPage />,
       },
       {
         path: "/projects/:projectId/evaluation-dataset-versions/:datasetVersionId",

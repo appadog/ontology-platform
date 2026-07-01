@@ -65,10 +65,11 @@ to Backend.
 - **Evaluation reproducibility is the load-bearing invariant.**
   `EvaluationRun.dataset_version_id` is never rewritten. Editing gold items,
   cutting a revision, archiving, or importing never retro-mutates a prior run or
-  its metrics. A revision becomes `FROZEN` (immutable) the moment any run pins it
-  OR when a newer revision is activated; runs pin only `ACTIVE` or `FROZEN`
-  revisions, never `DRAFT`. An old run therefore always resolves to the exact
-  immutable snapshot it was scored against.
+  its metrics. A revision **transitions to `FROZEN`** (immutable) the moment any
+  run pins it OR when a newer revision is activated; there is no
+  ACTIVE-but-immutable state. Runs pin only `ACTIVE` or `FROZEN` revisions, never
+  `DRAFT`. An old run therefore always resolves to the exact immutable snapshot
+  it was scored against.
 - P0 reads/writes **only** MVP6.1 evaluation artifacts (dataset/sample/gold/
   evidence/revision) + an authoring audit log. It does not join MVP3
   review/correction, MVP4 quality, MVP6.2 learning signals, MVP6.3 comparison,
@@ -127,11 +128,13 @@ is soft, owner-reversible (`RESTORE`), never a hard delete.
 ```text
 DRAFT      revision being assembled; mutable
 ACTIVE     the dataset's current authoritative revision (== EvaluationDataset.active_version_id); at most one per dataset
-FROZEN     immutable; set when a newer revision is activated OR any EvaluationRun pins it
+FROZEN     immutable; status transitions here when a newer revision is activated OR any EvaluationRun pins it (no ACTIVE-but-immutable state)
 ARCHIVED   dataset-level archive cascade; immutable; still retrievable for run lineage
 ```
 
-Runs may pin only `ACTIVE` or `FROZEN` revisions, never `DRAFT`.
+Runs may pin only `ACTIVE` or `FROZEN` revisions, never `DRAFT`. `is_immutable`
+is always exactly `status in {FROZEN, ARCHIVED}`. When a pin freezes the ACTIVE
+revision, the dataset has no ACTIVE revision until a new one is cut/activated.
 
 ### `GoldAuthoringAction` (audit log — the 9 actions, verbatim)
 
@@ -611,16 +614,27 @@ and that a run's basis is FROZEN/immutable. Required: `dataset`,
 - Errors: `403`, `404 REVISION_NOT_FOUND`, `409 REVISION_NOT_DRAFT` (only DRAFT
   may be activated), `409 REVISION_FROZEN`.
 
-### Freeze-on-pin (run reproducibility — critical, see Open Questions Q1)
+### Freeze-on-pin (run reproducibility — FROZEN by PM, Wave40 / PM6-022)
 
-- A revision is frozen the moment an `EvaluationRun` pins it
-  (`frozen_reason=PINNED_BY_RUN`). MVP6.4 itself starts **no** runs; the freeze
-  trigger is observed/derived from existing run pins. **Exact trigger timing is
-  an open question for QA/Frontend (Q1).** Draft assumption: a revision with
-  `pinned_run_count > 0` is reported `FROZEN`/`is_immutable=true` regardless of
-  whether it is also the ACTIVE revision — i.e. pin-freeze and active-status are
-  orthogonal; an ACTIVE revision that gets pinned becomes immutable-while-active
-  and authoring must branch a new DRAFT revision to continue editing.
+- **Frozen rule (single, authoritative):** the moment a revision's
+  `pinned_run_count` becomes `> 0` (any `EvaluationRun` pins it), the revision
+  **transitions to `status=FROZEN`** with `frozen_reason=PINNED_BY_RUN`. The
+  FROZEN transition is what pinning triggers — there is NO "ACTIVE-but-immutable"
+  state. `is_immutable` is therefore always exactly
+  `status in {FROZEN, ARCHIVED}`, and "at most one ACTIVE per dataset" is never
+  contradicted.
+- If the pinned revision was the dataset's ACTIVE revision, the freeze vacates
+  the ACTIVE slot: the dataset then has **no** ACTIVE revision until the owner
+  cuts/activates a new one (`active_version_id` may be null). A run never pins a
+  DRAFT; a DRAFT is unaffected by pins.
+- An ACTIVE revision is fully mutable (edit/archive gold items, attach evidence)
+  right up until it is frozen. Once FROZEN, every mutation against it or its
+  gold items/evidence returns `409 REVISION_FROZEN` / `409 GOLD_ITEM_IMMUTABLE`;
+  to keep editing the owner cuts a new revision (snapshot) and edits that DRAFT,
+  then activates it. The prior FROZEN revision and every run pinned to it are
+  untouched (`EvaluationRun.dataset_version_id` never rewritten).
+- MVP6.4 itself starts **no** runs, so the freeze is observed/derived from
+  existing run pins at read time and applied as the FROZEN transition above.
 
 ### GET `.../{revision_id}/export`
 
@@ -672,13 +686,15 @@ is enforced; all other roles get read + a permission state.
 
 ## Open Questions for Frontend / QA
 
-1. **Revision freeze-on-pin trigger timing.** MVP6.4 starts no runs, so the
-   `PINNED_BY_RUN` freeze is derived from existing run pins. Draft assumption:
-   `pinned_run_count > 0` ⇒ `is_immutable=true` even while ACTIVE, forcing a new
-   DRAFT branch to keep authoring. QA: confirm this is the immutability rule to
-   test; Frontend: confirm the "ACTIVE but pinned ⇒ immutable, branch to edit"
-   UX. Alternative: freeze only on activation of a newer revision and treat pin
-   as advisory — **needs PM/QA ruling**.
+1. **Revision freeze-on-pin trigger timing — RESOLVED (PM, Wave40 / PM6-022).**
+   Rule: `pinned_run_count > 0` ⇒ the revision **transitions to `status=FROZEN`**
+   (`frozen_reason=PINNED_BY_RUN`, `is_immutable=true`). There is no
+   ACTIVE-but-immutable state; `is_immutable == status in {FROZEN, ARCHIVED}`.
+   If the pinned revision was ACTIVE, the dataset has no ACTIVE revision until a
+   new one is cut/activated. Mutations against a FROZEN revision/its gold items
+   return `409 REVISION_FROZEN` / `409 GOLD_ITEM_IMMUTABLE`; to keep editing, cut
+   a new DRAFT revision. See "Freeze-on-pin" section above. (Backend/Frontend/QA
+   implement/test this one behavior.)
 2. **Import conflict resolution semantics.** `CONFLICT` is not auto-merged and
    requires an explicit `GoldSetImportStrategy`. For `NEW_REVISION_OF_EXISTING`
    onto a dataset whose ACTIVE revision is pinned/immutable, the import creates a

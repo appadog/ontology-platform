@@ -2607,3 +2607,324 @@ export interface AutoApprovalCandidatePreview {
   safety_note: string;
   blocked_actions: string[];
 }
+
+// ---- MVP6.4 Gold Set Authoring + Dataset Revisioning ----
+// Field/enum names match docs/api/openapi-mvp6-4-draft.json and
+// apps/backend/app/modules/goldset_authoring/schemas.py EXACTLY.
+// Reuses MVP6.1 EvaluationDataset / EvaluationSample / GoldEntity / GoldRelation
+// / GoldEvidenceRef / EvaluationRun verbatim — no renames (additive overlay).
+
+export type GoldItemStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
+
+export type DatasetRevisionStatus = "DRAFT" | "ACTIVE" | "FROZEN" | "ARCHIVED";
+
+export type GoldAuthoringAction =
+  | "CREATE"
+  | "EDIT"
+  | "ARCHIVE"
+  | "RESTORE"
+  | "EVIDENCE_ATTACH"
+  | "EVIDENCE_EDIT"
+  | "REVISION_CUT"
+  | "REVISION_ACTIVATE"
+  | "IMPORT";
+
+export type GoldSetImportCompatibility = "COMPATIBLE" | "WARNING" | "CONFLICT" | "INCOMPATIBLE";
+
+export type GoldSetImportStrategy = "CREATE_NEW_DATASET" | "NEW_REVISION_OF_EXISTING";
+
+export type RevisionFrozenReason = "NEWER_REVISION_ACTIVATED" | "PINNED_BY_RUN";
+
+export type GoldAuthoringTargetKind =
+  | "GOLD_ENTITY"
+  | "GOLD_RELATION"
+  | "GOLD_EVIDENCE"
+  | "DATASET_REVISION"
+  | "DATASET";
+
+export interface GoldAuthoringMutationGuard {
+  published_graph_mutated: boolean;
+  candidate_graph_mutated: boolean;
+  prompt_version_mutated: boolean;
+  ontology_definition_mutated: boolean;
+  extraction_job_started: boolean;
+  evaluation_run_started: boolean;
+  prior_run_pin_rewritten: boolean;
+}
+
+export interface GoldAuthoringCapabilities {
+  can_view: boolean;
+  can_edit_gold_item: boolean;
+  can_archive_gold_item: boolean;
+  can_author_evidence: boolean;
+  can_cut_revision: boolean;
+  can_activate_revision: boolean;
+  can_import: boolean;
+}
+
+// Additive overlay over MVP6.1 GoldEntity / GoldRelation (allOf; no rename).
+export interface GoldItemAuthoringOverlay {
+  status: GoldItemStatus;
+  revision_id?: string | null;
+  evidence_id?: string | null;
+  updated_at?: string | null;
+  archived_at?: string | null;
+}
+
+export type GoldEntityAuthoringView = GoldEntity & GoldItemAuthoringOverlay;
+
+export type GoldRelationAuthoringView = GoldRelation & GoldItemAuthoringOverlay;
+
+// Standalone first-class evidence; preserves all GoldEvidenceRef fields verbatim.
+export interface GoldEvidence {
+  id: string;
+  project_id: string;
+  dataset_id: string;
+  revision_id?: string | null;
+  gold_entity_id?: string | null;
+  gold_relation_id?: string | null;
+  status: GoldItemStatus;
+  sample_id: string;
+  source_id?: string | null;
+  source_segment_id?: string | null;
+  locator?: string | null;
+  offset_start?: number | null;
+  offset_end?: number | null;
+  quote?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+  archived_at?: string | null;
+}
+
+export interface RunRevisionPin {
+  run_id: string;
+  dataset_version_id?: string | null;
+  revision_status?: DatasetRevisionStatus | null;
+  pin_immutable: boolean;
+}
+
+export interface DatasetRevision {
+  id: string;
+  dataset_id: string;
+  project_id: string;
+  revision_number: number;
+  status: DatasetRevisionStatus;
+  is_immutable: boolean;
+  frozen_reason?: RevisionFrozenReason | null;
+  sample_count: number;
+  gold_entity_count: number;
+  gold_relation_count: number;
+  gold_evidence_count: number;
+  pinned_run_count: number;
+  parent_revision_id?: string | null;
+  ontology_version_id?: string | null;
+  created_at: string;
+  activated_at?: string | null;
+  frozen_at?: string | null;
+  created_by?: string | null;
+}
+
+export interface DatasetRevisionSummary {
+  id: string;
+  dataset_id: string;
+  revision_number: number;
+  status: DatasetRevisionStatus;
+  is_immutable: boolean;
+  frozen_reason?: RevisionFrozenReason | null;
+  pinned_run_count: number;
+  created_at: string;
+}
+
+export interface GoldEntityEditRequest {
+  label?: string | null;
+  normalized_value?: string | null;
+  ontology_class_id?: string | null;
+  evidence?: GoldEvidenceRef | null;
+  reason?: string | null;
+}
+
+export interface GoldRelationEditRequest {
+  ontology_relation_id?: string | null;
+  source_gold_entity_id?: string | null;
+  target_gold_entity_id?: string | null;
+  evidence?: GoldEvidenceRef | null;
+  reason?: string | null;
+}
+
+export interface GoldItemArchiveRequest {
+  reason?: string | null;
+}
+
+export interface GoldEvidenceAttachRequest {
+  gold_entity_id?: string | null;
+  gold_relation_id?: string | null;
+  sample_id: string;
+  source_id?: string | null;
+  source_segment_id?: string | null;
+  locator?: string | null;
+  offset_start?: number | null;
+  offset_end?: number | null;
+  quote?: string | null;
+  reason?: string | null;
+}
+
+export interface GoldEvidenceEditRequest {
+  source_id?: string | null;
+  source_segment_id?: string | null;
+  locator?: string | null;
+  offset_start?: number | null;
+  offset_end?: number | null;
+  quote?: string | null;
+  reason?: string | null;
+}
+
+export interface DatasetRevisionCutRequest {
+  note?: string | null;
+  activate?: boolean;
+}
+
+export interface GoldAuthoringAuditEntry {
+  id: string;
+  project_id: string;
+  dataset_id: string;
+  revision_id?: string | null;
+  action: GoldAuthoringAction;
+  actor_id: string;
+  is_owner: boolean;
+  target_kind: GoldAuthoringTargetKind;
+  target_id: string;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  reason?: string | null;
+  created_at: string;
+}
+
+export interface GoldEntityMutationResponse {
+  gold_entity: GoldEntityAuthoringView;
+  audit_entry: GoldAuthoringAuditEntry;
+  mutation_guard: GoldAuthoringMutationGuard;
+  capabilities?: GoldAuthoringCapabilities | null;
+}
+
+export interface GoldRelationMutationResponse {
+  gold_relation: GoldRelationAuthoringView;
+  audit_entry: GoldAuthoringAuditEntry;
+  mutation_guard: GoldAuthoringMutationGuard;
+  capabilities?: GoldAuthoringCapabilities | null;
+}
+
+export interface GoldEvidenceMutationResponse {
+  gold_evidence: GoldEvidence;
+  audit_entry: GoldAuthoringAuditEntry;
+  mutation_guard: GoldAuthoringMutationGuard;
+  capabilities?: GoldAuthoringCapabilities | null;
+}
+
+export interface DatasetRevisionMutationResponse {
+  revision: DatasetRevision;
+  dataset?: EvaluationDataset | null;
+  frozen_revision_id?: string | null;
+  audit_entry: GoldAuthoringAuditEntry;
+  mutation_guard: GoldAuthoringMutationGuard;
+  capabilities?: GoldAuthoringCapabilities | null;
+}
+
+export interface DatasetAuthoringOverview {
+  dataset: EvaluationDataset;
+  active_revision?: DatasetRevision | null;
+  revision_count: number;
+  gold_status_counts: Record<string, number>;
+  pinned_runs: RunRevisionPin[];
+  capabilities: GoldAuthoringCapabilities;
+  mutation_guard: GoldAuthoringMutationGuard;
+}
+
+export interface GoldEvidenceListResponse {
+  items: GoldEvidence[];
+  next_cursor?: string | null;
+}
+
+export interface DatasetRevisionListResponse {
+  items: DatasetRevisionSummary[];
+  next_cursor?: string | null;
+}
+
+export interface GoldAuthoringAuditListResponse {
+  items: GoldAuthoringAuditEntry[];
+  next_cursor?: string | null;
+}
+
+export interface GoldSetExportBundle {
+  bundle_version: string;
+  source_project_id: string;
+  source_dataset_id: string;
+  source_revision_id: string;
+  revision_status?: DatasetRevisionStatus | null;
+  ontology_version_id?: string | null;
+  exported_at: string;
+  samples: EvaluationSample[];
+  gold_entities: GoldEntityAuthoringView[];
+  gold_relations: GoldRelationAuthoringView[];
+  gold_evidence: GoldEvidence[];
+  mutation_guard: GoldAuthoringMutationGuard;
+}
+
+export interface GoldSetImportDryRunRequest {
+  bundle: GoldSetExportBundle;
+}
+
+export interface GoldSetImportIssue {
+  code: string;
+  severity: GoldSetImportCompatibility;
+  ontology_class_id?: string | null;
+  ontology_relation_id?: string | null;
+  sample_id?: string | null;
+  message: string;
+}
+
+export interface GoldSetBundleSummary {
+  bundle_version: string;
+  source_dataset_id?: string | null;
+  source_revision_id?: string | null;
+  sample_count: number;
+  gold_entity_count: number;
+  gold_relation_count: number;
+  gold_evidence_count: number;
+}
+
+export interface GoldSetImportReport {
+  import_id: string;
+  project_id: string;
+  compatibility: GoldSetImportCompatibility;
+  bundle_summary: GoldSetBundleSummary;
+  target_ontology_version_id?: string | null;
+  issues: GoldSetImportIssue[];
+  allowed_strategies: GoldSetImportStrategy[];
+  blocking: boolean;
+  mutation_guard: GoldAuthoringMutationGuard;
+}
+
+export interface GoldSetImportConfirmRequest {
+  strategy: GoldSetImportStrategy;
+  target_dataset_id?: string | null;
+  activate?: boolean;
+  acknowledge_warnings?: boolean;
+}
+
+export interface ImportedCounts {
+  samples: number;
+  gold_entities: number;
+  gold_relations: number;
+  gold_evidence: number;
+}
+
+export interface GoldSetImportConfirmResponse {
+  import_id: string;
+  strategy: GoldSetImportStrategy;
+  created_dataset_id?: string | null;
+  created_revision_id: string;
+  created_revision_status: DatasetRevisionStatus;
+  imported_counts: ImportedCounts;
+  audit_entry: GoldAuthoringAuditEntry;
+  mutation_guard: GoldAuthoringMutationGuard;
+}

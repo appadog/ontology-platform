@@ -3,6 +3,14 @@ import { apiClient } from "./client";
 import {
   PermissionCheckRequest,
   CandidateListFilters,
+  DatasetRevisionCutRequest,
+  GoldEntityEditRequest,
+  GoldEvidenceAttachRequest,
+  GoldEvidenceEditRequest,
+  GoldItemArchiveRequest,
+  GoldRelationEditRequest,
+  GoldSetImportConfirmRequest,
+  GoldSetImportDryRunRequest,
   EvaluationDatasetCreateRequest,
   EvaluationRunCreateRequest,
   EvaluationSampleCreateRequest,
@@ -970,5 +978,159 @@ export function useBenchmarkCellErrorCases(
     queryKey: ["benchmark-comparisons", comparisonId, "confusion-matrix", runId, axis, "cells", cellId],
     queryFn: () => apiClient.getBenchmarkCellErrorCases(comparisonId, runId, axis, cellId),
     enabled: Boolean(comparisonId) && Boolean(runId) && Boolean(cellId),
+  });
+}
+
+// ---- MVP6.4 Gold Set Authoring + Dataset Revisioning ----
+// Authoring is candidate/analysis-layer only; no run/score/publish invalidation.
+
+const goldsetKeys = {
+  overview: (datasetId: string) => ["evaluation-datasets", datasetId, "authoring"] as const,
+  evidence: (datasetId: string) => ["evaluation-datasets", datasetId, "gold-evidence"] as const,
+  revisions: (datasetId: string) => ["evaluation-datasets", datasetId, "revisions"] as const,
+  audit: (datasetId: string) => ["evaluation-datasets", datasetId, "authoring-audit"] as const,
+};
+
+export function useDatasetAuthoringOverview(projectId: string, datasetId: string) {
+  return useQuery({
+    queryKey: goldsetKeys.overview(datasetId),
+    queryFn: () => apiClient.getDatasetAuthoringOverview(projectId, datasetId),
+    enabled: Boolean(projectId) && Boolean(datasetId),
+  });
+}
+
+export function useGoldEvidence(datasetId: string) {
+  return useQuery({
+    queryKey: goldsetKeys.evidence(datasetId),
+    queryFn: () => apiClient.listGoldEvidence(datasetId),
+    enabled: Boolean(datasetId),
+  });
+}
+
+export function useDatasetRevisions(datasetId: string) {
+  return useQuery({
+    queryKey: goldsetKeys.revisions(datasetId),
+    queryFn: () => apiClient.listDatasetRevisions(datasetId),
+    enabled: Boolean(datasetId),
+  });
+}
+
+export function useGoldAuthoringAudit(datasetId: string) {
+  return useQuery({
+    queryKey: goldsetKeys.audit(datasetId),
+    queryFn: () => apiClient.listGoldAuthoringAudit(datasetId),
+    enabled: Boolean(datasetId),
+  });
+}
+
+function useGoldsetInvalidate(datasetId: string) {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: goldsetKeys.overview(datasetId) });
+    void queryClient.invalidateQueries({ queryKey: goldsetKeys.evidence(datasetId) });
+    void queryClient.invalidateQueries({ queryKey: goldsetKeys.revisions(datasetId) });
+    void queryClient.invalidateQueries({ queryKey: goldsetKeys.audit(datasetId) });
+    void queryClient.invalidateQueries({ queryKey: ["evaluation-datasets", datasetId, "gold-entities"] });
+    void queryClient.invalidateQueries({ queryKey: ["evaluation-datasets", datasetId, "gold-relations"] });
+  };
+}
+
+export function useEditGoldEntity(datasetId: string) {
+  const invalidate = useGoldsetInvalidate(datasetId);
+  return useMutation({
+    mutationFn: ({ goldEntityId, payload }: { goldEntityId: string; payload: GoldEntityEditRequest }) =>
+      apiClient.editGoldEntity(datasetId, goldEntityId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useArchiveGoldEntity(datasetId: string) {
+  const invalidate = useGoldsetInvalidate(datasetId);
+  return useMutation({
+    mutationFn: ({ goldEntityId, payload }: { goldEntityId: string; payload?: GoldItemArchiveRequest }) =>
+      apiClient.archiveGoldEntity(datasetId, goldEntityId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRestoreGoldEntity(datasetId: string) {
+  const invalidate = useGoldsetInvalidate(datasetId);
+  return useMutation({
+    mutationFn: ({ goldEntityId, payload }: { goldEntityId: string; payload?: GoldItemArchiveRequest }) =>
+      apiClient.restoreGoldEntity(datasetId, goldEntityId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useEditGoldRelation(datasetId: string) {
+  const invalidate = useGoldsetInvalidate(datasetId);
+  return useMutation({
+    mutationFn: ({ goldRelationId, payload }: { goldRelationId: string; payload: GoldRelationEditRequest }) =>
+      apiClient.editGoldRelation(datasetId, goldRelationId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useArchiveGoldRelation(datasetId: string) {
+  const invalidate = useGoldsetInvalidate(datasetId);
+  return useMutation({
+    mutationFn: ({ goldRelationId, payload }: { goldRelationId: string; payload?: GoldItemArchiveRequest }) =>
+      apiClient.archiveGoldRelation(datasetId, goldRelationId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRestoreGoldRelation(datasetId: string) {
+  const invalidate = useGoldsetInvalidate(datasetId);
+  return useMutation({
+    mutationFn: ({ goldRelationId, payload }: { goldRelationId: string; payload?: GoldItemArchiveRequest }) =>
+      apiClient.restoreGoldRelation(datasetId, goldRelationId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useAttachGoldEvidence(datasetId: string) {
+  const invalidate = useGoldsetInvalidate(datasetId);
+  return useMutation({
+    mutationFn: (payload: GoldEvidenceAttachRequest) => apiClient.attachGoldEvidence(datasetId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useEditGoldEvidence(datasetId: string) {
+  const invalidate = useGoldsetInvalidate(datasetId);
+  return useMutation({
+    mutationFn: ({ evidenceId, payload }: { evidenceId: string; payload: GoldEvidenceEditRequest }) =>
+      apiClient.editGoldEvidence(evidenceId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCutDatasetRevision(datasetId: string) {
+  const invalidate = useGoldsetInvalidate(datasetId);
+  return useMutation({
+    mutationFn: (payload: DatasetRevisionCutRequest) => apiClient.cutDatasetRevision(datasetId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useActivateDatasetRevision(datasetId: string) {
+  const invalidate = useGoldsetInvalidate(datasetId);
+  return useMutation({
+    mutationFn: (revisionId: string) => apiClient.activateDatasetRevision(revisionId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDryRunGoldSetImport(projectId: string) {
+  return useMutation({
+    mutationFn: (payload: GoldSetImportDryRunRequest) => apiClient.dryRunGoldSetImport(projectId, payload),
+  });
+}
+
+export function useConfirmGoldSetImport(projectId: string) {
+  return useMutation({
+    mutationFn: ({ importId, payload }: { importId: string; payload: GoldSetImportConfirmRequest }) =>
+      apiClient.confirmGoldSetImport(projectId, importId, payload),
   });
 }

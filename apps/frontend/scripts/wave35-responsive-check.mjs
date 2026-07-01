@@ -38,8 +38,12 @@ if (!candidatesPath) {
   await probe.close();
 }
 
+const goldsetDatasetId = process.env.W35_GOLDSET_DATASET_ID ?? "dataset-corp-knowledge-gold";
+
 const routes = [
   { name: "ontology-modeler", path: `/projects/${projectId}/ontology` },
+  // Wave40 FE6-053..056: MVP6.4 Gold Set Manager (mock-backed, contextual under Evaluation).
+  { name: "gold-set-manager", path: `/projects/${projectId}/evaluation-datasets/${goldsetDatasetId}/gold-set` },
 ];
 if (candidatesPath) routes.push({ name: "candidate-results", path: candidatesPath });
 
