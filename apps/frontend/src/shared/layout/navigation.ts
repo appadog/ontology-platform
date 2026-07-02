@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ClipboardCheck,
   GaugeCircle,
+  Scale,
   UploadCloud,
   Share2,
   Search,
@@ -38,6 +39,7 @@ export type NavSection =
   | "candidates"
   | "review"
   | "quality"
+  | "governance"
   | "publish"
   | "published-graph"
   | "search"
@@ -88,6 +90,9 @@ export const projectNavGroups: NavGroup[] = [
     items: [
       { section: "review", label: "Review", icon: ClipboardCheck, to: (p) => `/projects/${p}/review` },
       { section: "quality", label: "Quality", icon: GaugeCircle, to: (p) => `/projects/${p}/quality` },
+      // MVP6.5 (FE6-061): governance change-request board is its own persistent
+      // work queue under the Review group (ADR 0010). Detail is contextual.
+      { section: "governance", label: "Governance", icon: Scale, to: (p) => `/projects/${p}/governance` },
     ],
   },
   {
@@ -125,6 +130,8 @@ export function resolveActiveSection(pathname: string): NavSection | null {
   if (pathname.includes("/sources")) return "sources";
   if (pathname.includes("/extraction-jobs") || pathname.includes("/extraction/new")) return "extraction";
   if (pathname.includes("/quality")) return "quality";
+  // Governance is a distinct segment; resolve it explicitly (no overlap with review).
+  if (pathname.includes("/governance")) return "governance";
   if (pathname.includes("/review")) return "review";
   if (pathname.includes("/published-graph")) return "published-graph";
   if (pathname.includes("/publish")) return "publish"; // covers /publish and /publish-jobs

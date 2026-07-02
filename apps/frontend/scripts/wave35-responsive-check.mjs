@@ -39,11 +39,16 @@ if (!candidatesPath) {
 }
 
 const goldsetDatasetId = process.env.W35_GOLDSET_DATASET_ID ?? "dataset-corp-knowledge-gold";
+const governanceChangeRequestId = process.env.W35_GOVERNANCE_CR_ID ?? "ocr-approved-004";
 
 const routes = [
   { name: "ontology-modeler", path: `/projects/${projectId}/ontology` },
   // Wave40 FE6-053..056: MVP6.4 Gold Set Manager (mock-backed, contextual under Evaluation).
   { name: "gold-set-manager", path: `/projects/${projectId}/evaluation-datasets/${goldsetDatasetId}/gold-set` },
+  // Wave42 FE6-061..064: MVP6.5 Governance (board / propose / detail).
+  { name: "governance-board", path: `/projects/${projectId}/governance` },
+  { name: "governance-propose", path: `/projects/${projectId}/governance/new` },
+  { name: "governance-detail", path: `/projects/${projectId}/governance/${governanceChangeRequestId}` },
 ];
 if (candidatesPath) routes.push({ name: "candidate-results", path: candidatesPath });
 

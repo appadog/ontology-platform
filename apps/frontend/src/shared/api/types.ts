@@ -2928,3 +2928,212 @@ export interface GoldSetImportConfirmResponse {
   audit_entry: GoldAuthoringAuditEntry;
   mutation_guard: GoldAuthoringMutationGuard;
 }
+
+// ---- MVP6.5 Governance workflow (ontology change-request lifecycle) ----
+// Additive decision-record surface in the candidate/analysis layer. Field/enum
+// names match docs/api/openapi-mvp6-5-draft.json EXACTLY. Approval records intent
+// + audit ONLY (application_state=QUEUED); it applies NOTHING (change_auto_applied
+// always false). APPLIED/SUPERSEDED are reserved and never produced in P0.
+
+/** Change-request lifecycle. DRAFT->OPEN->IN_REVIEW->{APPROVED|REJECTED}; WITHDRAWN from DRAFT/OPEN/IN_REVIEW. */
+export type OntologyChangeRequestStatus =
+  | "DRAFT"
+  | "OPEN"
+  | "IN_REVIEW"
+  | "APPROVED"
+  | "REJECTED"
+  | "WITHDRAWN";
+
+/** Orthogonal post-approval intent lifecycle. QUEUED on APPROVE. APPLIED/SUPERSEDED reserved (never produced in P0). */
+export type GovernanceApplicationState = "NOT_APPLICABLE" | "QUEUED" | "APPLIED" | "SUPERSEDED";
+
+/** Decision commands. Reuses MVP3 APPROVE/REQUEST_CHANGES/REJECT verbatim + adds COMMENT (no MODIFY_AND_APPROVE). */
+export type GovernanceReviewAction = "COMMENT" | "REQUEST_CHANGES" | "APPROVE" | "REJECT";
+
+/** Ontology element kind a change item targets (reference only; never edited). */
+export type ChangeRequestTargetKind = "CLASS" | "PROPERTY" | "RELATION";
+
+/** Proposed change type. Element ref null for ADD; required for MODIFY/DEPRECATE. */
+export type ChangeRequestChangeType = "ADD" | "MODIFY" | "DEPRECATE";
+
+/** Governance-specific audit actions (does NOT rename MVP3/MVP5 AuditEventType). */
+export type GovernanceAuditAction =
+  | "CHANGE_REQUEST_CREATED"
+  | "CHANGE_REQUEST_UPDATED"
+  | "CHANGE_REQUEST_SUBMITTED"
+  | "CHANGE_REQUEST_WITHDRAWN"
+  | "REVIEW_STARTED"
+  | "COMMENT_ADDED"
+  | "CHANGES_REQUESTED"
+  | "CHANGE_REQUEST_APPROVED"
+  | "CHANGE_REQUEST_REJECTED";
+
+/**
+ * Reused verbatim from the backend Role enum (apps/backend/app/core/enums.py) and
+ * mirrored in the OpenAPI `Role` schema. Not a rename of any existing FE type.
+ * Approve/reject restricted to ONTOLOGY_MANAGER/PROJECT_ADMIN/SYSTEM_ADMIN.
+ */
+export type GovernanceRole =
+  | "SYSTEM_ADMIN"
+  | "PROJECT_ADMIN"
+  | "ONTOLOGY_MANAGER"
+  | "DATA_MANAGER"
+  | "EXTRACTION_MANAGER"
+  | "REVIEWER"
+  | "VIEWER"
+  | "API_CLIENT";
+
+/** All-false on every governance write response. change_auto_applied=false is the approval-!=-auto-apply proof. */
+export interface GovernanceMutationGuard {
+  ontology_definition_mutated: false;
+  published_graph_mutated: false;
+  candidate_graph_mutated: false;
+  prompt_version_mutated: false;
+  publish_job_started: false;
+  extraction_job_started: false;
+  change_auto_applied: false;
+}
+
+/** Read-only permission hint for the UI. Display-only; the server enforces authorization independently. */
+export interface GovernanceCapabilities {
+  can_view: boolean;
+  can_edit_request?: boolean;
+  can_submit?: boolean;
+  can_withdraw?: boolean;
+  can_comment?: boolean;
+  can_request_changes?: boolean;
+  can_approve?: boolean;
+  can_reject?: boolean;
+}
+
+/** A proposed change to a single ontology element. The proposed_change payload is intent only, never applied. */
+export interface OntologyChangeItem {
+  id: string;
+  change_request_id: string;
+  target_kind: ChangeRequestTargetKind;
+  change_type: ChangeRequestChangeType;
+  ontology_class_id?: string | null;
+  ontology_property_id?: string | null;
+  ontology_relation_id?: string | null;
+  ontology_version_id: string;
+  proposed_change?: Record<string, unknown>;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+/** Add/edit a change item. Element ref null for ADD; exactly one matching target_kind for MODIFY/DEPRECATE. */
+export interface OntologyChangeItemRequest {
+  target_kind: ChangeRequestTargetKind;
+  change_type: ChangeRequestChangeType;
+  ontology_class_id?: string | null;
+  ontology_property_id?: string | null;
+  ontology_relation_id?: string | null;
+  ontology_version_id: string;
+  proposed_change?: Record<string, unknown>;
+}
+
+/** A proposal record in the governance/decision layer. application_state is QUEUED iff status==APPROVED. */
+export interface OntologyChangeRequest {
+  id: string;
+  project_id: string;
+  title: string;
+  summary?: string | null;
+  status: OntologyChangeRequestStatus;
+  application_state: GovernanceApplicationState;
+  proposer_id: string;
+  item_count: number;
+  ontology_version_id?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+  submitted_at?: string | null;
+  decided_at?: string | null;
+  decided_by?: string | null;
+  decision_reason?: string | null;
+}
+
+export interface OntologyChangeRequestCreateRequest {
+  title: string;
+  summary?: string | null;
+  ontology_version_id?: string | null;
+  items?: OntologyChangeItemRequest[];
+}
+
+export interface OntologyChangeRequestUpdateRequest {
+  title?: string;
+  summary?: string | null;
+}
+
+export interface GovernanceWithdrawRequest {
+  reason?: string | null;
+}
+
+/** Record a review decision. reason REQUIRED (non-empty) for REQUEST_CHANGES/APPROVE/REJECT; optional for COMMENT. */
+export interface GovernanceReviewDecisionRequest {
+  action: GovernanceReviewAction;
+  reason?: string | null;
+}
+
+/** One entry in the review thread. resulting_application_state is QUEUED only on APPROVE. */
+export interface GovernanceReviewDecision {
+  id: string;
+  change_request_id: string;
+  action: GovernanceReviewAction;
+  actor_id: string;
+  actor_role?: GovernanceRole;
+  reason?: string | null;
+  resulting_status: OntologyChangeRequestStatus;
+  resulting_application_state?: GovernanceApplicationState;
+  created_at: string;
+}
+
+/** Surfaces the approval-!=-auto-apply state for the UI. */
+export interface GovernanceApplicationBanner {
+  application_state: GovernanceApplicationState;
+  message: string;
+}
+
+export interface OntologyChangeRequestDetail {
+  change_request: OntologyChangeRequest;
+  items: OntologyChangeItem[];
+  reviews: GovernanceReviewDecision[];
+  capabilities: GovernanceCapabilities;
+  application_banner?: GovernanceApplicationBanner;
+}
+
+/** Governance audit entry. Reuses the MVP3/MVP5 audit shape by reference; adds governance target/state context. */
+export interface GovernanceAuditEntry {
+  id: string;
+  project_id: string;
+  change_request_id: string;
+  action: GovernanceAuditAction;
+  actor_id: string;
+  actor_role?: GovernanceRole;
+  target_item_ids?: string[];
+  target_ontology_element_ids?: string[];
+  ontology_version_id?: string | null;
+  before_status?: OntologyChangeRequestStatus | null;
+  after_status?: OntologyChangeRequestStatus | null;
+  reason?: string | null;
+  created_at: string;
+}
+
+/** Envelope for every governance write. review_decision is null for non-review writes. */
+export interface GovernanceMutationResponse {
+  change_request: OntologyChangeRequest;
+  review_decision?: GovernanceReviewDecision | null;
+  audit_entry: GovernanceAuditEntry;
+  mutation_guard: GovernanceMutationGuard;
+  capabilities?: GovernanceCapabilities;
+}
+
+export interface OntologyChangeRequestListResponse {
+  items: OntologyChangeRequest[];
+  total_count: number;
+  next_cursor?: string | null;
+}
+
+export interface GovernanceAuditListResponse {
+  items: GovernanceAuditEntry[];
+  total_count: number;
+  next_cursor?: string | null;
+}

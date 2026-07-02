@@ -1,0 +1,498 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP6.5 Governance Workflow Planning API",
+    "description": "Planning-only OpenAPI artifact for MVP6.5 Governance workflow: an auditable ontology change-request lifecycle (propose -> submit -> reviewer COMMENT/REQUEST_CHANGES -> approver APPROVE/REJECT -> APPROVED is QUEUED as intent only -> audit trail). Candidate/analysis-layer decision-record surface only. Approval records intent + audit and applies NOTHING to the ontology definition or published graph (change_auto_applied always false). Additive; does not replace any prior MVP1-MVP6.4 OpenAPI draft. Wave41 contract-first planning only: no runtime code, models, migrations, or tests. Reuses MVP3 ReviewDecisionType literals (APPROVE/REJECT/REQUEST_CHANGES, no MODIFY_AND_APPROVE) + adds COMMENT, the shipped Role enum, and the MVP3/MVP5 audit shape by reference (no renames). Frozen by docs/pm/MVP6_5_GOVERNANCE_BRIEF.md and docs/adr/0012.",
+    "version": "0.6.5-draft"
+  },
+  "tags": [
+    {
+      "name": "MVP6.5 Governance",
+      "description": "Additive ontology change-request lifecycle. Every write response carries an all-false GovernanceMutationGuard; approval sets application_state=QUEUED and applies nothing; approve/reject restricted to ONTOLOGY_MANAGER/PROJECT_ADMIN/SYSTEM_ADMIN; proposer != approver; reason required for REJECT/REQUEST_CHANGES/APPROVE; wrong-state decision -> 409."
+    }
+  ],
+  "paths": {
+    "/api/v1/projects/{project_id}/ontology-change-requests": {
+      "post": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "Propose an ontology change request",
+        "description": "Create a DRAFT change request (title + summary + change items). Audit CHANGE_REQUEST_CREATED. Any project member may propose. All-false mutation guard.",
+        "operationId": "proposeOntologyChangeRequest",
+        "parameters": [{ "$ref": "#/components/parameters/ProjectId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OntologyChangeRequestCreateRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Change request created (DRAFT)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceMutationResponse" } } } },
+          "403": { "$ref": "#/components/responses/PermissionDenied" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/Unprocessable" }
+        }
+      },
+      "get": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "List ontology change requests",
+        "description": "Project-scoped list, filterable by status/application_state. Read is open to any project member.",
+        "operationId": "listOntologyChangeRequests",
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/StatusFilter" },
+          { "$ref": "#/components/parameters/ApplicationStateFilter" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": { "description": "Change request list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OntologyChangeRequestListResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/ontology-change-requests/{change_request_id}": {
+      "get": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "Get one ontology change request",
+        "description": "Detail: change request + items + review thread + capabilities + application banner.",
+        "operationId": "getOntologyChangeRequest",
+        "parameters": [{ "$ref": "#/components/parameters/ChangeRequestId" }],
+        "responses": {
+          "200": { "description": "Change request detail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OntologyChangeRequestDetail" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "Update change request (proposer, while DRAFT/OPEN)",
+        "description": "Update title/summary while DRAFT/OPEN. Proposer-only. Audit CHANGE_REQUEST_UPDATED. Wrong state -> 409.",
+        "operationId": "updateOntologyChangeRequest",
+        "parameters": [{ "$ref": "#/components/parameters/ChangeRequestId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OntologyChangeRequestUpdateRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Change request updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceMutationResponse" } } } },
+          "403": { "$ref": "#/components/responses/PermissionDenied" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/ontology-change-requests/{change_request_id}/items": {
+      "post": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "Add a change item",
+        "description": "Add a change item (target_kind/change_type/element ref/ontology_version_id/proposed_change). Proposer-only, DRAFT/OPEN only.",
+        "operationId": "addOntologyChangeItem",
+        "parameters": [{ "$ref": "#/components/parameters/ChangeRequestId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OntologyChangeItemRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Change item added", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceMutationResponse" } } } },
+          "403": { "$ref": "#/components/responses/PermissionDenied" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/ontology-change-requests/{change_request_id}/items/{item_id}": {
+      "patch": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "Edit a change item",
+        "description": "Edit a change item. Proposer-only, DRAFT/OPEN only. References ontology elements; never writes them.",
+        "operationId": "editOntologyChangeItem",
+        "parameters": [
+          { "$ref": "#/components/parameters/ChangeRequestId" },
+          { "$ref": "#/components/parameters/ItemId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OntologyChangeItemRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Change item edited", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceMutationResponse" } } } },
+          "403": { "$ref": "#/components/responses/PermissionDenied" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      },
+      "delete": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "Remove a change item",
+        "description": "Remove a change item from a DRAFT/OPEN request. Removes from proposal only; touches no ontology element.",
+        "operationId": "removeOntologyChangeItem",
+        "parameters": [
+          { "$ref": "#/components/parameters/ChangeRequestId" },
+          { "$ref": "#/components/parameters/ItemId" }
+        ],
+        "responses": {
+          "200": { "description": "Change item removed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceMutationResponse" } } } },
+          "403": { "$ref": "#/components/responses/PermissionDenied" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/ontology-change-requests/{change_request_id}/submit": {
+      "post": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "Submit a change request (DRAFT -> OPEN)",
+        "description": "Proposer-only. Requires >= 1 change item (else 409 CHANGE_REQUEST_NO_ITEMS). Audit CHANGE_REQUEST_SUBMITTED. Wrong state -> 409.",
+        "operationId": "submitOntologyChangeRequest",
+        "parameters": [{ "$ref": "#/components/parameters/ChangeRequestId" }],
+        "responses": {
+          "200": { "description": "Submitted (OPEN)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceMutationResponse" } } } },
+          "403": { "$ref": "#/components/responses/PermissionDenied" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/ontology-change-requests/{change_request_id}/withdraw": {
+      "post": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "Withdraw a change request (-> WITHDRAWN)",
+        "description": "Proposer-only, from DRAFT/OPEN/IN_REVIEW. Reason optional. Audit CHANGE_REQUEST_WITHDRAWN. Terminal states -> 409.",
+        "operationId": "withdrawOntologyChangeRequest",
+        "parameters": [{ "$ref": "#/components/parameters/ChangeRequestId" }],
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceWithdrawRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Withdrawn", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceMutationResponse" } } } },
+          "403": { "$ref": "#/components/responses/PermissionDenied" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/ontology-change-requests/{change_request_id}/reviews": {
+      "post": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "Record a governance review decision",
+        "description": "Record a GovernanceReviewAction (COMMENT/REQUEST_CHANGES/APPROVE/REJECT). COMMENT auto-advances OPEN->IN_REVIEW (REVIEW_STARTED). APPROVE sets status=APPROVED, application_state=QUEUED, applies NOTHING. Reason required for REQUEST_CHANGES/APPROVE/REJECT. approve/reject restricted to ONTOLOGY_MANAGER/PROJECT_ADMIN/SYSTEM_ADMIN; approver != proposer. Wrong-state decision -> 409; self-approve -> 403.",
+        "operationId": "recordGovernanceReviewDecision",
+        "parameters": [{ "$ref": "#/components/parameters/ChangeRequestId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceReviewDecisionRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Decision recorded", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceMutationResponse" } } } },
+          "403": { "$ref": "#/components/responses/PermissionDenied" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/Unprocessable" }
+        }
+      }
+    },
+    "/api/v1/ontology-change-requests/{change_request_id}/audit": {
+      "get": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "List audit entries for a change request",
+        "description": "Per-request governance audit trail (actor, action, reason, before/after state, target ids, timestamp). Read-only.",
+        "operationId": "listChangeRequestAudit",
+        "parameters": [
+          { "$ref": "#/components/parameters/ChangeRequestId" },
+          { "$ref": "#/components/parameters/ActionFilter" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": { "description": "Audit entries", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceAuditListResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/governance-audit": {
+      "get": {
+        "tags": ["MVP6.5 Governance"],
+        "summary": "Project-scoped governance audit feed",
+        "description": "Cross-request governance audit feed, filterable by action / change_request_id. Read-only, paginated.",
+        "operationId": "listProjectGovernanceAudit",
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/ActionFilter" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": { "description": "Audit feed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceAuditListResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ProjectId": { "name": "project_id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Project id" },
+      "ChangeRequestId": { "name": "change_request_id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Ontology change request id" },
+      "ItemId": { "name": "item_id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Change item id" },
+      "Limit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "default": 50, "minimum": 1, "maximum": 100 }, "description": "Page size (default 50, max 100)" },
+      "Cursor": { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Opaque pagination cursor" },
+      "StatusFilter": { "name": "status", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/OntologyChangeRequestStatus" }, "description": "Filter by request status" },
+      "ApplicationStateFilter": { "name": "application_state", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/GovernanceApplicationState" }, "description": "Filter by application state" },
+      "ActionFilter": { "name": "action", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/GovernanceAuditAction" }, "description": "Filter audit entries by action" }
+    },
+    "responses": {
+      "PermissionDenied": { "description": "Permission denied (403: PERMISSION_DENIED or SELF_APPROVAL_FORBIDDEN)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+      "NotFound": { "description": "Resource not found (404)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+      "Conflict": { "description": "State/target conflict (409: CHANGE_REQUEST_STATE_CONFLICT / CHANGE_REQUEST_NO_ITEMS / CHANGE_ITEM_TARGET_INVALID / ONTOLOGY_REF_INVALID)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+      "Unprocessable": { "description": "Validation error (422: REASON_REQUIRED)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+    },
+    "schemas": {
+      "OntologyChangeRequestStatus": {
+        "type": "string",
+        "description": "Change request lifecycle. DRAFT->OPEN->IN_REVIEW->{APPROVED|REJECTED}; WITHDRAWN from DRAFT/OPEN/IN_REVIEW. APPROVED/REJECTED/WITHDRAWN terminal.",
+        "enum": ["DRAFT", "OPEN", "IN_REVIEW", "APPROVED", "REJECTED", "WITHDRAWN"]
+      },
+      "GovernanceApplicationState": {
+        "type": "string",
+        "description": "Orthogonal post-approval intent lifecycle. QUEUED on APPROVE (intent only, nothing applied). APPLIED/SUPERSEDED are RESERVED for a later application slice and are NOT produced by any P0 operation.",
+        "enum": ["NOT_APPLICABLE", "QUEUED", "APPLIED", "SUPERSEDED"]
+      },
+      "GovernanceReviewAction": {
+        "type": "string",
+        "description": "Decision commands. Reuses MVP3 ReviewDecisionType literals APPROVE/REQUEST_CHANGES/REJECT verbatim (no rename) and adds COMMENT. MVP3 MODIFY_AND_APPROVE is intentionally EXCLUDED (governance approval never inline-applies).",
+        "enum": ["COMMENT", "REQUEST_CHANGES", "APPROVE", "REJECT"]
+      },
+      "ChangeRequestTargetKind": {
+        "type": "string",
+        "description": "Ontology element kind a change item targets (reference only; never edited).",
+        "enum": ["CLASS", "PROPERTY", "RELATION"]
+      },
+      "ChangeRequestChangeType": {
+        "type": "string",
+        "description": "Proposed change type. Element ref null for ADD; required (matching target_kind) for MODIFY/DEPRECATE. DEPRECATE proposes retirement only; never sets OntologyElementStatus.",
+        "enum": ["ADD", "MODIFY", "DEPRECATE"]
+      },
+      "GovernanceAuditAction": {
+        "type": "string",
+        "description": "Governance-specific audit actions. Names governance events; does NOT rename MVP3/MVP5 AuditEventType.",
+        "enum": ["CHANGE_REQUEST_CREATED", "CHANGE_REQUEST_UPDATED", "CHANGE_REQUEST_SUBMITTED", "CHANGE_REQUEST_WITHDRAWN", "REVIEW_STARTED", "COMMENT_ADDED", "CHANGES_REQUESTED", "CHANGE_REQUEST_APPROVED", "CHANGE_REQUEST_REJECTED"]
+      },
+      "GovernanceMutationGuard": {
+        "type": "object",
+        "description": "All-false on every governance write response. change_auto_applied=false is the approval-!=-auto-apply proof; approval only sets application_state=QUEUED. Mirrors the MVP6.2/6.4 audit-only pattern.",
+        "properties": {
+          "ontology_definition_mutated": { "type": "boolean", "const": false },
+          "published_graph_mutated": { "type": "boolean", "const": false },
+          "candidate_graph_mutated": { "type": "boolean", "const": false },
+          "prompt_version_mutated": { "type": "boolean", "const": false },
+          "publish_job_started": { "type": "boolean", "const": false },
+          "extraction_job_started": { "type": "boolean", "const": false },
+          "change_auto_applied": { "type": "boolean", "const": false }
+        },
+        "required": ["ontology_definition_mutated", "published_graph_mutated", "candidate_graph_mutated", "prompt_version_mutated", "publish_job_started", "extraction_job_started", "change_auto_applied"]
+      },
+      "GovernanceCapabilities": {
+        "type": "object",
+        "description": "Read-only permission hint for the UI. Display-only; server enforces authorization independently and this never widens the boundary.",
+        "properties": {
+          "can_view": { "type": "boolean" },
+          "can_edit_request": { "type": "boolean" },
+          "can_submit": { "type": "boolean" },
+          "can_withdraw": { "type": "boolean" },
+          "can_comment": { "type": "boolean" },
+          "can_request_changes": { "type": "boolean" },
+          "can_approve": { "type": "boolean" },
+          "can_reject": { "type": "boolean" }
+        },
+        "required": ["can_view"]
+      },
+      "OntologyChangeItem": {
+        "type": "object",
+        "description": "A proposed change to a single ontology element. References the element; the proposed_change payload is stored as intent only and never applied.",
+        "properties": {
+          "id": { "type": "string" },
+          "change_request_id": { "type": "string" },
+          "target_kind": { "$ref": "#/components/schemas/ChangeRequestTargetKind" },
+          "change_type": { "$ref": "#/components/schemas/ChangeRequestChangeType" },
+          "ontology_class_id": { "type": ["string", "null"] },
+          "ontology_property_id": { "type": ["string", "null"] },
+          "ontology_relation_id": { "type": ["string", "null"] },
+          "ontology_version_id": { "type": "string" },
+          "proposed_change": { "type": "object", "additionalProperties": true, "description": "Opaque intent-only payload; stored, never applied." },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": ["string", "null"], "format": "date-time" }
+        },
+        "required": ["id", "change_request_id", "target_kind", "change_type", "ontology_version_id", "created_at"]
+      },
+      "OntologyChangeItemRequest": {
+        "type": "object",
+        "description": "Add/edit a change item. Element ref null for ADD; exactly one matching target_kind required for MODIFY/DEPRECATE.",
+        "properties": {
+          "target_kind": { "$ref": "#/components/schemas/ChangeRequestTargetKind" },
+          "change_type": { "$ref": "#/components/schemas/ChangeRequestChangeType" },
+          "ontology_class_id": { "type": ["string", "null"] },
+          "ontology_property_id": { "type": ["string", "null"] },
+          "ontology_relation_id": { "type": ["string", "null"] },
+          "ontology_version_id": { "type": "string" },
+          "proposed_change": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["target_kind", "change_type", "ontology_version_id"]
+      },
+      "OntologyChangeRequest": {
+        "type": "object",
+        "description": "A proposal record in the governance/decision layer. application_state is QUEUED iff status==APPROVED, else NOT_APPLICABLE.",
+        "properties": {
+          "id": { "type": "string" },
+          "project_id": { "type": "string" },
+          "title": { "type": "string" },
+          "summary": { "type": ["string", "null"] },
+          "status": { "$ref": "#/components/schemas/OntologyChangeRequestStatus" },
+          "application_state": { "$ref": "#/components/schemas/GovernanceApplicationState" },
+          "proposer_id": { "type": "string" },
+          "item_count": { "type": "integer" },
+          "ontology_version_id": { "type": ["string", "null"] },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": ["string", "null"], "format": "date-time" },
+          "submitted_at": { "type": ["string", "null"], "format": "date-time" },
+          "decided_at": { "type": ["string", "null"], "format": "date-time" },
+          "decided_by": { "type": ["string", "null"] },
+          "decision_reason": { "type": ["string", "null"] }
+        },
+        "required": ["id", "project_id", "title", "status", "application_state", "proposer_id", "item_count", "created_at"]
+      },
+      "OntologyChangeRequestCreateRequest": {
+        "type": "object",
+        "description": "Propose a change request. Any project member may propose.",
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "summary": { "type": ["string", "null"] },
+          "ontology_version_id": { "type": ["string", "null"] },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/OntologyChangeItemRequest" } }
+        },
+        "required": ["title"]
+      },
+      "OntologyChangeRequestUpdateRequest": {
+        "type": "object",
+        "description": "Update title/summary while DRAFT/OPEN (proposer). PATCH semantics; at least one field required.",
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "summary": { "type": ["string", "null"] }
+        }
+      },
+      "GovernanceWithdrawRequest": {
+        "type": "object",
+        "description": "Withdraw a change request. Reason optional.",
+        "properties": { "reason": { "type": ["string", "null"] } }
+      },
+      "GovernanceReviewDecisionRequest": {
+        "type": "object",
+        "description": "Record a review decision. Mirrors MVP3 ReviewDecisionCreateRequest by reference (no correction_id/corrected_payload; governance never inline-applies). reason REQUIRED (non-empty) for REQUEST_CHANGES/APPROVE/REJECT; optional for COMMENT.",
+        "properties": {
+          "action": { "$ref": "#/components/schemas/GovernanceReviewAction" },
+          "reason": { "type": ["string", "null"], "description": "Required non-empty for REQUEST_CHANGES/APPROVE/REJECT (else 422 REASON_REQUIRED); optional for COMMENT." }
+        },
+        "required": ["action"]
+      },
+      "GovernanceReviewDecision": {
+        "type": "object",
+        "description": "One entry in the review thread. resulting_application_state is QUEUED only on APPROVE.",
+        "properties": {
+          "id": { "type": "string" },
+          "change_request_id": { "type": "string" },
+          "action": { "$ref": "#/components/schemas/GovernanceReviewAction" },
+          "actor_id": { "type": "string" },
+          "actor_role": { "$ref": "#/components/schemas/Role" },
+          "reason": { "type": ["string", "null"] },
+          "resulting_status": { "$ref": "#/components/schemas/OntologyChangeRequestStatus" },
+          "resulting_application_state": { "$ref": "#/components/schemas/GovernanceApplicationState" },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "change_request_id", "action", "actor_id", "resulting_status", "created_at"]
+      },
+      "GovernanceApplicationBanner": {
+        "type": "object",
+        "description": "Surfaces the approval-!=-auto-apply state for the UI. On APPROVE, application_state=QUEUED and the message states nothing was applied.",
+        "properties": {
+          "application_state": { "$ref": "#/components/schemas/GovernanceApplicationState" },
+          "message": { "type": "string" }
+        },
+        "required": ["application_state", "message"]
+      },
+      "OntologyChangeRequestDetail": {
+        "type": "object",
+        "description": "Change request detail with items, review thread, capabilities, and application banner.",
+        "properties": {
+          "change_request": { "$ref": "#/components/schemas/OntologyChangeRequest" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/OntologyChangeItem" } },
+          "reviews": { "type": "array", "items": { "$ref": "#/components/schemas/GovernanceReviewDecision" } },
+          "capabilities": { "$ref": "#/components/schemas/GovernanceCapabilities" },
+          "application_banner": { "$ref": "#/components/schemas/GovernanceApplicationBanner" }
+        },
+        "required": ["change_request", "items", "reviews", "capabilities"]
+      },
+      "GovernanceAuditEntry": {
+        "type": "object",
+        "description": "Governance audit entry. Reuses the MVP3/MVP5 audit shape (actor_id, action, reason, timestamp) by reference; adds governance target/state context. Never hard-deleted.",
+        "properties": {
+          "id": { "type": "string" },
+          "project_id": { "type": "string" },
+          "change_request_id": { "type": "string" },
+          "action": { "$ref": "#/components/schemas/GovernanceAuditAction" },
+          "actor_id": { "type": "string" },
+          "actor_role": { "$ref": "#/components/schemas/Role" },
+          "target_item_ids": { "type": "array", "items": { "type": "string" } },
+          "target_ontology_element_ids": { "type": "array", "items": { "type": "string" } },
+          "ontology_version_id": { "type": ["string", "null"] },
+          "before_status": { "anyOf": [{ "$ref": "#/components/schemas/OntologyChangeRequestStatus" }, { "type": "null" }] },
+          "after_status": { "anyOf": [{ "$ref": "#/components/schemas/OntologyChangeRequestStatus" }, { "type": "null" }] },
+          "reason": { "type": ["string", "null"] },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "project_id", "change_request_id", "action", "actor_id", "created_at"]
+      },
+      "GovernanceMutationResponse": {
+        "type": "object",
+        "description": "Envelope for every governance write. review_decision is null for non-review writes. mutation_guard is always all-false.",
+        "properties": {
+          "change_request": { "$ref": "#/components/schemas/OntologyChangeRequest" },
+          "review_decision": { "anyOf": [{ "$ref": "#/components/schemas/GovernanceReviewDecision" }, { "type": "null" }] },
+          "audit_entry": { "$ref": "#/components/schemas/GovernanceAuditEntry" },
+          "mutation_guard": { "$ref": "#/components/schemas/GovernanceMutationGuard" },
+          "capabilities": { "$ref": "#/components/schemas/GovernanceCapabilities" }
+        },
+        "required": ["change_request", "audit_entry", "mutation_guard"]
+      },
+      "OntologyChangeRequestListResponse": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/OntologyChangeRequest" } },
+          "total_count": { "type": "integer" },
+          "next_cursor": { "type": ["string", "null"] }
+        },
+        "required": ["items", "total_count"]
+      },
+      "GovernanceAuditListResponse": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/GovernanceAuditEntry" } },
+          "total_count": { "type": "integer" },
+          "next_cursor": { "type": ["string", "null"] }
+        },
+        "required": ["items", "total_count"]
+      },
+      "Role": {
+        "type": "string",
+        "description": "Reused verbatim from apps/backend/app/core/enums.py (NOT renamed / redefined; mirrored here so this planning artifact is standalone). Approve/reject restricted to ONTOLOGY_MANAGER/PROJECT_ADMIN/SYSTEM_ADMIN; review/comment/request-changes to REVIEWER + those; propose to any project member.",
+        "enum": ["SYSTEM_ADMIN", "PROJECT_ADMIN", "ONTOLOGY_MANAGER", "DATA_MANAGER", "EXTRACTION_MANAGER", "REVIEWER", "VIEWER", "API_CLIENT"]
+      },
+      "ApiError": {
+        "type": "object",
+        "description": "Standard error. codes: PROJECT_NOT_FOUND, CHANGE_REQUEST_NOT_FOUND, CHANGE_REQUEST_STATE_CONFLICT, CHANGE_REQUEST_NO_ITEMS, CHANGE_ITEM_NOT_FOUND, CHANGE_ITEM_TARGET_INVALID, ONTOLOGY_REF_INVALID, REASON_REQUIRED, SELF_APPROVAL_FORBIDDEN, PERMISSION_DENIED.",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "type": ["object", "null"], "additionalProperties": true }
+        },
+        "required": ["code", "message"]
+      }
+    }
+  }
+}

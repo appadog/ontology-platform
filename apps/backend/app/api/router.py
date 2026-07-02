@@ -7,6 +7,7 @@ from app.modules.candidate.router import router as candidate_router
 from app.modules.evaluation.router import router as evaluation_router
 from app.modules.extraction.router import router as extraction_router
 from app.modules.goldset_authoring.router import router as goldset_authoring_router
+from app.modules.governance.router import router as governance_router
 from app.modules.learning.router import router as learning_router
 from app.modules.mvp4.router import router as mvp4_router
 from app.modules.mvp5.router import router as mvp5_router
@@ -31,6 +32,7 @@ api_router.include_router(evaluation_router)
 api_router.include_router(learning_router)
 api_router.include_router(benchmark_router)
 api_router.include_router(goldset_authoring_router)
+api_router.include_router(governance_router)
 api_router.include_router(validation_router)
 api_router.include_router(review_router)
 api_router.include_router(audit_router)

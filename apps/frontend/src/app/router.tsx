@@ -20,6 +20,9 @@ import { EvidenceViewerPage } from "../pages/EvidenceViewerPage";
 import { ExternalApiDocsPage } from "../pages/ExternalApiDocsPage";
 import { ExtractionJobCreatePage } from "../pages/ExtractionJobCreatePage";
 import { GoldSetManagerPage } from "../pages/GoldSetManagerPage";
+import { GovernanceBoardPage } from "../pages/GovernanceBoardPage";
+import { GovernanceProposePage } from "../pages/GovernanceProposePage";
+import { GovernanceDetailPage } from "../pages/GovernanceDetailPage";
 import { ExtractionJobMonitorPage } from "../pages/ExtractionJobMonitorPage";
 import { IntegratedSearchPage } from "../pages/IntegratedSearchPage";
 import { LearningInsightsPage } from "../pages/LearningInsightsPage";
@@ -144,6 +147,18 @@ export const router = createBrowserRouter([
       {
         path: "/projects/:projectId/quality",
         element: <QualityDashboardPage />,
+      },
+      {
+        path: "/projects/:projectId/governance",
+        element: <GovernanceBoardPage />,
+      },
+      {
+        path: "/projects/:projectId/governance/new",
+        element: <GovernanceProposePage />,
+      },
+      {
+        path: "/projects/:projectId/governance/:changeRequestId",
+        element: <GovernanceDetailPage />,
       },
       {
         path: "/projects/:projectId/search",

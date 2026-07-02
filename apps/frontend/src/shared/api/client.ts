@@ -103,6 +103,19 @@ import {
   MVP6_GOLDSET_OWNER_ID,
 } from "../mocks/mvp6GoldsetFixtures";
 import {
+  allFalseGovernanceGuard,
+  approverCapabilities,
+  bannerFor,
+  mockGovernanceAudit,
+  mockGovernanceItems,
+  mockGovernanceRequests,
+  mockGovernanceReviews,
+  MVP6_GOVERNANCE_APPROVER_ID,
+  MVP6_GOVERNANCE_ONTOLOGY_VERSION_ID,
+  MVP6_GOVERNANCE_PROJECT_ID,
+  MVP6_GOVERNANCE_PROPOSER_ID,
+} from "../mocks/mvp6GovernanceFixtures";
+import {
   AuditEvent,
   AutoApprovalCandidatePreview,
   AutomaticApprovalPolicyDocument,
@@ -167,6 +180,19 @@ import {
   GoldSetImportConfirmResponse,
   GoldSetImportDryRunRequest,
   GoldSetImportReport,
+  GovernanceAuditListResponse,
+  GovernanceMutationResponse,
+  GovernanceReviewDecision,
+  GovernanceReviewDecisionRequest,
+  GovernanceWithdrawRequest,
+  OntologyChangeItem,
+  OntologyChangeItemRequest,
+  OntologyChangeRequest,
+  OntologyChangeRequestCreateRequest,
+  OntologyChangeRequestDetail,
+  OntologyChangeRequestListResponse,
+  OntologyChangeRequestStatus,
+  OntologyChangeRequestUpdateRequest,
   GraphExploreRequest,
   GraphExploreResponse,
   ModelRun,
@@ -311,6 +337,80 @@ export class GoldAuthoringError extends Error {
 }
 
 let mockGoldsetImportCounter = 0;
+
+// ---- MVP6.5 Governance error + process-local store ----
+export class GovernanceError extends Error {
+  code: string;
+  status: number;
+
+  constructor(message: string, code: string, status: number) {
+    super(message);
+    this.name = "GovernanceError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
+// Deterministic process-local governance stores (mirror the goldset precedent:
+// clone the fixtures so mock mutations persist within a session).
+let mockGovernanceRequestStore: OntologyChangeRequest[] = mockGovernanceRequests.map((cr) => ({ ...cr }));
+const mockGovernanceItemStore: Record<string, OntologyChangeItem[]> = Object.fromEntries(
+  Object.entries(mockGovernanceItems).map(([id, items]) => [id, items.map((item) => ({ ...item }))]),
+);
+const mockGovernanceReviewStore: Record<string, GovernanceReviewDecision[]> = Object.fromEntries(
+  Object.entries(mockGovernanceReviews).map(([id, reviews]) => [id, reviews.map((r) => ({ ...r }))]),
+);
+const mockGovernanceAuditStore: Record<string, GovernanceAuditListResponse["items"]> = Object.fromEntries(
+  Object.entries(mockGovernanceAudit).map(([id, entries]) => [id, entries.map((e) => ({ ...e }))]),
+);
+let mockGovernanceCounter = 0;
+
+// The mock actor. In actual mode the backend derives the actor; the mock treats
+// the approver identity as "the current viewer" so the approver decision surface
+// (and the segregation-of-duties disable on own requests) is exercisable.
+const MOCK_GOVERNANCE_ACTOR_ID = MVP6_GOVERNANCE_APPROVER_ID;
+
+function governanceCapabilitiesFor(request: OntologyChangeRequest) {
+  // Approver viewer: full decision authority, but cannot approve own proposals.
+  const isProposer = request.proposer_id === MOCK_GOVERNANCE_ACTOR_ID;
+  return {
+    ...approverCapabilities,
+    can_approve: approverCapabilities.can_approve && !isProposer,
+    can_reject: approverCapabilities.can_reject,
+  };
+}
+
+function governanceBannerFor(request: OntologyChangeRequest) {
+  return bannerFor(request.application_state);
+}
+
+function nextGovernanceAudit(
+  changeRequestId: string,
+  action: GovernanceAuditListResponse["items"][number]["action"],
+  beforeStatus: OntologyChangeRequestStatus | null,
+  afterStatus: OntologyChangeRequestStatus | null,
+  reason?: string | null,
+): GovernanceAuditListResponse["items"][number] {
+  mockGovernanceCounter += 1;
+  const entry: GovernanceAuditListResponse["items"][number] = {
+    id: `gov-audit-mock-${mockGovernanceCounter}`,
+    project_id: MVP6_GOVERNANCE_PROJECT_ID,
+    change_request_id: changeRequestId,
+    action,
+    actor_id: MOCK_GOVERNANCE_ACTOR_ID,
+    target_item_ids: [],
+    target_ontology_element_ids: [],
+    ontology_version_id: MVP6_GOVERNANCE_ONTOLOGY_VERSION_ID,
+    before_status: beforeStatus,
+    after_status: afterStatus,
+    reason: reason ?? null,
+    created_at: new Date().toISOString(),
+  };
+  const bucket = mockGovernanceAuditStore[changeRequestId] ?? [];
+  // G4: audit stored chronological ascending.
+  mockGovernanceAuditStore[changeRequestId] = [...bucket, entry];
+  return entry;
+}
 
 async function delay<T>(value: T): Promise<T> {
   await new Promise((resolve) => globalThis.setTimeout(resolve, 180));
@@ -3870,6 +3970,308 @@ export const apiClient = {
     return jsonRequest<GoldSetImportConfirmResponse>(
       `/api/v1/projects/${projectId}/gold-set-imports/${importId}/confirm`,
       { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  // ---- MVP6.5 Governance ----
+  async listOntologyChangeRequests(
+    projectId: string,
+    params?: { status?: OntologyChangeRequestStatus; limit?: number; cursor?: string },
+  ): Promise<OntologyChangeRequestListResponse> {
+    if (USE_MOCK_API) {
+      let items = mockGovernanceRequestStore.filter((cr) => cr.project_id === projectId);
+      if (params?.status) {
+        items = items.filter((cr) => cr.status === params.status);
+      }
+      return delay({ items: items.map((cr) => ({ ...cr })), total_count: items.length, next_cursor: null });
+    }
+    const query = new URLSearchParams();
+    if (params?.status) query.set("status", params.status);
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.cursor) query.set("cursor", params.cursor);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<OntologyChangeRequestListResponse>(
+      `/api/v1/projects/${projectId}/ontology-change-requests${suffix}`,
+    );
+  },
+
+  async getOntologyChangeRequest(changeRequestId: string): Promise<OntologyChangeRequestDetail> {
+    if (USE_MOCK_API) {
+      const request_ = mockGovernanceRequestStore.find((cr) => cr.id === changeRequestId);
+      if (!request_) {
+        throw new GovernanceError("Change request was not found.", "CHANGE_REQUEST_NOT_FOUND", 404);
+      }
+      return delay({
+        change_request: { ...request_ },
+        items: (mockGovernanceItemStore[changeRequestId] ?? []).map((item) => ({ ...item })),
+        reviews: (mockGovernanceReviewStore[changeRequestId] ?? []).map((r) => ({ ...r })),
+        capabilities: governanceCapabilitiesFor(request_),
+        application_banner: governanceBannerFor(request_),
+      });
+    }
+    return request<OntologyChangeRequestDetail>(
+      `/api/v1/ontology-change-requests/${changeRequestId}`,
+    );
+  },
+
+  async proposeOntologyChangeRequest(
+    projectId: string,
+    payload: OntologyChangeRequestCreateRequest,
+  ): Promise<GovernanceMutationResponse> {
+    if (USE_MOCK_API) {
+      mockGovernanceCounter += 1;
+      const id = `ocr-mock-${mockGovernanceCounter}`;
+      const created: OntologyChangeRequest = {
+        id,
+        project_id: projectId,
+        title: payload.title,
+        summary: payload.summary ?? null,
+        status: "DRAFT",
+        application_state: "NOT_APPLICABLE",
+        proposer_id: MVP6_GOVERNANCE_PROPOSER_ID,
+        item_count: payload.items?.length ?? 0,
+        ontology_version_id: payload.ontology_version_id ?? MVP6_GOVERNANCE_ONTOLOGY_VERSION_ID,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        submitted_at: null,
+        decided_at: null,
+        decided_by: null,
+        decision_reason: null,
+      };
+      mockGovernanceRequestStore = [created, ...mockGovernanceRequestStore];
+      mockGovernanceItemStore[id] = (payload.items ?? []).map((item, index) => ({
+        id: `${id}-item-${index + 1}`,
+        change_request_id: id,
+        ...item,
+        created_at: new Date().toISOString(),
+        updated_at: null,
+      }));
+      mockGovernanceReviewStore[id] = [];
+      const audit = nextGovernanceAudit(id, "CHANGE_REQUEST_CREATED", null, "DRAFT");
+      return delay({
+        change_request: { ...created },
+        review_decision: null,
+        audit_entry: audit,
+        mutation_guard: { ...allFalseGovernanceGuard },
+        capabilities: governanceCapabilitiesFor(created),
+      });
+    }
+    return jsonRequest<GovernanceMutationResponse>(
+      `/api/v1/projects/${projectId}/ontology-change-requests`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  async updateOntologyChangeRequest(
+    changeRequestId: string,
+    payload: OntologyChangeRequestUpdateRequest,
+  ): Promise<GovernanceMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGovernanceRequestStore.find((cr) => cr.id === changeRequestId);
+      if (!existing) {
+        throw new GovernanceError("Change request was not found.", "CHANGE_REQUEST_NOT_FOUND", 404);
+      }
+      if (existing.status !== "DRAFT" && existing.status !== "OPEN") {
+        throw new GovernanceError("Only DRAFT/OPEN requests may be edited.", "CHANGE_REQUEST_STATE_CONFLICT", 409);
+      }
+      const updated = { ...existing, title: payload.title ?? existing.title, summary: payload.summary ?? existing.summary, updated_at: new Date().toISOString() };
+      mockGovernanceRequestStore = mockGovernanceRequestStore.map((cr) => (cr.id === changeRequestId ? updated : cr));
+      const audit = nextGovernanceAudit(changeRequestId, "CHANGE_REQUEST_UPDATED", existing.status, updated.status);
+      return delay({ change_request: { ...updated }, review_decision: null, audit_entry: audit, mutation_guard: { ...allFalseGovernanceGuard }, capabilities: governanceCapabilitiesFor(updated) });
+    }
+    return jsonRequest<GovernanceMutationResponse>(
+      `/api/v1/ontology-change-requests/${changeRequestId}`,
+      { method: "PATCH", body: JSON.stringify(payload) },
+    );
+  },
+
+  async addOntologyChangeItem(
+    changeRequestId: string,
+    payload: OntologyChangeItemRequest,
+  ): Promise<GovernanceMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGovernanceRequestStore.find((cr) => cr.id === changeRequestId);
+      if (!existing) {
+        throw new GovernanceError("Change request was not found.", "CHANGE_REQUEST_NOT_FOUND", 404);
+      }
+      const bucket = mockGovernanceItemStore[changeRequestId] ?? [];
+      const item: OntologyChangeItem = {
+        id: `${changeRequestId}-item-${bucket.length + 1}`,
+        change_request_id: changeRequestId,
+        ...payload,
+        created_at: new Date().toISOString(),
+        updated_at: null,
+      };
+      mockGovernanceItemStore[changeRequestId] = [...bucket, item];
+      const updated = { ...existing, item_count: bucket.length + 1 };
+      mockGovernanceRequestStore = mockGovernanceRequestStore.map((cr) => (cr.id === changeRequestId ? updated : cr));
+      const audit = nextGovernanceAudit(changeRequestId, "CHANGE_REQUEST_UPDATED", existing.status, existing.status);
+      return delay({ change_request: { ...updated }, review_decision: null, audit_entry: audit, mutation_guard: { ...allFalseGovernanceGuard }, capabilities: governanceCapabilitiesFor(updated) });
+    }
+    return jsonRequest<GovernanceMutationResponse>(
+      `/api/v1/ontology-change-requests/${changeRequestId}/items`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  async submitOntologyChangeRequest(changeRequestId: string): Promise<GovernanceMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGovernanceRequestStore.find((cr) => cr.id === changeRequestId);
+      if (!existing) {
+        throw new GovernanceError("Change request was not found.", "CHANGE_REQUEST_NOT_FOUND", 404);
+      }
+      if (existing.status !== "DRAFT") {
+        throw new GovernanceError("Only a DRAFT request may be submitted.", "CHANGE_REQUEST_STATE_CONFLICT", 409);
+      }
+      if ((mockGovernanceItemStore[changeRequestId] ?? []).length === 0) {
+        throw new GovernanceError("A change request must have at least one item to submit.", "CHANGE_REQUEST_NO_ITEMS", 409);
+      }
+      const updated = { ...existing, status: "OPEN" as OntologyChangeRequestStatus, submitted_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+      mockGovernanceRequestStore = mockGovernanceRequestStore.map((cr) => (cr.id === changeRequestId ? updated : cr));
+      const audit = nextGovernanceAudit(changeRequestId, "CHANGE_REQUEST_SUBMITTED", "DRAFT", "OPEN");
+      return delay({ change_request: { ...updated }, review_decision: null, audit_entry: audit, mutation_guard: { ...allFalseGovernanceGuard }, capabilities: governanceCapabilitiesFor(updated) });
+    }
+    return jsonRequest<GovernanceMutationResponse>(
+      `/api/v1/ontology-change-requests/${changeRequestId}/submit`,
+      { method: "POST", body: JSON.stringify({}) },
+    );
+  },
+
+  async withdrawOntologyChangeRequest(
+    changeRequestId: string,
+    payload: GovernanceWithdrawRequest = {},
+  ): Promise<GovernanceMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGovernanceRequestStore.find((cr) => cr.id === changeRequestId);
+      if (!existing) {
+        throw new GovernanceError("Change request was not found.", "CHANGE_REQUEST_NOT_FOUND", 404);
+      }
+      if (!["DRAFT", "OPEN", "IN_REVIEW"].includes(existing.status)) {
+        throw new GovernanceError("Only DRAFT/OPEN/IN_REVIEW requests may be withdrawn.", "CHANGE_REQUEST_STATE_CONFLICT", 409);
+      }
+      const updated = { ...existing, status: "WITHDRAWN" as OntologyChangeRequestStatus, updated_at: new Date().toISOString() };
+      mockGovernanceRequestStore = mockGovernanceRequestStore.map((cr) => (cr.id === changeRequestId ? updated : cr));
+      const audit = nextGovernanceAudit(changeRequestId, "CHANGE_REQUEST_WITHDRAWN", existing.status, "WITHDRAWN", payload.reason);
+      return delay({ change_request: { ...updated }, review_decision: null, audit_entry: audit, mutation_guard: { ...allFalseGovernanceGuard }, capabilities: governanceCapabilitiesFor(updated) });
+    }
+    return jsonRequest<GovernanceMutationResponse>(
+      `/api/v1/ontology-change-requests/${changeRequestId}/withdraw`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  async recordGovernanceReviewDecision(
+    changeRequestId: string,
+    payload: GovernanceReviewDecisionRequest,
+  ): Promise<GovernanceMutationResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGovernanceRequestStore.find((cr) => cr.id === changeRequestId);
+      if (!existing) {
+        throw new GovernanceError("Change request was not found.", "CHANGE_REQUEST_NOT_FOUND", 404);
+      }
+      const reasonRequired = payload.action === "REQUEST_CHANGES" || payload.action === "APPROVE" || payload.action === "REJECT";
+      if (reasonRequired && !payload.reason?.trim()) {
+        throw new GovernanceError("A non-empty reason is required for this action.", "REASON_REQUIRED", 422);
+      }
+      // Only OPEN / IN_REVIEW requests accept decisions.
+      if (existing.status !== "OPEN" && existing.status !== "IN_REVIEW") {
+        throw new GovernanceError("The request is not in a reviewable state.", "CHANGE_REQUEST_STATE_CONFLICT", 409);
+      }
+      // Segregation of duties: proposer may not approve their own request.
+      if (payload.action === "APPROVE" && existing.proposer_id === MOCK_GOVERNANCE_ACTOR_ID) {
+        throw new GovernanceError("Proposers cannot approve their own request.", "SELF_APPROVAL_FORBIDDEN", 403);
+      }
+
+      // G1 first-touch: COMMENT/REQUEST_CHANGES on OPEN auto-advances to IN_REVIEW.
+      let nextStatus: OntologyChangeRequestStatus = existing.status;
+      let nextApplicationState = existing.application_state;
+      if (payload.action === "APPROVE") {
+        nextStatus = "APPROVED";
+        nextApplicationState = "QUEUED";
+      } else if (payload.action === "REJECT") {
+        nextStatus = "REJECTED";
+      } else if (payload.action === "REQUEST_CHANGES") {
+        nextStatus = "OPEN";
+        if (existing.status === "OPEN") {
+          nextGovernanceAudit(changeRequestId, "REVIEW_STARTED", "OPEN", "IN_REVIEW");
+        }
+      } else if (payload.action === "COMMENT") {
+        if (existing.status === "OPEN") {
+          nextStatus = "IN_REVIEW";
+          nextGovernanceAudit(changeRequestId, "REVIEW_STARTED", "OPEN", "IN_REVIEW");
+        }
+      }
+
+      const updated: OntologyChangeRequest = {
+        ...existing,
+        status: nextStatus,
+        application_state: nextApplicationState,
+        updated_at: new Date().toISOString(),
+        decided_at: payload.action === "APPROVE" || payload.action === "REJECT" ? new Date().toISOString() : existing.decided_at,
+        decided_by: payload.action === "APPROVE" || payload.action === "REJECT" ? MOCK_GOVERNANCE_ACTOR_ID : existing.decided_by,
+        decision_reason: payload.action === "APPROVE" || payload.action === "REJECT" ? payload.reason ?? null : existing.decision_reason,
+      };
+      mockGovernanceRequestStore = mockGovernanceRequestStore.map((cr) => (cr.id === changeRequestId ? updated : cr));
+
+      const decision: GovernanceReviewDecision = {
+        id: `rev-mock-${(mockGovernanceReviewStore[changeRequestId]?.length ?? 0) + 1}-${changeRequestId}`,
+        change_request_id: changeRequestId,
+        action: payload.action,
+        actor_id: MOCK_GOVERNANCE_ACTOR_ID,
+        actor_role: "ONTOLOGY_MANAGER",
+        reason: payload.reason ?? null,
+        resulting_status: nextStatus,
+        resulting_application_state: nextApplicationState,
+        created_at: new Date().toISOString(),
+      };
+      mockGovernanceReviewStore[changeRequestId] = [...(mockGovernanceReviewStore[changeRequestId] ?? []), decision];
+
+      const auditAction =
+        payload.action === "APPROVE"
+          ? "CHANGE_REQUEST_APPROVED"
+          : payload.action === "REJECT"
+            ? "CHANGE_REQUEST_REJECTED"
+            : payload.action === "REQUEST_CHANGES"
+              ? "CHANGES_REQUESTED"
+              : "COMMENT_ADDED";
+      const audit = nextGovernanceAudit(changeRequestId, auditAction, existing.status, nextStatus, payload.reason);
+
+      return delay({
+        change_request: { ...updated },
+        review_decision: decision,
+        audit_entry: audit,
+        mutation_guard: { ...allFalseGovernanceGuard },
+        capabilities: governanceCapabilitiesFor(updated),
+      });
+    }
+    return jsonRequest<GovernanceMutationResponse>(
+      `/api/v1/ontology-change-requests/${changeRequestId}/reviews`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  async listChangeRequestAudit(changeRequestId: string): Promise<GovernanceAuditListResponse> {
+    if (USE_MOCK_API) {
+      const items = (mockGovernanceAuditStore[changeRequestId] ?? []).map((e) => ({ ...e }));
+      // G4: wire order ascending.
+      return delay({ items, total_count: items.length, next_cursor: null });
+    }
+    return request<GovernanceAuditListResponse>(
+      `/api/v1/ontology-change-requests/${changeRequestId}/audit`,
+    );
+  },
+
+  async listProjectGovernanceAudit(projectId: string): Promise<GovernanceAuditListResponse> {
+    if (USE_MOCK_API) {
+      const items = Object.values(mockGovernanceAuditStore)
+        .flat()
+        .filter((e) => e.project_id === projectId)
+        .map((e) => ({ ...e }))
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+      return delay({ items, total_count: items.length, next_cursor: null });
+    }
+    return request<GovernanceAuditListResponse>(
+      `/api/v1/projects/${projectId}/governance-audit`,
     );
   },
 };

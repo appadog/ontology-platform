@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
 import {
+  GovernanceReviewDecisionRequest,
+  GovernanceWithdrawRequest,
+  OntologyChangeItemRequest,
+  OntologyChangeRequestCreateRequest,
+  OntologyChangeRequestStatus,
+  OntologyChangeRequestUpdateRequest,
   PermissionCheckRequest,
   CandidateListFilters,
   DatasetRevisionCutRequest,
@@ -1132,5 +1138,104 @@ export function useConfirmGoldSetImport(projectId: string) {
   return useMutation({
     mutationFn: ({ importId, payload }: { importId: string; payload: GoldSetImportConfirmRequest }) =>
       apiClient.confirmGoldSetImport(projectId, importId, payload),
+  });
+}
+
+// ---- MVP6.5 Governance (ontology change-request lifecycle) ----
+// Decision-record surface in the candidate/analysis layer; no publish/candidate/
+// ontology invalidation. Writes invalidate only the governance queries.
+
+const governanceKeys = {
+  board: (projectId: string, status?: OntologyChangeRequestStatus) =>
+    ["governance", "change-requests", projectId, status ?? "ALL"] as const,
+  detail: (changeRequestId: string) => ["governance", "change-request", changeRequestId] as const,
+  audit: (changeRequestId: string) => ["governance", "change-request", changeRequestId, "audit"] as const,
+};
+
+export function useOntologyChangeRequests(projectId: string, status?: OntologyChangeRequestStatus) {
+  return useQuery({
+    queryKey: governanceKeys.board(projectId, status),
+    queryFn: () => apiClient.listOntologyChangeRequests(projectId, status ? { status } : undefined),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useOntologyChangeRequestDetail(changeRequestId: string) {
+  return useQuery({
+    queryKey: governanceKeys.detail(changeRequestId),
+    queryFn: () => apiClient.getOntologyChangeRequest(changeRequestId),
+    enabled: Boolean(changeRequestId),
+  });
+}
+
+export function useChangeRequestAudit(changeRequestId: string) {
+  return useQuery({
+    queryKey: governanceKeys.audit(changeRequestId),
+    queryFn: () => apiClient.listChangeRequestAudit(changeRequestId),
+    enabled: Boolean(changeRequestId),
+  });
+}
+
+function useGovernanceInvalidate(changeRequestId: string) {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: governanceKeys.detail(changeRequestId) });
+    void queryClient.invalidateQueries({ queryKey: governanceKeys.audit(changeRequestId) });
+    void queryClient.invalidateQueries({ queryKey: ["governance", "change-requests"] });
+  };
+}
+
+export function useProposeOntologyChangeRequest(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: OntologyChangeRequestCreateRequest) =>
+      apiClient.proposeOntologyChangeRequest(projectId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["governance", "change-requests"] });
+    },
+  });
+}
+
+export function useAddOntologyChangeItem(changeRequestId: string) {
+  const invalidate = useGovernanceInvalidate(changeRequestId);
+  return useMutation({
+    mutationFn: (payload: OntologyChangeItemRequest) =>
+      apiClient.addOntologyChangeItem(changeRequestId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateOntologyChangeRequest(changeRequestId: string) {
+  const invalidate = useGovernanceInvalidate(changeRequestId);
+  return useMutation({
+    mutationFn: (payload: OntologyChangeRequestUpdateRequest) =>
+      apiClient.updateOntologyChangeRequest(changeRequestId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSubmitOntologyChangeRequest(changeRequestId: string) {
+  const invalidate = useGovernanceInvalidate(changeRequestId);
+  return useMutation({
+    mutationFn: () => apiClient.submitOntologyChangeRequest(changeRequestId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useWithdrawOntologyChangeRequest(changeRequestId: string) {
+  const invalidate = useGovernanceInvalidate(changeRequestId);
+  return useMutation({
+    mutationFn: (payload?: GovernanceWithdrawRequest) =>
+      apiClient.withdrawOntologyChangeRequest(changeRequestId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRecordGovernanceReviewDecision(changeRequestId: string) {
+  const invalidate = useGovernanceInvalidate(changeRequestId);
+  return useMutation({
+    mutationFn: (payload: GovernanceReviewDecisionRequest) =>
+      apiClient.recordGovernanceReviewDecision(changeRequestId, payload),
+    onSuccess: invalidate,
   });
 }

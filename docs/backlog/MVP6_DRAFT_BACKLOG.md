@@ -1,7 +1,7 @@
 # MVP 6 Draft Backlog
 
-Status: `MVP6.4 WAVE39 GOLD SET AUTHORING + DATASET REVISIONING CONTRACT-FIRST PLANNING`
-Date: 2026-06-30
+Status: `MVP6.5 WAVE42 GOVERNANCE WORKFLOW THIN IMPLEMENTATION (G1/G2/G4 FROZEN, G3 RATIFIED)`
+Date: 2026-07-01
 
 MVP6 is broad. Wave28 and Wave29 closed MVP6.1 Gold Set / Benchmark Studio.
 Wave30 freezes MVP6.2 Active Learning / Continuous Improvement as a
@@ -404,6 +404,102 @@ Backlog IDs: PM `PM6-021`; Backend `BE6-028`~`BE6-031`; Frontend
 earlier `INT6-026`~`INT6-029` proposal collided with IDs already consumed by the
 closed UI/UX waves 35–38; re-ranged to `INT6-035`+).
 
+## Wave41 MVP6.5 Governance Workflow PM Freeze Summary
+
+Wave41 opens the next MVP6 theme as contract-first planning only. The chosen P0
+is an **auditable ontology change-request lifecycle**: propose a change request
+(add/modify/deprecate a class/property/relation) → reviewer comments /
+requests-changes → an approver approves or rejects with a reason → full audit
+trail. It is a candidate/analysis-layer (governance/decision) surface only; it
+does NOT touch the ontology definition, candidates, prompts, or the published
+graph. Runtime implementation waits for Wave42 after Backend contract draft +
+Frontend field/state/IA review + QA executable checklist. The full freeze is in
+`docs/pm/MVP6_5_GOVERNANCE_BRIEF.md` and the durable boundary in ADR 0012.
+
+Request states (`OntologyChangeRequestStatus`):
+`DRAFT → OPEN → IN_REVIEW → {APPROVED | REJECTED}`, plus `WITHDRAWN`
+(proposer, from DRAFT/OPEN/IN_REVIEW). `REQUEST_CHANGES` returns IN_REVIEW/OPEN →
+OPEN. APPROVED/REJECTED/WITHDRAWN are terminal; a decision on a terminal/wrong
+state returns `409 CHANGE_REQUEST_STATE_CONFLICT`.
+
+Decision commands (`GovernanceReviewAction`, reuses MVP3 `ReviewDecisionType`
+literals verbatim; `MODIFY_AND_APPROVE` intentionally excluded): `COMMENT`,
+`REQUEST_CHANGES` (reason required), `APPROVE` (justification required),
+`REJECT` (reason required). Proposer commands `submit`/`withdraw` are separate.
+Approver must not be the proposer (segregation of duties). RBAC reuses the
+shipped `Role` enum verbatim (approve/reject restricted to `ONTOLOGY_MANAGER`/
+`PROJECT_ADMIN`/`SYSTEM_ADMIN`); no new role literal.
+
+Approval-is-intent-not-auto-apply (load-bearing decision): an `APPROVED` request
+is QUEUED as intent (orthogonal `GovernanceApplicationState=QUEUED`); P0 applies
+NOTHING to the ontology or published graph. Actual application is a later,
+human-initiated, separately-audited slice via the existing MVP1 ontology-edit +
+MVP3 publish paths; `APPLIED`/`SUPERSEDED` application-states are RESERVED and
+never produced in P0. Every governance write response exposes an all-false
+7-flag `GovernanceMutationGuard` (`ontology_definition_mutated`,
+`published_graph_mutated`, `candidate_graph_mutated`, `prompt_version_mutated`,
+`publish_job_started`, `extraction_job_started`, `change_auto_applied`).
+
+Change-item enums: `ChangeRequestTargetKind` (CLASS/PROPERTY/RELATION),
+`ChangeRequestChangeType` (ADD/MODIFY/DEPRECATE); each item references an
+ontology element (null for ADD) + `ontology_version_id` (read-only reference,
+never written). Audit: `GovernanceAuditAction` (9 events), reusing the MVP3/MVP5
+audit record shape by reference.
+
+Exclusions: auto-apply, automatic enforcement, autonomous/agent publish +
+rollback, impact simulation/analysis reports, migration-plan +
+release-note generation, post-change re-validation/re-extraction jobs, ontology
+diff viz beyond a change-item summary, automatic reviewer assignment, real LLM,
+copilot/agent runtime, connector/plugin SDK, multi-tenant runtime. Durable
+DB/Alembic persistence not required for P0 (process-local store with
+`reset_runtime_store()` acceptable); stays P1/P2.
+
+Backlog IDs: PM `PM6-023`; Backend `BE6-036`~`BE6-039`; Frontend
+`FE6-057`~`FE6-060`; QA `INT6-043`~`INT6-046` (continued cleanly; `INT6` was used
+through `INT6-042`, so the QA range starts at `INT6-043`).
+
+## Wave42 MVP6.5 Governance Workflow THIN IMPLEMENTATION — Gate Freeze
+
+Wave42 implements the smallest deterministic runtime/UI slice of the frozen P0
+loop. PM (`PM6-024`) runs first and freezes the three Wave41 open gates plus
+ratifies the commander IA ruling; the freeze is recorded in
+`docs/pm/MVP6_5_GOVERNANCE_BRIEF.md §10`.
+
+- **G1 (OPEN→IN_REVIEW auto-advance) FROZEN = first-touch.** No explicit
+  "start review" action exists. The transition fires when the **first review
+  action** (`COMMENT` or `REQUEST_CHANGES`) is recorded against an `OPEN`
+  request: that write atomically sets `status=IN_REVIEW` and audits
+  `REVIEW_STARTED` *before* the action's own audit event (`COMMENT_ADDED` /
+  `CHANGES_REQUESTED`). `APPROVE`/`REJECT` from `OPEN` are valid directly (no
+  IN_REVIEW precondition) and do NOT emit `REVIEW_STARTED`. If a request is sent
+  back to `OPEN` by `REQUEST_CHANGES`, the next reviewer touch re-fires
+  `REVIEW_STARTED` (idempotent per OPEN episode, once per re-entry).
+- **G2 (approve justification) FROZEN = single `reason` field.** No separate
+  `application_note`. `APPROVE` reuses the one `reason` field on
+  `GovernanceReviewDecisionRequest` (required, non-empty → `422 REASON_REQUIRED`
+  when blank), consistent with `REJECT`/`REQUEST_CHANGES`.
+- **G3 (IA) RATIFIED (commander-ruled).** Governance = a NEW project-zone LNB
+  item under the **Review** group (`/projects/:p/governance`). Detail
+  (`/governance/:id`) is a contextual ID-bound route (ADR 0010), NOT an LNB item;
+  single active LNB item preserved.
+- **G4 (FE field shapes) CONFIRMED:**
+  - **Audit ordering + pagination:** both audit reads
+    (`.../{id}/audit`, `/projects/{project_id}/governance-audit`) return
+    **chronological ascending** (oldest→newest) for a stable audit-trail read,
+    with `limit`/`cursor` opaque-cursor pagination (default 50, max 100). The UI
+    may render newest-first by reversing the loaded page; the wire order is asc.
+  - **Board list pagination:** `limit`/`cursor` opaque-cursor pagination
+    (default 50, max 100); FE groups by `status` client-side within the loaded
+    page.
+  - **Current-reviewer field on list DTO: NO.** `OntologyChangeRequest` stays as
+    drafted (`proposer_id`/`item_count` etc.); the board derives current
+    reviewer/approver from the latest `GovernanceReviewDecision` on the detail.
+    No field added — keeps the list DTO minimal and avoids a denormalized field.
+
+Backlog IDs: PM `PM6-024`; Backend `BE6-040`~`BE6-043`; Frontend
+`FE6-061`~`FE6-064`; QA `INT6-047`~`INT6-050` (continued cleanly from the Wave41
+ranges above).
+
 ## PM Backlog
 
 | ID | Priority | Owner | Task | Dependencies | Acceptance draft |
@@ -430,6 +526,7 @@ closed UI/UX waves 35–38; re-ranged to `INT6-035`+).
 | PM6-020 | P1 | PM | Wave37 reference-driven design direction (intuitive/easy-to-use) | `https://wwit.design`, `https://ai.codle.io/kr`, PM6-019 (D1-D6), ADR 0010, `MVP6_FRONTEND_UI_STYLE_GUIDE.md` | `docs/pm/DESIGN_DIRECTION_REFERENCE_UPGRADE.md` translates the two references' PRINCIPLES into our operational console: 7 adopted principles (3-tier hierarchy, one card module, whitespace scale, one primary action, restrained single accent, progressive disclosure, outcome-first KO copy); a refined token spec expressed against the real `styles/theme.ts` (add `fontWeight.medium=500/semibold=600/bold=700`, `fontSize.xl=22px`+rename old `xl`->`xxl`, `spacing.section/page`, color roles `accent/surfaceInfo/Success/Warning/Danger/surfaceSelected/surfaceStrong/textOnStrong`, `shadow.card`); a canonical Section+Card module extending `HanaCard` (eyebrow/action/emphasis) + promoting duplicated `ScreenGrid/Split/Stack/CardBody` into one shared module; per-screen-type guidance (Dashboard/list/workbench/empty-loading-error); outcome-first KO microcopy with Dashboard + Review Workbench before/after; and the prioritized P0/P1/P2 change list (FE6-038+) with completion criteria; presentation/token-only, no API/DTO/enum change; not a 35-screen rewrite |
 | PM6-021 | P0 | PM | MVP6.4 Gold Set Authoring + dataset revisioning P0 scope freeze | MVP6.1 closeout, MVP6 roadmap Theme 1 §4.2-4.4, PM6-005 | `docs/pm/MVP6_4_GOLD_SET_AUTHORING_BRIEF.md` freezes the expert-owned authoring P0: demo flow, source artifacts (reuse MVP6.1 shapes by ref, no rename), enums/states (`GoldItemStatus`, `DatasetRevisionStatus`, `GoldAuthoringAction`, `GoldSetImportCompatibility`), the reproducibility decision (runs keep `dataset_version_id` pin, FROZEN revision immutability, no hard delete), import dry-run/confirm policy, the candidate/analysis-only safety boundary + all-false `GoldAuthoringMutationGuard`, and exclusions; durable boundary recorded in ADR 0011; planning-only, no runtime/API/DTO/enum change |
 | PM6-022 | P0 | PM | MVP6.4 Wave40 freeze-on-pin freeze + scope guard | PM6-021, BE6-028~BE6-031 | freezes the single freeze-on-pin rule for Wave40 thin implementation: `pinned_run_count > 0` ⇒ the revision **transitions to `status=FROZEN`** (`frozen_reason=PINNED_BY_RUN`, `is_immutable=true`), no ACTIVE-but-immutable state, `is_immutable == status in {FROZEN,ARCHIVED}`, freeze of an ACTIVE revision vacates the ACTIVE slot until a new one is cut/activated; mutating FROZEN ⇒ `409 REVISION_FROZEN`/`GOLD_ITEM_IMMUTABLE`; refines brief/ADR 0011/contract-draft minimally; confirms no scope expansion beyond P0 + the 5 endpoint families; restates Wave40 acceptance gates; planning/docs-only, no `apps/` change |
+| PM6-023 | P0 | PM | MVP6.5 Governance workflow P0 scope freeze | MVP6.4 closeout, MVP6 roadmap Theme 3 §6.1-6.5 | `docs/pm/MVP6_5_GOVERNANCE_BRIEF.md` freezes the auditable ontology change-request lifecycle P0: demo flow (propose → review → approve/reject → audit); target kinds (`ChangeRequestTargetKind` CLASS/PROPERTY/RELATION × `ChangeRequestChangeType` ADD/MODIFY/DEPRECATE); request states (`OntologyChangeRequestStatus` DRAFT/OPEN/IN_REVIEW/APPROVED/REJECTED/WITHDRAWN) + decision commands (`GovernanceReviewAction` COMMENT/REQUEST_CHANGES/APPROVE/REJECT, reusing MVP3 `ReviewDecisionType` literals, no `MODIFY_AND_APPROVE`) + reason rules; RBAC (reuse shipped `Role`, approver ≠ proposer); audit content (`GovernanceAuditAction`); the **approval-is-intent-not-auto-apply** boundary + orthogonal `GovernanceApplicationState` (QUEUED on approve; APPLIED/SUPERSEDED reserved) + all-false `GovernanceMutationGuard`; and exclusions (auto-apply, enforcement, autonomous publish/rollback, impact simulation, migration/release-note, re-validation/re-extraction, multi-tenant, agents, connectors); durable boundary recorded in ADR 0012; planning-only, no runtime/API/DTO/enum change |
 
 ## Backend Backlog
 
@@ -470,6 +567,10 @@ closed UI/UX waves 35–38; re-ranged to `INT6-035`+).
 | BE6-033 | P0 | Backend | MVP6.4 dataset revision cut/activate + freeze-on-pin runtime | PM6-022, BE6-032 | implement family C (revision cut/list/get/activate); enforce the PM-frozen rule: `pinned_run_count>0` ⇒ status transitions to FROZEN, no ACTIVE-but-immutable, at most one ACTIVE per dataset (vacated on pin-freeze), runs pin only ACTIVE/FROZEN; `409 REVISION_FROZEN`/`REVISION_NOT_DRAFT`; `EvaluationRun.dataset_version_id` never rewritten |
 | BE6-034 | P0 | Backend | MVP6.4 export/import dry-run+confirm + audit log runtime | PM6-022, BE6-032 | implement families D (export GET + import dry-run/confirm) + E (audit log); dry-run-first 4-state `GoldSetImportCompatibility`; explicit `GoldSetImportStrategy` on confirm; `INCOMPATIBLE` blocked (`409`), no auto-merge, never edit FROZEN; all-false `GoldAuthoringMutationGuard` on every response |
 | BE6-035 | P0 | Backend | MVP6.4 OpenAPI export/alignment + no-mutation regression | PM6-022, BE6-032~BE6-034 | export runtime OpenAPI for MVP6.4 paths and compare to `openapi-mvp6-4-draft.json` (0 field/enum mismatch); focused tests for the 5 families + freeze-on-pin + run-pin-not-rewritten + authz + guard; MVP6.1 evaluation tests + ruff stay green; additive/no-rename |
+| BE6-036 | P0 | Backend | MVP6.5 governance change-request contract draft | PM6-023 | draft additive endpoint families + DTO/enum names in `docs/api/MVP6_5_GOVERNANCE_API_CONTRACT_DRAFT.md`: change-request create/list/get + proposer update (while DRAFT/OPEN), submit, withdraw; reuse `ReviewDecisionType` semantics + `Role` + MVP3/MVP5 audit shape by `$ref` (no rename); define `OntologyChangeRequest` + `OntologyChangeItem` DTOs, `ChangeRequestTargetKind`/`ChangeRequestChangeType`, `OntologyChangeRequestStatus`; ontology element refs are read-only |
+| BE6-037 | P0 | Backend | MVP6.5 review/decision + approval-is-intent contract | PM6-023, BE6-036 | define review actions (`comment`/`request-changes`) and `approve`/`reject` with reason rules (REJECT/REQUEST_CHANGES/APPROVE require reason); state machine `DRAFT→OPEN→IN_REVIEW→{APPROVED|REJECTED}` + WITHDRAWN; `409 CHANGE_REQUEST_STATE_CONFLICT` on terminal/wrong-state; approver≠proposer (`403`); orthogonal `GovernanceApplicationState` (`QUEUED` on approve; `APPLIED`/`SUPERSEDED` reserved, not produced in P0); document that approval applies nothing |
+| BE6-038 | P0 | Backend | MVP6.5 audit log + no-mutation guard contract | PM6-023, BE6-036 | governance audit-log GET reusing the MVP3/MVP5 audit shape; `GovernanceAuditAction` enum (9 events); every governance write response exposes all-false `GovernanceMutationGuard` (`ontology_definition_mutated`, `published_graph_mutated`, `candidate_graph_mutated`, `prompt_version_mutated`, `publish_job_started`, `extraction_job_started`, `change_auto_applied`); no ontology/candidate/published/prompt mutation; no hard delete |
+| BE6-039 | P0 | Backend | MVP6.5 OpenAPI planning artifact | PM6-023, BE6-036~BE6-038 | produce `docs/api/openapi-mvp6-5-draft.json` — parses as OpenAPI 3.1.0, version label `0.6.5-draft`, additive/disjoint to MVP1-MVP6.4 paths; capture open questions (OPEN→IN_REVIEW auto-advance timing; whether `approve` needs a distinct `application_note` vs decision reason); no runtime code/models/migrations/tests |
 
 ## Frontend Backlog
 
@@ -530,6 +631,10 @@ closed UI/UX waves 35–38; re-ranged to `INT6-035`+).
 | FE6-054 | P0 | Frontend | MVP6.4 authoring UI (gold edit/archive + GoldEvidence) | PM6-022, FE6-053 | gold entity/relation edit/archive/restore + standalone Gold Evidence attach/edit UI; owner/admin gating via `GoldAuthoringCapabilities` (non-owner read-only hint); loading/empty/error states; design language (Section+Card, KO titles, one primary action) |
 | FE6-055 | P0 | Frontend | MVP6.4 revision lifecycle + export/import UI | PM6-022, FE6-053 | `DatasetRevisionStatus` D6 badges (FROZEN read-only + immutable banner reflecting the PM freeze-on-pin rule, no ACTIVE-but-immutable); each run shows its pinned FROZEN revision (reproducibility visible); export JSON; import dry-run compatibility (COMPATIBLE/WARNING/CONFLICT/INCOMPATIBLE, INCOMPATIBLE blocks) → confirm-with-strategy; no publish/auto-merge copy |
 | FE6-056 | P0 | Frontend | MVP6.4 mock + actual smoke | PM6-022, FE6-053~FE6-055 | add `npm run smoke:mvp6:goldset:mock` and (if backend runnable) `:actual`; `npm run test`/`build` pass; 0 horizontal overflow @1440/1366/1280/768 for the new screens |
+| FE6-057 | P0 | Frontend | MVP6.5 Governance route/IA + field/state review | PM6-023, BE6-036~BE6-039 | requirements note (planning-only, no route/component/type/mock/smoke code): project-scoped Governance area contextual under the Review group (ADR 0010, no global LNB ID-page); change-request board/list by `OntologyChangeRequestStatus`; loading/empty/error/permission states; DTO gaps vs Backend draft |
+| FE6-058 | P0 | Frontend | MVP6.5 propose + detail/review UX requirements | PM6-023, FE6-057 | propose form (title/summary + change items: `ChangeRequestTargetKind`/`ChangeRequestChangeType` + element ref + `ontology_version_id`, ADD has null ref); change-request detail (change items + review thread + decision panel); reason-required decision inputs; reviewer/approver permission-boundary UX (non-authorized read-only hint); design language (Section+Card, KO titles, one primary action) |
+| FE6-059 | P0 | Frontend | MVP6.5 approval-is-intent + audit UX requirements | PM6-023, FE6-057 | explicit "approved = queued intent, not yet applied" banner surfacing `GovernanceApplicationState` (QUEUED); D6 status badges for request states; audit-trail view (actor/action/reason/timestamp/target element + version/before-after state); no auto-apply/publish copy; make clear application is a later slice |
+| FE6-060 | P0 | Frontend | MVP6.5 types/client/mocks alignment plan | PM6-023, BE6-039 | requirements note that Wave42 TS types/client/mocks must match `openapi-mvp6-5-draft.json` exactly and reuse MVP3 review-decision + `Role` + audit shapes without rename; enumerate the new governance DTOs/enums + all-false `GovernanceMutationGuard` display; planning-only |
 
 ## QA / Integration Backlog
 
@@ -568,6 +673,10 @@ closed UI/UX waves 35–38; re-ranged to `INT6-035`+).
 | INT6-040 | P0 | QA | MVP6.4 frontend mock/API acceptance | PM6-022, FE6-053~FE6-056 | validate the mock + actual flow open→edit/archive→evidence→cut revision→export→import dry-run→confirm→run-pin display; FROZEN read-only/immutable banner, compatibility states, permission-limited state |
 | INT6-041 | P0 | QA | MVP6.4 no-mutation + reproducibility guard | PM6-022, BE6-035 | independently confirm `EvaluationRun.dataset_version_id` is never rewritten and an old run resolves its exact snapshot; all-false `GoldAuthoringMutationGuard` at response + data level (no published/candidate/prompt/extraction/evaluation-score mutation); no MVP6.1 field/enum rename |
 | INT6-042 | P0 | QA | Wave40 closeout recommendation | PM6-022, INT6-039~INT6-041 | run selected MVP6.1/earlier regression + smokes BE/FE touched; recommend MVP6.4 thin-slice closeout, targeted Wave41 hardening, or PM redesign with exact commands/artifacts; no leftover listeners on 8000/5173 |
+| INT6-043 | P0 | QA | MVP6.5 Governance acceptance checklist | PM6-023, BE6-036~BE6-039, FE6-057~FE6-060 | executable `INT6-*` checklist verifies PM/BE/FE agreement on the P0 flow, states/enums (`OntologyChangeRequestStatus`, `GovernanceReviewAction`, `ChangeRequestTargetKind`/`ChangeRequestChangeType`, `GovernanceApplicationState`, `GovernanceAuditAction`), decision commands + reason rules, RBAC + segregation of duties, source artifacts (reuse-by-ref, no rename), safety boundary, and exclusions; OpenAPI parse/additivity; planning-only with no runtime leakage under `apps/`/`infra/`; recommends Wave42 thin implementation, hardening, or PM redesign |
+| INT6-044 | P0 | QA | MVP6.5 lifecycle + approval-is-intent guard | PM6-023, BE6-037 | checklist asserts the state machine `DRAFT→OPEN→IN_REVIEW→{APPROVED|REJECTED}`+WITHDRAWN; reason required for REJECT/REQUEST_CHANGES/APPROVE; `409 CHANGE_REQUEST_STATE_CONFLICT` on terminal/wrong-state decisions; approver≠proposer (`403`); on APPROVE `application_state=QUEUED` and NOTHING is applied; `APPLIED`/`SUPERSEDED` never produced in P0 |
+| INT6-045 | P0 | QA | MVP6.5 no-mutation + audit guard | PM6-023, BE6-038 | checklist asserts all-false `GovernanceMutationGuard` on every governance write response (no ontology-definition/published/candidate/prompt mutation, no publish/extraction job started, `change_auto_applied` false); full audit trail (actor/action/reason/timestamp/target change item + ontology element + version context/before-after state); no hard delete; ontology element refs read-only |
+| INT6-046 | P0 | QA | Wave41 planning recommendation | INT6-043~INT6-045 | confirm brief/ADR 0012/backlog/Backend/Frontend artifacts agree on P0 flow, states/commands, approval-≠-auto-apply boundary, safety, and exclusions; recommend Wave42 thin implementation, targeted hardening, or PM redesign with exact follow-up gates |
 
 QA ID correction (Wave39): the QA rows above were re-ranged from the PM-proposed
 `INT6-026`~`INT6-029` to `INT6-035`~`INT6-038` because `INT6-026`~`INT6-034` were
