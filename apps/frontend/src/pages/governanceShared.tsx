@@ -44,8 +44,16 @@ export function ApplicationStateBadge({ state }: { state: GovernanceApplicationS
   if (state === "NOT_APPLICABLE") {
     return <StatusBadge token="NOT_APPLICABLE" />;
   }
-  // APPLIED / SUPERSEDED are RESERVED — never expected in P0. If the backend
-  // ever returns them, surface an unexpected-state notice rather than success.
+  // MVP6.6 (G7): APPLIED / SUPERSEDED are now produced for the first time.
+  // APPLIED = success `초안에 적용됨 (미게시)` (never reads as published).
+  if (state === "APPLIED") {
+    return <StatusBadge token="APPLIED" koLabel="초안에 적용됨 (미게시)" tone="success" />;
+  }
+  // SUPERSEDED = warning `대체됨 (미적용)` — a blocked, non-applied terminal.
+  if (state === "SUPERSEDED") {
+    return <StatusBadge token="SUPERSEDED" koLabel="대체됨 (미적용)" tone="warning" />;
+  }
+  // Any OTHER unexpected literal still degrades to the unexpected-state notice.
   return <StatusBadge token={state} koLabel="예상치 못한 상태 (P0 미지원)" tone="danger" />;
 }
 
@@ -78,6 +86,19 @@ export const auditActionKo: Record<GovernanceAuditAction, string> = {
   CHANGES_REQUESTED: "변경 요청",
   CHANGE_REQUEST_APPROVED: "승인",
   CHANGE_REQUEST_REJECTED: "반려",
+};
+
+// MVP6.6 application-audit action gloss (D6-style EN token + KO gloss).
+export const applicationAuditActionKo: Record<"CHANGE_REQUEST_APPLIED" | "CHANGE_REQUEST_SUPERSEDED", string> = {
+  CHANGE_REQUEST_APPLIED: "적용됨",
+  CHANGE_REQUEST_SUPERSEDED: "대체됨",
+};
+
+// MVP6.6 pre-check per-item intended-effect copy (outcome-first KO microcopy).
+export const applyChangeTypeEffectKo: Record<ChangeRequestChangeType, string> = {
+  ADD: "추가 — 대상 초안에 새 요소 생성",
+  MODIFY: "수정 — 대상 요소 갱신",
+  DEPRECATE: "폐기 — OntologyElementStatus=ARCHIVED 설정",
 };
 
 /** Persistent approval-is-intent banner (load-bearing). Rendered on board + detail. */

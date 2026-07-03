@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
 import {
+  GovernanceApplyRequest,
   GovernanceReviewDecisionRequest,
   GovernanceWithdrawRequest,
   OntologyChangeItemRequest,
@@ -1150,6 +1151,10 @@ const governanceKeys = {
     ["governance", "change-requests", projectId, status ?? "ALL"] as const,
   detail: (changeRequestId: string) => ["governance", "change-request", changeRequestId] as const,
   audit: (changeRequestId: string) => ["governance", "change-request", changeRequestId, "audit"] as const,
+  applicationStatus: (changeRequestId: string) =>
+    ["governance", "change-request", changeRequestId, "application-status"] as const,
+  applicationAudit: (changeRequestId: string) =>
+    ["governance", "change-request", changeRequestId, "application-audit"] as const,
 };
 
 export function useOntologyChangeRequests(projectId: string, status?: OntologyChangeRequestStatus) {
@@ -1181,8 +1186,42 @@ function useGovernanceInvalidate(changeRequestId: string) {
   return () => {
     void queryClient.invalidateQueries({ queryKey: governanceKeys.detail(changeRequestId) });
     void queryClient.invalidateQueries({ queryKey: governanceKeys.audit(changeRequestId) });
+    void queryClient.invalidateQueries({ queryKey: governanceKeys.applicationStatus(changeRequestId) });
+    void queryClient.invalidateQueries({ queryKey: governanceKeys.applicationAudit(changeRequestId) });
     void queryClient.invalidateQueries({ queryKey: ["governance", "change-requests"] });
   };
+}
+
+// ---- MVP6.6 Governance change application (apply into a DRAFT ontology version) ----
+
+/** Read-only application-status pre-check. Enabled only when the request is APPROVED. */
+export function useChangeRequestApplicationStatus(changeRequestId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: governanceKeys.applicationStatus(changeRequestId),
+    queryFn: () => apiClient.getChangeRequestApplicationStatus(changeRequestId),
+    enabled: Boolean(changeRequestId) && enabled,
+  });
+}
+
+/** Read-only application audit (CHANGE_REQUEST_APPLIED / CHANGE_REQUEST_SUPERSEDED). */
+export function useChangeRequestApplicationAudit(changeRequestId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: governanceKeys.applicationAudit(changeRequestId),
+    queryFn: () => apiClient.listChangeRequestApplicationAudit(changeRequestId),
+    enabled: Boolean(changeRequestId) && enabled,
+  });
+}
+
+/** Human-initiated apply into a DRAFT ontology version. Invalidates governance queries. */
+export function useApplyOntologyChangeRequest(changeRequestId: string) {
+  const invalidate = useGovernanceInvalidate(changeRequestId);
+  return useMutation({
+    mutationFn: (payload?: GovernanceApplyRequest) =>
+      apiClient.applyOntologyChangeRequest(changeRequestId, payload),
+    onSuccess: invalidate,
+    // A staleness 409 still transitions QUEUED->SUPERSEDED server-side; refresh.
+    onError: invalidate,
+  });
 }
 
 export function useProposeOntologyChangeRequest(projectId: string) {

@@ -24,7 +24,9 @@
     "smoke:mvp6:goldset:mock": "node scripts/mvp6-goldset-mock-route-smoke.mjs",
     "smoke:mvp6:goldset:actual": "node scripts/mvp6-goldset-actual-api-smoke.mjs",
     "smoke:mvp6:governance:mock": "node scripts/mvp6-governance-mock-route-smoke.mjs",
-    "smoke:mvp6:governance:actual": "node scripts/mvp6-governance-actual-api-smoke.mjs"
+    "smoke:mvp6:governance:actual": "node scripts/mvp6-governance-actual-api-smoke.mjs",
+    "smoke:mvp6:governance-apply:mock": "node scripts/mvp6-governance-apply-mock-route-smoke.mjs",
+    "smoke:mvp6:governance-apply:actual": "node scripts/mvp6-governance-apply-actual-api-smoke.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.81.5",

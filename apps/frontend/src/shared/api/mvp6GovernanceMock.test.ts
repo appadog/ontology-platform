@@ -5,6 +5,7 @@ import {
   MVP6_GOVERNANCE_OPEN_ID,
   MVP6_GOVERNANCE_PROJECT_ID,
   MVP6_GOVERNANCE_REJECTED_ID,
+  MVP6_GOVERNANCE_STALE_APPROVED_ID,
 } from "../mocks/mvp6GovernanceFixtures";
 import type { GovernanceMutationGuard } from "./types";
 
@@ -150,5 +151,94 @@ describe("MVP6.5 Governance mock contract", () => {
     const sorted = [...times].sort((a, b) => a.localeCompare(b));
     expect(times).toEqual(sorted);
     expect(audit.items[0].action).toBe("CHANGE_REQUEST_CREATED");
+  });
+});
+
+describe("MVP6.6 Governance change application mock contract", () => {
+  // Create + submit + approve a fresh request so the process-local store has a
+  // clean APPROVED+QUEUED target to apply (the seeded APPROVED_ID may be consumed
+  // by other tests / smokes sharing the store).
+  async function freshApprovedRequest() {
+    const created = await apiClient.proposeOntologyChangeRequest(MVP6_GOVERNANCE_PROJECT_ID, {
+      title: "적용 대상 (신규)",
+      summary: "apply happy path",
+      items: [{ target_kind: "PROPERTY", change_type: "ADD", ontology_version_id: "onto-v6-gov" }],
+    });
+    await apiClient.submitOntologyChangeRequest(created.change_request.id);
+    await apiClient.recordGovernanceReviewDecision(created.change_request.id, {
+      action: "APPROVE",
+      reason: "apply test approval",
+    });
+    return created.change_request.id;
+  }
+
+  it("pre-check is read-only (all-false guard) and reports a DRAFT target + per-item preview", async () => {
+    const id = await freshApprovedRequest();
+    const status = await apiClient.getChangeRequestApplicationStatus(id);
+    expect(status.application_state).toBe("QUEUED");
+    expect(status.target_is_draft).toBe(true);
+    expect(status.target_version_status).toBe("DRAFT");
+    expect(status.applicable).toBe(true);
+    expect(status.would_supersede).toBe(false);
+    expect(status.capabilities.can_apply).toBe(true);
+    expect(status.item_previews.length).toBeGreaterThan(0);
+    // Read carries the all-false MVP6.5 guard (never the one-true-flag guard).
+    expect(status.mutation_guard).toEqual(ALL_FALSE_GUARD);
+  });
+
+  it("apply -> APPLIED with the one-true-flag guard (ontology_draft_mutated only)", async () => {
+    const id = await freshApprovedRequest();
+    const applied = await apiClient.applyOntologyChangeRequest(id, {});
+    expect(applied.application_state).toBe("APPLIED");
+    expect(applied.target_ontology_version_id).toBeTruthy();
+    expect(applied.applied_item_ids.length).toBeGreaterThan(0);
+    expect(applied.audit_entry.action).toBe("CHANGE_REQUEST_APPLIED");
+    const g = applied.mutation_guard;
+    expect(g.ontology_draft_mutated).toBe(true);
+    expect(g.published_graph_mutated).toBe(false);
+    expect(g.candidate_graph_mutated).toBe(false);
+    expect(g.prompt_version_mutated).toBe(false);
+    expect(g.publish_job_started).toBe(false);
+    expect(g.extraction_job_started).toBe(false);
+    expect(g.evaluation_run_started).toBe(false);
+    expect(applied.capabilities?.can_apply).toBe(false);
+  });
+
+  it("idempotency: re-apply an APPLIED request -> 409 CHANGE_ALREADY_APPLIED (nothing applied)", async () => {
+    const id = await freshApprovedRequest();
+    await apiClient.applyOntologyChangeRequest(id, {});
+    await expect(apiClient.applyOntologyChangeRequest(id, {})).rejects.toMatchObject({
+      code: "CHANGE_ALREADY_APPLIED",
+      status: 409,
+    });
+  });
+
+  it("staleness at apply -> 409 CHANGE_REQUEST_SUPERSEDED, request flips to SUPERSEDED (terminal)", async () => {
+    await expect(
+      apiClient.applyOntologyChangeRequest(MVP6_GOVERNANCE_STALE_APPROVED_ID, {}),
+    ).rejects.toMatchObject({ code: "CHANGE_REQUEST_SUPERSEDED", status: 409 });
+    // The request is now SUPERSEDED; a re-apply is CHANGE_NOT_APPLICABLE (terminal).
+    const detail = await apiClient.getOntologyChangeRequest(MVP6_GOVERNANCE_STALE_APPROVED_ID);
+    expect(detail.change_request.application_state).toBe("SUPERSEDED");
+    await expect(
+      apiClient.applyOntologyChangeRequest(MVP6_GOVERNANCE_STALE_APPROVED_ID, {}),
+    ).rejects.toMatchObject({ code: "CHANGE_NOT_APPLICABLE", status: 409 });
+    // A CHANGE_REQUEST_SUPERSEDED application-audit entry is written (nothing mutated).
+    const audit = await apiClient.listChangeRequestApplicationAudit(MVP6_GOVERNANCE_STALE_APPROVED_ID);
+    expect(audit.items.some((e) => e.action === "CHANGE_REQUEST_SUPERSEDED")).toBe(true);
+  });
+
+  it("apply on a non-APPROVED/QUEUED request -> 409 CHANGE_NOT_APPLICABLE", async () => {
+    await expect(
+      apiClient.applyOntologyChangeRequest(MVP6_GOVERNANCE_OPEN_ID, {}),
+    ).rejects.toMatchObject({ code: "CHANGE_NOT_APPLICABLE", status: 409 });
+  });
+
+  it("application-audit lists CHANGE_REQUEST_APPLIED after a successful apply", async () => {
+    const id = await freshApprovedRequest();
+    await apiClient.applyOntologyChangeRequest(id, { note: "적용 노트" });
+    const audit = await apiClient.listChangeRequestApplicationAudit(id);
+    expect(audit.items.length).toBeGreaterThan(0);
+    expect(audit.items[audit.items.length - 1].action).toBe("CHANGE_REQUEST_APPLIED");
   });
 });

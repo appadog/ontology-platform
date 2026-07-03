@@ -104,8 +104,14 @@ import {
 } from "../mocks/mvp6GoldsetFixtures";
 import {
   allFalseGovernanceGuard,
+  applyCapabilitiesApplied,
+  applyCapabilitiesQueued,
+  applyCapabilitiesReadOnly,
+  applyMutationGuard,
   approverCapabilities,
   bannerFor,
+  buildApplicationAudit,
+  buildItemPreviews,
   mockGovernanceAudit,
   mockGovernanceItems,
   mockGovernanceRequests,
@@ -114,6 +120,8 @@ import {
   MVP6_GOVERNANCE_ONTOLOGY_VERSION_ID,
   MVP6_GOVERNANCE_PROJECT_ID,
   MVP6_GOVERNANCE_PROPOSER_ID,
+  MVP6_GOVERNANCE_STALE_APPROVED_ID,
+  MVP6_GOVERNANCE_TARGET_DRAFT_VERSION_ID,
 } from "../mocks/mvp6GovernanceFixtures";
 import {
   AuditEvent,
@@ -180,6 +188,12 @@ import {
   GoldSetImportConfirmResponse,
   GoldSetImportDryRunRequest,
   GoldSetImportReport,
+  GovernanceApplicationAuditEntry,
+  GovernanceApplicationAuditListResponse,
+  GovernanceApplicationState,
+  GovernanceApplicationStatusResponse,
+  GovernanceApplyRequest,
+  GovernanceApplyResponse,
   GovernanceAuditListResponse,
   GovernanceMutationResponse,
   GovernanceReviewDecision,
@@ -364,6 +378,10 @@ const mockGovernanceAuditStore: Record<string, GovernanceAuditListResponse["item
   Object.entries(mockGovernanceAudit).map(([id, entries]) => [id, entries.map((e) => ({ ...e }))]),
 );
 let mockGovernanceCounter = 0;
+
+// MVP6.6 application-audit store (CHANGE_REQUEST_APPLIED / CHANGE_REQUEST_SUPERSEDED),
+// process-local, chronological ascending.
+const mockApplicationAuditStore: Record<string, GovernanceApplicationAuditEntry[]> = {};
 
 // The mock actor. In actual mode the backend derives the actor; the mock treats
 // the approver identity as "the current viewer" so the approver decision surface
@@ -4272,6 +4290,145 @@ export const apiClient = {
     }
     return request<GovernanceAuditListResponse>(
       `/api/v1/projects/${projectId}/governance-audit`,
+    );
+  },
+
+  // ---- MVP6.6 Governance change application (apply into a DRAFT ontology version) ----
+  async getChangeRequestApplicationStatus(
+    changeRequestId: string,
+    params?: { targetOntologyVersionId?: string },
+  ): Promise<GovernanceApplicationStatusResponse> {
+    if (USE_MOCK_API) {
+      const req = mockGovernanceRequestStore.find((cr) => cr.id === changeRequestId);
+      if (!req) {
+        throw new GovernanceError("Change request was not found.", "CHANGE_REQUEST_NOT_FOUND", 404);
+      }
+      const items = mockGovernanceItemStore[changeRequestId] ?? [];
+      const targetVersionId = params?.targetOntologyVersionId ?? MVP6_GOVERNANCE_TARGET_DRAFT_VERSION_ID;
+      // Advisory-only staleness hint (G5): the pre-check NEVER flips QUEUED->SUPERSEDED.
+      const wouldSupersede =
+        req.status === "APPROVED" &&
+        req.application_state === "QUEUED" &&
+        changeRequestId === MVP6_GOVERNANCE_STALE_APPROVED_ID;
+      const isQueuedApproved = req.status === "APPROVED" && req.application_state === "QUEUED";
+      const canApply = isQueuedApproved; // mock actor holds apply rights
+      return delay({
+        change_request_id: req.id,
+        project_id: req.project_id,
+        status: req.status,
+        application_state: req.application_state,
+        target_ontology_version_id: targetVersionId,
+        target_version_status: "DRAFT",
+        target_is_draft: true,
+        applicable: isQueuedApproved && !wouldSupersede,
+        would_supersede: wouldSupersede,
+        item_previews: buildItemPreviews(items, targetVersionId, wouldSupersede),
+        capabilities: canApply ? applyCapabilitiesQueued : applyCapabilitiesReadOnly,
+        mutation_guard: { ...allFalseGovernanceGuard },
+      });
+    }
+    const query = new URLSearchParams();
+    if (params?.targetOntologyVersionId) query.set("target_ontology_version_id", params.targetOntologyVersionId);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<GovernanceApplicationStatusResponse>(
+      `/api/v1/ontology-change-requests/${changeRequestId}/application-status${suffix}`,
+    );
+  },
+
+  async applyOntologyChangeRequest(
+    changeRequestId: string,
+    payload: GovernanceApplyRequest = {},
+  ): Promise<GovernanceApplyResponse> {
+    if (USE_MOCK_API) {
+      const existing = mockGovernanceRequestStore.find((cr) => cr.id === changeRequestId);
+      if (!existing) {
+        throw new GovernanceError("Change request was not found.", "CHANGE_REQUEST_NOT_FOUND", 404);
+      }
+      // Idempotency (409): already APPLIED.
+      if (existing.application_state === "APPLIED") {
+        throw new GovernanceError("This change request is already applied.", "CHANGE_ALREADY_APPLIED", 409);
+      }
+      // Terminal SUPERSEDED (409): not applicable.
+      if (existing.application_state === "SUPERSEDED") {
+        throw new GovernanceError("This change request has been superseded.", "CHANGE_NOT_APPLICABLE", 409);
+      }
+      // Precondition (409): must be APPROVED + QUEUED.
+      if (existing.status !== "APPROVED" || existing.application_state !== "QUEUED") {
+        throw new GovernanceError("The request is not in an applicable state (APPROVED + QUEUED).", "CHANGE_NOT_APPLICABLE", 409);
+      }
+      const targetVersionId = payload.target_ontology_version_id ?? MVP6_GOVERNANCE_TARGET_DRAFT_VERSION_ID;
+      const items = mockGovernanceItemStore[changeRequestId] ?? [];
+
+      // Staleness auto-detected at apply -> block, mutate nothing, QUEUED -> SUPERSEDED,
+      // write a CHANGE_REQUEST_SUPERSEDED audit entry, 409 CHANGE_REQUEST_SUPERSEDED.
+      if (changeRequestId === MVP6_GOVERNANCE_STALE_APPROVED_ID) {
+        const superseded = { ...existing, application_state: "SUPERSEDED" as GovernanceApplicationState, updated_at: new Date().toISOString() };
+        mockGovernanceRequestStore = mockGovernanceRequestStore.map((cr) => (cr.id === changeRequestId ? superseded : cr));
+        const supersedeAudit = buildApplicationAudit(changeRequestId, existing.project_id, "CHANGE_REQUEST_SUPERSEDED", {
+          target_ontology_version_id: targetVersionId,
+          applied_item_ids: [],
+          before_after_refs: [],
+          before_application_state: "QUEUED",
+          after_application_state: "SUPERSEDED",
+          note: payload.note ?? null,
+          stale_detail: { reason: "TARGET_ELEMENT_ARCHIVED", stale_item_ids: items.map((i) => i.id) },
+        });
+        mockApplicationAuditStore[changeRequestId] = [...(mockApplicationAuditStore[changeRequestId] ?? []), supersedeAudit];
+        throw new GovernanceError(
+          "The target draft changed since approval; nothing was applied and the request is now SUPERSEDED.",
+          "CHANGE_REQUEST_SUPERSEDED",
+          409,
+        );
+      }
+
+      // Apply (all-or-nothing): mutate ONLY the DRAFT (mocked) + set APPLIED.
+      const previews = buildItemPreviews(items, targetVersionId, false);
+      const beforeAfterRefs = previews.map((p) => ({
+        change_item_id: p.change_item_id,
+        change_type: p.change_type,
+        before: p.before_ref ?? null,
+        after: p.after_ref ?? null,
+      }));
+      const applied = { ...existing, application_state: "APPLIED" as GovernanceApplicationState, updated_at: new Date().toISOString() };
+      mockGovernanceRequestStore = mockGovernanceRequestStore.map((cr) => (cr.id === changeRequestId ? applied : cr));
+      const auditEntry = buildApplicationAudit(changeRequestId, existing.project_id, "CHANGE_REQUEST_APPLIED", {
+        target_ontology_version_id: targetVersionId,
+        applied_item_ids: items.map((i) => i.id),
+        before_after_refs: beforeAfterRefs,
+        before_application_state: "QUEUED",
+        after_application_state: "APPLIED",
+        note: payload.note ?? null,
+        stale_detail: null,
+      });
+      mockApplicationAuditStore[changeRequestId] = [...(mockApplicationAuditStore[changeRequestId] ?? []), auditEntry];
+      return delay({
+        change_request_id: applied.id,
+        project_id: applied.project_id,
+        application_state: "APPLIED",
+        target_ontology_version_id: targetVersionId,
+        applied_item_ids: items.map((i) => i.id),
+        before_after_refs: beforeAfterRefs,
+        audit_entry: auditEntry,
+        mutation_guard: { ...applyMutationGuard },
+        capabilities: { ...applyCapabilitiesApplied },
+      });
+    }
+    return jsonRequest<GovernanceApplyResponse>(
+      `/api/v1/ontology-change-requests/${changeRequestId}/apply`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  async listChangeRequestApplicationAudit(
+    changeRequestId: string,
+  ): Promise<GovernanceApplicationAuditListResponse> {
+    if (USE_MOCK_API) {
+      const items = (mockApplicationAuditStore[changeRequestId] ?? []).map((e) => ({ ...e }));
+      // Chronological ascending (wire order).
+      return delay({ items, total_count: items.length, next_cursor: null });
+    }
+    return request<GovernanceApplicationAuditListResponse>(
+      `/api/v1/ontology-change-requests/${changeRequestId}/application-audit`,
     );
   },
 };

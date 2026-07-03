@@ -1,0 +1,374 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP6.7 Impact Simulation Planning API",
+    "description": "Planning-only OpenAPI artifact for MVP6.7 Impact Simulation: a READ-ONLY impact report for an existing governance change request, fixed durably by ADR 0014 and frozen by docs/pm/MVP6_7_IMPACT_SIMULATION_BRIEF.md. Given a change-request id (any lifecycle state), a human runs an impact simulation and reads a report covering five deterministic dimensions: (1) affected ontology elements = direct target(s) of each change item + bounded transitive dependents (max depth 2); (2) dependent candidate entities/relations = exact count + capped OntologyElementRef list + truncated flag; (3) dependent published elements = exact count + capped ref list + truncated; (4) affected MVP3 ValidationRuleCode(s) + MVP4 QualityMetricGroup(s) by reference; (5) severity/summary rollup (per-item ImpactSeverity + report-level max + per-severity counts). ImpactSeverity = NONE/LOW/MEDIUM/HIGH/BREAKING computed by a deterministic rule from the counted dimensions (no LLM, no randomness). This is the RETURN TO READ-ONLY after the single MVP6.6 apply mutation: it mutates NOTHING (not the ontology draft/published, candidates, prompts, extraction, evaluation, or governance state; it never flips status/application_state and never SUPERSEDES). Every response carries an all-false ImpactSimulationMutationGuard (distinct from the MVP6.6 GovernanceApplicationMutationGuard; MVP6.7 turns NO flag true, ever). ADVISORY-ONLY: never blocks/gates/pre-authorizes/auto-triggers apply or publish; severity is informational. Read authorization = any project member who can view the change request (MVP5 Role, no elevated role); unauthorized -> 403 PERMISSION_DENIED; missing request -> 404 CHANGE_REQUEST_NOT_FOUND. Additive/disjoint to MVP1-MVP6.6: reuses MVP6.5/6.6 governance change-request/item/OntologyElementRef/ChangeRequestChangeType/ChangeRequestTargetKind, MVP1 OntologyElementStatus/OntologyVersionStatus, MVP3 ValidationRuleCode/ValidationResultSeverity, MVP4 QualityMetricGroup, and MVP5 Role by reference (no renames). Wave45 contract-first planning only: no runtime code, models, migrations, or tests.",
+    "version": "0.6.7-draft"
+  },
+  "tags": [
+    {
+      "name": "MVP6.7 Impact Simulation",
+      "description": "Read-only, advisory, deterministic-bounded impact analysis of a governance change request. No mutation."
+    }
+  ],
+  "paths": {
+    "/api/v1/ontology-change-requests/{change_request_id}/impact-simulation": {
+      "get": {
+        "tags": ["MVP6.7 Impact Simulation"],
+        "summary": "Run/read the read-only impact simulation for a change request",
+        "description": "Computes and returns the deterministic, read-only impact report for the given governance change request. Idempotent GET: mutates NOTHING (all-false ImpactSimulationMutationGuard on every response). The analysis is bounded (transitive dependent depth <= 2; per-dimension ref list capped with an exact count + truncated flag) and byte-stable for a fixed change request + graph snapshot. Advisory-only: it never applies, publishes, enforces, gates, re-validates, re-extracts, flips status/application_state, or sets SUPERSEDED. Read authz = any project member who can view the change request (no elevated role). Optional target_ontology_version_id query pins the ontology version snapshot the analysis reads against (else the change request's own ontology_version_id / project current DRAFT).",
+        "operationId": "getChangeRequestImpactSimulation",
+        "parameters": [
+          { "$ref": "#/components/parameters/ChangeRequestId" },
+          { "$ref": "#/components/parameters/TargetOntologyVersionIdQuery" },
+          { "$ref": "#/components/parameters/RefCap" }
+        ],
+        "responses": {
+          "200": {
+            "description": "The read-only impact report (all-false mutation guard).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ImpactSimulationReport" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/PermissionDenied" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ChangeRequestId": {
+        "name": "change_request_id",
+        "in": "path",
+        "required": true,
+        "description": "Id of the existing MVP6.5/6.6 governance change request to analyze. Reused by reference; not mutated.",
+        "schema": { "type": "string" }
+      },
+      "TargetOntologyVersionIdQuery": {
+        "name": "target_ontology_version_id",
+        "in": "query",
+        "required": false,
+        "description": "Optional explicit ontology version to read the analysis against (read-only snapshot pin). Omit to use the change request's own ontology_version_id (or the project current DRAFT). Never mutated.",
+        "schema": { "type": ["string", "null"] }
+      },
+      "RefCap": {
+        "name": "ref_cap",
+        "in": "query",
+        "required": false,
+        "description": "Optional override for the per-dimension returned-refs cap (dependent candidate refs, dependent published refs, affected-element dependent refs). Default 50, max 200. The dimension count is ALWAYS exact regardless of the cap; only the returned ref list is capped, with truncated=true when the cap is hit.",
+        "schema": { "type": "integer", "default": 50, "minimum": 1, "maximum": 200 }
+      }
+    },
+    "responses": {
+      "PermissionDenied": {
+        "description": "403 PERMISSION_DENIED - actor cannot view this change request. Mutates nothing.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+        }
+      },
+      "NotFound": {
+        "description": "404 CHANGE_REQUEST_NOT_FOUND / PROJECT_NOT_FOUND / ONTOLOGY_VERSION_NOT_FOUND. Mutates nothing.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+        }
+      }
+    },
+    "schemas": {
+      "ChangeRequestChangeType": {
+        "type": "string",
+        "description": "Reused VERBATIM from MVP6.5/6.6, NOT renamed. Drives per-item severity: ADD of a new element with no dependents -> NONE; DEPRECATE/MODIFY on an element with dependents escalates.",
+        "enum": ["ADD", "MODIFY", "DEPRECATE"]
+      },
+      "ChangeRequestTargetKind": {
+        "type": "string",
+        "description": "Reused VERBATIM from MVP6.5/6.6, NOT renamed. The ontology element kind a change item targets.",
+        "enum": ["CLASS", "PROPERTY", "RELATION"]
+      },
+      "OntologyElementStatus": {
+        "type": "string",
+        "description": "Reused VERBATIM from MVP1 (apps/backend/app/core/enums.py), NOT renamed. Status of a referenced ontology element at the read moment.",
+        "enum": ["DRAFT", "ACTIVE", "ARCHIVED", "DELETED"]
+      },
+      "OntologyVersionStatus": {
+        "type": "string",
+        "description": "Reused VERBATIM from MVP1, NOT renamed. Status of the ontology version the analysis reads against.",
+        "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+      },
+      "ValidationRuleCode": {
+        "type": "string",
+        "description": "Reused VERBATIM from MVP3 (openapi-mvp3-draft.json), NOT renamed. Affected validation rule codes are reported BY REFERENCE (advisory); MVP6.7 runs no validation job.",
+        "enum": ["CLASS_EXISTS", "RELATION_EXISTS", "RELATION_DOMAIN_RANGE", "RELATION_DIRECTION", "REQUIRED_PROPERTY", "DATATYPE", "CARDINALITY", "DUPLICATE_CANDIDATE", "ORPHAN_NODE", "EVIDENCE_MISSING", "ONTOLOGY_VERSION_MISMATCH", "LOW_CONFIDENCE"]
+      },
+      "ValidationResultSeverity": {
+        "type": "string",
+        "description": "Reused VERBATIM from MVP3, NOT renamed. Drives severity: an affected FAILED validation -> HIGH; an affected WARNING validation -> MEDIUM. INFO does not escalate.",
+        "enum": ["INFO", "WARNING", "FAILED"]
+      },
+      "QualityMetricGroup": {
+        "type": "string",
+        "description": "Reused VERBATIM from MVP4 (openapi-mvp4-draft.json), NOT renamed. Affected quality metric groups whose scope intersects an affected element are reported BY REFERENCE (advisory); MVP6.7 recomputes no quality metric.",
+        "enum": ["COMPLETENESS", "CONSISTENCY", "TRACEABILITY", "VALIDATION", "REVIEW", "DUPLICATE", "RELATION_DENSITY"]
+      },
+      "Role": {
+        "type": "string",
+        "description": "Reused VERBATIM from apps/backend/app/core/enums.py, NOT renamed. Impact simulation is read-only: ANY project member who can view the change request may read the report (no elevated role, unlike the MVP6.6 apply).",
+        "enum": ["SYSTEM_ADMIN", "PROJECT_ADMIN", "ONTOLOGY_MANAGER", "DATA_MANAGER", "EXTRACTION_MANAGER", "REVIEWER", "VIEWER", "API_CLIENT"]
+      },
+      "OntologyElementRef": {
+        "type": "object",
+        "description": "Reused BY REFERENCE from MVP6.5/6.6 (same shape, not renamed). A reference to a single ontology element. Exactly one of the id fields is set, matching target_kind. status is the element's OntologyElementStatus at the read moment.",
+        "properties": {
+          "target_kind": { "$ref": "#/components/schemas/ChangeRequestTargetKind" },
+          "ontology_class_id": { "type": ["string", "null"] },
+          "ontology_property_id": { "type": ["string", "null"] },
+          "ontology_relation_id": { "type": ["string", "null"] },
+          "ontology_version_id": { "type": "string" },
+          "status": { "anyOf": [{ "$ref": "#/components/schemas/OntologyElementStatus" }, { "type": "null" }] }
+        },
+        "required": ["target_kind", "ontology_version_id"]
+      },
+      "ImpactSeverity": {
+        "type": "string",
+        "description": "NEW (MVP6.7). Deterministic per-item / report-rollup impact severity, computed from the counted dimensions (no LLM, no randomness). Order low->high: NONE < LOW < MEDIUM < HIGH < BREAKING. Rules (highest matching wins): BREAKING = DEPRECATE/MODIFY on an element with dependent PUBLISHED elements (or that would violate a published-graph reference); HIGH = DEPRECATE/MODIFY on an element with dependent CANDIDATE elements, or an affected FAILED-severity validation; MEDIUM = transitive ontology dependents affected, or affected WARNING-severity validations / affected quality groups; LOW = only the direct element affected, no dependents; NONE = ADD of a new element with no existing dependents. Advisory only; never gates apply/publish.",
+        "enum": ["NONE", "LOW", "MEDIUM", "HIGH", "BREAKING"]
+      },
+      "ImpactSeverityReason": {
+        "type": "string",
+        "description": "NEW (MVP6.7). Deterministic machine reason code explaining which rule set an item's ImpactSeverity. Display/audit aid; the enum is the authority.",
+        "enum": [
+          "DEPRECATE_MODIFY_WITH_PUBLISHED_DEPENDENTS",
+          "DEPRECATE_MODIFY_WITH_CANDIDATE_DEPENDENTS",
+          "AFFECTED_FAILED_VALIDATION",
+          "TRANSITIVE_ONTOLOGY_DEPENDENTS",
+          "AFFECTED_WARNING_VALIDATION",
+          "AFFECTED_QUALITY_GROUP",
+          "DIRECT_ELEMENT_ONLY",
+          "ADD_NEW_ELEMENT_NO_DEPENDENTS"
+        ]
+      },
+      "ImpactSimulationMutationGuard": {
+        "type": "object",
+        "description": "NEW (MVP6.7). ALL FLAGS FALSE on EVERY response, no exceptions. Distinct from the MVP6.6 GovernanceApplicationMutationGuard (which turns ontology_draft_mutated true on a successful apply): impact simulation turns NO flag true, ever. QA asserts zero sanctioned mutation surface: any true flag - or any data-level change to ontology/published/candidate/prompt/governance state after running a simulation - is a defect.",
+        "properties": {
+          "ontology_draft_mutated": { "type": "boolean", "const": false, "default": false },
+          "published_graph_mutated": { "type": "boolean", "const": false, "default": false },
+          "candidate_graph_mutated": { "type": "boolean", "const": false, "default": false },
+          "prompt_version_mutated": { "type": "boolean", "const": false, "default": false },
+          "governance_state_mutated": { "type": "boolean", "const": false, "default": false },
+          "publish_job_started": { "type": "boolean", "const": false, "default": false },
+          "extraction_job_started": { "type": "boolean", "const": false, "default": false },
+          "evaluation_run_started": { "type": "boolean", "const": false, "default": false }
+        },
+        "required": [
+          "ontology_draft_mutated",
+          "published_graph_mutated",
+          "candidate_graph_mutated",
+          "prompt_version_mutated",
+          "governance_state_mutated",
+          "publish_job_started",
+          "extraction_job_started",
+          "evaluation_run_started"
+        ]
+      },
+      "AffectedOntologyElement": {
+        "type": "object",
+        "description": "NEW (MVP6.7). An ontology element affected by a change item: either the DIRECT target of the item or a bounded transitive DEPENDENT (max depth 2 = direct + one hop). relation_to_target names how it depends on the item's direct target; depth 0 = the direct target itself.",
+        "properties": {
+          "element_ref": { "$ref": "#/components/schemas/OntologyElementRef" },
+          "relation_to_target": { "$ref": "#/components/schemas/DependencyRelation" },
+          "depth": { "type": "integer", "minimum": 0, "maximum": 2, "description": "0 = direct target of the change item; 1 = first-hop dependent; 2 = second-hop dependent (cap)." },
+          "display_name": { "type": ["string", "null"], "description": "Human label of the element (advisory display aid)." }
+        },
+        "required": ["element_ref", "relation_to_target", "depth"]
+      },
+      "DependencyRelation": {
+        "type": "string",
+        "description": "NEW (MVP6.7). How a transitive dependent relates to the change item's direct target within the ontology definition. DIRECT_TARGET = the element the change item points at (depth 0).",
+        "enum": [
+          "DIRECT_TARGET",
+          "PROPERTY_OF_CLASS",
+          "RELATION_DOMAIN",
+          "RELATION_RANGE",
+          "SUBCLASS_OF",
+          "SUPERCLASS_OF",
+          "RELATED_ELEMENT"
+        ]
+      },
+      "DependentRefBucket": {
+        "type": "object",
+        "description": "NEW (MVP6.7). A bounded dependent-reference dimension: an EXACT count (never capped) plus a capped ref list with truncated=true when the ref_cap is hit. Used for dependent candidate entities/relations and dependent published elements.",
+        "properties": {
+          "count": { "type": "integer", "minimum": 0, "description": "EXACT total number of dependents. Always accurate regardless of the ref cap." },
+          "refs": {
+            "type": "array",
+            "description": "Capped list of dependent refs (at most ref_cap items). OntologyElementRef-style references to the depended-on ontology element (candidate rows / published elements are grouped by the affected ontology element they reference).",
+            "items": { "$ref": "#/components/schemas/OntologyElementRef" }
+          },
+          "truncated": { "type": "boolean", "description": "true when count > len(refs) because the ref_cap was hit." }
+        },
+        "required": ["count", "refs", "truncated"]
+      },
+      "AffectedValidationRef": {
+        "type": "object",
+        "description": "NEW (MVP6.7). An affected MVP3 validation reported BY REFERENCE (advisory). rule_code + the max ValidationResultSeverity whose scope intersects an affected element. No validation job is run.",
+        "properties": {
+          "rule_code": { "$ref": "#/components/schemas/ValidationRuleCode" },
+          "severity": { "$ref": "#/components/schemas/ValidationResultSeverity" }
+        },
+        "required": ["rule_code", "severity"]
+      },
+      "ImpactItem": {
+        "type": "object",
+        "description": "NEW (MVP6.7). The impact analysis for a single change item of the change request. Bounded + deterministic. Carries the five dimensions scoped to this item plus the item-level ImpactSeverity.",
+        "properties": {
+          "change_item_id": { "type": "string" },
+          "target_kind": { "$ref": "#/components/schemas/ChangeRequestTargetKind" },
+          "change_type": { "$ref": "#/components/schemas/ChangeRequestChangeType" },
+          "target_ref": { "$ref": "#/components/schemas/OntologyElementRef" },
+          "affected_ontology_elements": {
+            "type": "array",
+            "description": "Dimension 1: direct target (depth 0) + bounded transitive dependents (depth 1-2).",
+            "items": { "$ref": "#/components/schemas/AffectedOntologyElement" }
+          },
+          "dependent_candidates": { "$ref": "#/components/schemas/DependentRefBucket" },
+          "dependent_published": { "$ref": "#/components/schemas/DependentRefBucket" },
+          "affected_validations": {
+            "type": "array",
+            "description": "Dimension 4a: affected MVP3 ValidationRuleCode(s) by reference.",
+            "items": { "$ref": "#/components/schemas/AffectedValidationRef" }
+          },
+          "affected_quality_groups": {
+            "type": "array",
+            "description": "Dimension 4b: affected MVP4 QualityMetricGroup(s) by reference.",
+            "items": { "$ref": "#/components/schemas/QualityMetricGroup" }
+          },
+          "severity": { "$ref": "#/components/schemas/ImpactSeverity" },
+          "severity_reason": { "$ref": "#/components/schemas/ImpactSeverityReason" }
+        },
+        "required": [
+          "change_item_id",
+          "target_kind",
+          "change_type",
+          "target_ref",
+          "affected_ontology_elements",
+          "dependent_candidates",
+          "dependent_published",
+          "affected_validations",
+          "affected_quality_groups",
+          "severity",
+          "severity_reason"
+        ]
+      },
+      "ImpactSeverityCounts": {
+        "type": "object",
+        "description": "NEW (MVP6.7). Per-severity item counts for the report rollup. Sum == number of change items.",
+        "properties": {
+          "NONE": { "type": "integer", "minimum": 0 },
+          "LOW": { "type": "integer", "minimum": 0 },
+          "MEDIUM": { "type": "integer", "minimum": 0 },
+          "HIGH": { "type": "integer", "minimum": 0 },
+          "BREAKING": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["NONE", "LOW", "MEDIUM", "HIGH", "BREAKING"]
+      },
+      "ImpactSummary": {
+        "type": "object",
+        "description": "NEW (MVP6.7). Dimension 5: the deterministic report-level rollup. max_severity = the highest ImpactSeverity across all items (NONE if there are no items). severity_counts = per-severity item counts. Aggregate totals are EXACT (summed from exact per-item counts) even when per-item ref lists are truncated.",
+        "properties": {
+          "max_severity": { "$ref": "#/components/schemas/ImpactSeverity" },
+          "severity_counts": { "$ref": "#/components/schemas/ImpactSeverityCounts" },
+          "total_change_items": { "type": "integer", "minimum": 0 },
+          "total_affected_ontology_elements": { "type": "integer", "minimum": 0, "description": "EXACT count of distinct affected ontology elements across all items." },
+          "total_dependent_candidates": { "type": "integer", "minimum": 0, "description": "EXACT total dependent candidate rows across all items." },
+          "total_dependent_published": { "type": "integer", "minimum": 0, "description": "EXACT total dependent published elements across all items." },
+          "affected_validation_rule_codes": {
+            "type": "array",
+            "description": "Distinct union of affected ValidationRuleCode(s) across all items (by reference).",
+            "items": { "$ref": "#/components/schemas/ValidationRuleCode" }
+          },
+          "affected_quality_groups": {
+            "type": "array",
+            "description": "Distinct union of affected QualityMetricGroup(s) across all items (by reference).",
+            "items": { "$ref": "#/components/schemas/QualityMetricGroup" }
+          }
+        },
+        "required": [
+          "max_severity",
+          "severity_counts",
+          "total_change_items",
+          "total_affected_ontology_elements",
+          "total_dependent_candidates",
+          "total_dependent_published",
+          "affected_validation_rule_codes",
+          "affected_quality_groups"
+        ]
+      },
+      "ImpactSimulationCapabilities": {
+        "type": "object",
+        "description": "NEW (MVP6.7). Display-only capability hint. can_view is true for any project member who can view the change request. can_apply is echoed advisory context (governed by the SEPARATE MVP6.6 apply path) so the FE can decide whether to surface the apply CTA next to the read-only report; MVP6.7 never grants or gates apply.",
+        "properties": {
+          "can_view": { "type": "boolean" },
+          "can_apply": { "type": "boolean", "description": "Advisory echo of MVP6.6 apply capability; MVP6.7 does not authorize apply." },
+          "actor_role": { "anyOf": [{ "$ref": "#/components/schemas/Role" }, { "type": "null" }], "description": "Advisory echo of the requesting actor's MVP5 Role (read authz uses standard project-read membership; no elevated role required for MVP6.7)." }
+        },
+        "required": ["can_view", "can_apply"]
+      },
+      "ImpactSimulationReport": {
+        "type": "object",
+        "description": "NEW (MVP6.7). The read-only impact report for a change request. Deterministic + byte-stable for a fixed change request + graph snapshot. Carries per-item impact, the rollup summary, the bounding parameters actually applied, an ImpactSimulationCapabilities hint, and the all-false ImpactSimulationMutationGuard. impact_report_id is present ONLY if the backend persists reports (MVP6.3 pattern, deferred to Wave46); either way the report is read-only.",
+        "properties": {
+          "impact_report_id": { "type": ["string", "null"], "description": "Present only if reports are persisted (MVP6.3-style keyed record). Null / omitted when computed on demand. Read-only either way." },
+          "change_request_id": { "type": "string" },
+          "project_id": { "type": "string" },
+          "change_request_status": { "type": ["string", "null"], "description": "Advisory echo of the change request's current lifecycle status (e.g. APPROVED); read-only, never mutated by this call." },
+          "analyzed_ontology_version_id": { "type": "string", "description": "The ontology version the analysis read against (read-only snapshot pin)." },
+          "analyzed_ontology_version_status": { "$ref": "#/components/schemas/OntologyVersionStatus" },
+          "items": {
+            "type": "array",
+            "description": "Per-change-item impact analyses.",
+            "items": { "$ref": "#/components/schemas/ImpactItem" }
+          },
+          "summary": { "$ref": "#/components/schemas/ImpactSummary" },
+          "bounding": { "$ref": "#/components/schemas/ImpactBounding" },
+          "capabilities": { "$ref": "#/components/schemas/ImpactSimulationCapabilities" },
+          "mutation_guard": { "$ref": "#/components/schemas/ImpactSimulationMutationGuard" },
+          "computed_at": { "type": "string", "format": "date-time", "description": "When the report was computed (advisory; does not affect determinism of the analysis payload)." }
+        },
+        "required": [
+          "change_request_id",
+          "project_id",
+          "analyzed_ontology_version_id",
+          "analyzed_ontology_version_status",
+          "items",
+          "summary",
+          "bounding",
+          "capabilities",
+          "mutation_guard"
+        ]
+      },
+      "ImpactBounding": {
+        "type": "object",
+        "description": "NEW (MVP6.7). The deterministic bounding parameters actually applied to this report. Echoed so the FE can render honest truncation affordances and QA can assert the caps.",
+        "properties": {
+          "max_dependent_depth": { "type": "integer", "const": 2, "description": "P0 fixed at 2 (direct target + one hop)." },
+          "ref_cap": { "type": "integer", "description": "Per-dimension returned-refs cap actually applied (default 50)." },
+          "any_dimension_truncated": { "type": "boolean", "description": "true if any DependentRefBucket in the report has truncated=true." }
+        },
+        "required": ["max_dependent_depth", "ref_cap", "any_dimension_truncated"]
+      },
+      "ApiError": {
+        "type": "object",
+        "description": "Standard error. codes: PROJECT_NOT_FOUND (404), CHANGE_REQUEST_NOT_FOUND (404), ONTOLOGY_VERSION_NOT_FOUND (404), PERMISSION_DENIED (403). Impact simulation is read-only: every error body mutates nothing.",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "type": ["object", "null"], "additionalProperties": true }
+        },
+        "required": ["code", "message"]
+      }
+    }
+  }
+}

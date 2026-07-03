@@ -1,0 +1,279 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP6.6 Governance Change Application Planning API",
+    "description": "Planning-only OpenAPI artifact for MVP6.6 Governance Change Application: the deferred application slice from ADR 0012, fixed durably by ADR 0013. A privileged human explicitly APPLIES an APPROVED + application_state=QUEUED ontology change request onto a DRAFT ontology version (QUEUED -> APPLIED), executing the request's change items via the existing MVP1 ontology-edit semantics (ADD=create, MODIFY=update, DEPRECATE=archive) on a DRAFT version ONLY. APPLICATION != PUBLISH: apply never touches the published graph, never starts a publish job, never rolls back; publishing stays the separate MVP3 path. There is no auto-apply (approval never triggers apply). Staleness is auto-detected at apply -> 409 CHANGE_REQUEST_SUPERSEDED + application_state=SUPERSEDED (no mutation). Idempotency: already-applied -> 409 CHANGE_ALREADY_APPLIED; not APPROVED/QUEUED -> 409 CHANGE_NOT_APPLICABLE; non-DRAFT target -> 409 APPLY_TARGET_NOT_DRAFT. Apply rights = approver rights (ONTOLOGY_MANAGER/PROJECT_ADMIN/SYSTEM_ADMIN); applier may differ from approver; unauthorized -> 403 PERMISSION_DENIED. The successful-apply response carries GovernanceApplicationMutationGuard with exactly ONE true flag (ontology_draft_mutated); read/precheck/blocked-apply keep the all-false GovernanceMutationGuard. Additive/disjoint to MVP1-MVP6.5: reuses MVP6.5 governance change-request/item/GovernanceApplicationState/audit shapes, MVP1 ontology-version + OntologyElementStatus/OntologyVersionStatus, and MVP5 Role by reference (no renames). Wave43 contract-first planning only: no runtime code, models, migrations, or tests. Frozen by docs/pm/MVP6_6_GOVERNANCE_APPLICATION_BRIEF.md and docs/adr/0013.",
+    "version": "0.6.6-draft"
+  },
+  "tags": [
+    {
+      "name": "MVP6.6 Governance Application",
+      "description": "Additive human-initiated application of an APPROVED+QUEUED change request onto a DRAFT ontology version. Application != publish (draft-only). The successful apply response carries GovernanceApplicationMutationGuard with exactly one true flag (ontology_draft_mutated); the application-status pre-check and application-audit reads, and every blocked apply, keep the all-false GovernanceMutationGuard. Apply valid only from APPROVED + application_state=QUEUED; apply rights = ONTOLOGY_MANAGER/PROJECT_ADMIN/SYSTEM_ADMIN."
+    }
+  ],
+  "paths": {
+    "/api/v1/ontology-change-requests/{change_request_id}/application-status": {
+      "get": {
+        "tags": ["MVP6.6 Governance Application"],
+        "summary": "Read-only application-status pre-check",
+        "description": "Read-only pre-check for the apply action. Resolves the effective target DRAFT ontology version (explicit target_ontology_version_id query param, else the project current DRAFT), reports per-item before/after element refs and a staleness/would-supersede hint, and returns the apply capability + guard (all-false GovernanceMutationGuard: reads never mutate). This read NEVER flips QUEUED->SUPERSEDED; only the apply attempt is authoritative. The hint is advisory: a request the pre-check marks would_supersede=true still transitions only on the apply call.",
+        "operationId": "getChangeRequestApplicationStatus",
+        "parameters": [
+          { "$ref": "#/components/parameters/ChangeRequestId" },
+          { "$ref": "#/components/parameters/TargetOntologyVersionIdQuery" }
+        ],
+        "responses": {
+          "200": { "description": "Application-status pre-check", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceApplicationStatusResponse" } } } },
+          "403": { "$ref": "#/components/responses/PermissionDenied" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/ontology-change-requests/{change_request_id}/apply": {
+      "post": {
+        "tags": ["MVP6.6 Governance Application"],
+        "summary": "Apply an APPROVED+QUEUED change request to a DRAFT ontology version",
+        "description": "Human-initiated apply. Valid ONLY when status==APPROVED AND application_state==QUEUED. Executes the change items against a DRAFT ontology version via MVP1 ontology-edit semantics (ADD=create, MODIFY=update, DEPRECATE=set OntologyElementStatus=ARCHIVED), then sets application_state=APPLIED and returns GovernanceApplicationMutationGuard with ontology_draft_mutated=true (all others false). Target = optional target_ontology_version_id (must be OntologyVersionStatus=DRAFT) else the project current DRAFT; non-DRAFT -> 409 APPLY_TARGET_NOT_DRAFT. Idempotent: already-APPLIED -> 409 CHANGE_ALREADY_APPLIED; not APPROVED/QUEUED -> 409 CHANGE_NOT_APPLICABLE. Staleness auto-detected at apply time -> block, mutate nothing, application_state=SUPERSEDED, 409 CHANGE_REQUEST_SUPERSEDED. Apply rights = ONTOLOGY_MANAGER/PROJECT_ADMIN/SYSTEM_ADMIN (= approver rights; applier may differ from approver/proposer; no self-apply prohibition); unauthorized -> 403 PERMISSION_DENIED. NEVER touches the published graph, starts a publish/extraction/evaluation job, or rolls back. Writes a CHANGE_REQUEST_APPLIED application audit entry with per-item before/after element refs and the resulting draft version id.",
+        "operationId": "applyOntologyChangeRequest",
+        "parameters": [{ "$ref": "#/components/parameters/ChangeRequestId" }],
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceApplyRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Applied to the DRAFT ontology version (application_state=APPLIED). Response guard ontology_draft_mutated=true; all others false.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceApplyResponse" } } } },
+          "403": { "$ref": "#/components/responses/PermissionDenied" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/ApplyConflict" }
+        }
+      }
+    },
+    "/api/v1/ontology-change-requests/{change_request_id}/application-audit": {
+      "get": {
+        "tags": ["MVP6.6 Governance Application"],
+        "summary": "Read the application audit trail for a change request",
+        "description": "Read-only application audit for a change request: CHANGE_REQUEST_APPLIED / CHANGE_REQUEST_SUPERSEDED entries with actor+role, timestamp, source request id + applied item ids, resulting DRAFT target_ontology_version_id, and per-item before/after element refs. All-false GovernanceMutationGuard implied (read). Paginated (limit/cursor), chronological ASC.",
+        "operationId": "listChangeRequestApplicationAudit",
+        "parameters": [
+          { "$ref": "#/components/parameters/ChangeRequestId" },
+          { "$ref": "#/components/parameters/ApplicationActionFilter" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": { "description": "Application audit entries", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GovernanceApplicationAuditListResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ChangeRequestId": { "name": "change_request_id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Ontology change request id (MVP6.5 OntologyChangeRequest.id)" },
+      "TargetOntologyVersionIdQuery": { "name": "target_ontology_version_id", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Optional explicit DRAFT ontology version id to pre-check against. Omit to use the project current DRAFT." },
+      "Limit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "default": 50, "minimum": 1, "maximum": 100 }, "description": "Page size (default 50, max 100)" },
+      "Cursor": { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Opaque pagination cursor" },
+      "ApplicationActionFilter": { "name": "action", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/GovernanceApplicationAuditAction" }, "description": "Filter application audit entries by action" }
+    },
+    "responses": {
+      "PermissionDenied": { "description": "Permission denied (403: PERMISSION_DENIED). Apply rights = ONTOLOGY_MANAGER/PROJECT_ADMIN/SYSTEM_ADMIN.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+      "NotFound": { "description": "Resource not found (404: PROJECT_NOT_FOUND / CHANGE_REQUEST_NOT_FOUND / ONTOLOGY_VERSION_NOT_FOUND)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+      "ApplyConflict": { "description": "Apply blocked (409). CHANGE_ALREADY_APPLIED (already APPLIED), CHANGE_NOT_APPLICABLE (not APPROVED/QUEUED), CHANGE_REQUEST_SUPERSEDED (stale; application_state now SUPERSEDED, nothing mutated), APPLY_TARGET_NOT_DRAFT (target not OntologyVersionStatus=DRAFT). Every blocked apply mutates nothing; if a body is returned its mutation_guard is all-false.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+    },
+    "schemas": {
+      "GovernanceApplicationState": {
+        "type": "string",
+        "description": "Reused verbatim from MVP6.5 (docs/api/openapi-mvp6-5-draft.json), NOT renamed. Orthogonal post-approval intent lifecycle. QUEUED on APPROVE (intent only). MVP6.6 is the FIRST slice that produces APPLIED (successful apply) and SUPERSEDED (staleness block); both were reserved in ADR 0012. SUPERSEDED is terminal for application.",
+        "enum": ["NOT_APPLICABLE", "QUEUED", "APPLIED", "SUPERSEDED"]
+      },
+      "ChangeRequestChangeType": {
+        "type": "string",
+        "description": "Reused verbatim from MVP6.5, NOT renamed. Drives the applied ontology-edit semantics on a DRAFT version: ADD=create element, MODIFY=update element, DEPRECATE=set OntologyElementStatus=ARCHIVED.",
+        "enum": ["ADD", "MODIFY", "DEPRECATE"]
+      },
+      "ChangeRequestTargetKind": {
+        "type": "string",
+        "description": "Reused verbatim from MVP6.5, NOT renamed. The ontology element kind an applied change item targets.",
+        "enum": ["CLASS", "PROPERTY", "RELATION"]
+      },
+      "OntologyElementStatus": {
+        "type": "string",
+        "description": "Reused verbatim from apps/backend/app/core/enums.py, NOT renamed / redefined; mirrored here so this planning artifact is standalone. DEPRECATE applies to ARCHIVED; apply never hard-deletes (DELETED is not produced by apply).",
+        "enum": ["DRAFT", "ACTIVE", "ARCHIVED", "DELETED"]
+      },
+      "OntologyVersionStatus": {
+        "type": "string",
+        "description": "Reused verbatim from apps/backend/app/core/enums.py, NOT renamed / redefined. Apply targets a DRAFT version ONLY; PUBLISHED/ARCHIVED targets -> 409 APPLY_TARGET_NOT_DRAFT.",
+        "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+      },
+      "Role": {
+        "type": "string",
+        "description": "Reused verbatim from apps/backend/app/core/enums.py (NOT renamed / redefined; mirrored here so this planning artifact is standalone). Apply rights = approver rights: ONTOLOGY_MANAGER/PROJECT_ADMIN/SYSTEM_ADMIN. No distinct apply role literal is introduced.",
+        "enum": ["SYSTEM_ADMIN", "PROJECT_ADMIN", "ONTOLOGY_MANAGER", "DATA_MANAGER", "EXTRACTION_MANAGER", "REVIEWER", "VIEWER", "API_CLIENT"]
+      },
+      "GovernanceApplicationAuditAction": {
+        "type": "string",
+        "description": "New MVP6.6 audit actions naming application events. Additive; does NOT rename MVP6.5 GovernanceAuditAction or MVP3/MVP5 AuditEventType. CHANGE_REQUEST_APPLIED on a successful apply; CHANGE_REQUEST_SUPERSEDED on a staleness block.",
+        "enum": ["CHANGE_REQUEST_APPLIED", "CHANGE_REQUEST_SUPERSEDED"]
+      },
+      "GovernanceApplicationMutationGuard": {
+        "type": "object",
+        "description": "REDEFINED guard for the SUCCESSFUL apply response only (ADR 0013). Exactly ONE flag is legitimately true: ontology_draft_mutated. All other flags are false. Any other true flag, or a true ontology_draft_mutated on any non-apply endpoint, is a defect. Blocked apply (idempotency/staleness/authz) mutates nothing and uses the all-false GovernanceMutationGuard instead.",
+        "properties": {
+          "ontology_draft_mutated": { "type": "boolean", "const": true, "description": "The ONE sanctioned mutation surface: a DRAFT ontology version only." },
+          "published_graph_mutated": { "type": "boolean", "const": false, "description": "Publish stays the separate MVP3 path." },
+          "candidate_graph_mutated": { "type": "boolean", "const": false },
+          "prompt_version_mutated": { "type": "boolean", "const": false },
+          "publish_job_started": { "type": "boolean", "const": false },
+          "extraction_job_started": { "type": "boolean", "const": false },
+          "evaluation_run_started": { "type": "boolean", "const": false }
+        },
+        "required": ["ontology_draft_mutated", "published_graph_mutated", "candidate_graph_mutated", "prompt_version_mutated", "publish_job_started", "extraction_job_started", "evaluation_run_started"]
+      },
+      "GovernanceMutationGuard": {
+        "type": "object",
+        "description": "Reused verbatim from MVP6.5 (NOT renamed). All-false. Carried by the application-status pre-check read, the application-audit read, and EVERY blocked apply (idempotency/staleness/authz), which mutate nothing. Only the successful apply uses the redefined GovernanceApplicationMutationGuard.",
+        "properties": {
+          "ontology_definition_mutated": { "type": "boolean", "const": false },
+          "published_graph_mutated": { "type": "boolean", "const": false },
+          "candidate_graph_mutated": { "type": "boolean", "const": false },
+          "prompt_version_mutated": { "type": "boolean", "const": false },
+          "publish_job_started": { "type": "boolean", "const": false },
+          "extraction_job_started": { "type": "boolean", "const": false },
+          "change_auto_applied": { "type": "boolean", "const": false }
+        },
+        "required": ["ontology_definition_mutated", "published_graph_mutated", "candidate_graph_mutated", "prompt_version_mutated", "publish_job_started", "extraction_job_started", "change_auto_applied"]
+      },
+      "OntologyElementRef": {
+        "type": "object",
+        "description": "A reference to a single ontology element the apply touches. Exactly one of the id fields is set, matching target_kind. status is the element's OntologyElementStatus at the referenced moment (before or after).",
+        "properties": {
+          "target_kind": { "$ref": "#/components/schemas/ChangeRequestTargetKind" },
+          "ontology_class_id": { "type": ["string", "null"] },
+          "ontology_property_id": { "type": ["string", "null"] },
+          "ontology_relation_id": { "type": ["string", "null"] },
+          "ontology_version_id": { "type": "string" },
+          "status": { "anyOf": [{ "$ref": "#/components/schemas/OntologyElementStatus" }, { "type": "null" }] }
+        },
+        "required": ["target_kind", "ontology_version_id"]
+      },
+      "ApplicationItemPreview": {
+        "type": "object",
+        "description": "Per-change-item before/after preview for the pre-check. before_ref is null for ADD (no prior element). after_ref describes the intended post-apply element. stale=true when the item's approved before-state no longer matches the current draft target (see stale_reason).",
+        "properties": {
+          "change_item_id": { "type": "string" },
+          "target_kind": { "$ref": "#/components/schemas/ChangeRequestTargetKind" },
+          "change_type": { "$ref": "#/components/schemas/ChangeRequestChangeType" },
+          "before_ref": { "anyOf": [{ "$ref": "#/components/schemas/OntologyElementRef" }, { "type": "null" }] },
+          "after_ref": { "anyOf": [{ "$ref": "#/components/schemas/OntologyElementRef" }, { "type": "null" }] },
+          "stale": { "type": "boolean", "description": "Advisory only; the authoritative staleness transition happens on the apply attempt." },
+          "stale_reason": { "type": ["string", "null"], "description": "e.g. TARGET_ELEMENT_MODIFIED / TARGET_ELEMENT_ARCHIVED / TARGET_ELEMENT_DELETED / VERSION_CONTEXT_DIVERGED." }
+        },
+        "required": ["change_item_id", "target_kind", "change_type", "stale"]
+      },
+      "ApplicationCapabilities": {
+        "type": "object",
+        "description": "Read-only permission + eligibility hint for the UI. Display-only; the server enforces authorization and preconditions independently and this never widens the boundary. can_apply is true only when the actor holds apply rights AND status==APPROVED AND application_state==QUEUED.",
+        "properties": {
+          "can_view": { "type": "boolean" },
+          "can_apply": { "type": "boolean" }
+        },
+        "required": ["can_view", "can_apply"]
+      },
+      "GovernanceApplicationStatusResponse": {
+        "type": "object",
+        "description": "Read-only apply pre-check. Resolves the effective DRAFT target, per-item before/after preview, and a would_supersede staleness hint. Never mutates; mutation_guard is all-false. This read NEVER flips QUEUED->SUPERSEDED.",
+        "properties": {
+          "change_request_id": { "type": "string" },
+          "project_id": { "type": "string" },
+          "status": { "type": "string", "description": "MVP6.5 OntologyChangeRequestStatus of the request (e.g. APPROVED)." },
+          "application_state": { "$ref": "#/components/schemas/GovernanceApplicationState" },
+          "target_ontology_version_id": { "type": ["string", "null"], "description": "Resolved effective DRAFT target (explicit query param or project current DRAFT). Null if no DRAFT version exists." },
+          "target_version_status": { "anyOf": [{ "$ref": "#/components/schemas/OntologyVersionStatus" }, { "type": "null" }], "description": "Status of the resolved target; must be DRAFT for apply to be eligible." },
+          "target_is_draft": { "type": "boolean", "description": "True iff the resolved target is OntologyVersionStatus=DRAFT." },
+          "applicable": { "type": "boolean", "description": "True iff status==APPROVED AND application_state==QUEUED AND target_is_draft AND not would_supersede." },
+          "would_supersede": { "type": "boolean", "description": "Advisory staleness hint: apply would be blocked and the request superseded. Authoritative only on the apply attempt." },
+          "item_previews": { "type": "array", "items": { "$ref": "#/components/schemas/ApplicationItemPreview" } },
+          "capabilities": { "$ref": "#/components/schemas/ApplicationCapabilities" },
+          "mutation_guard": { "$ref": "#/components/schemas/GovernanceMutationGuard" }
+        },
+        "required": ["change_request_id", "project_id", "status", "application_state", "target_is_draft", "applicable", "would_supersede", "item_previews", "capabilities", "mutation_guard"]
+      },
+      "GovernanceApplyRequest": {
+        "type": "object",
+        "description": "Optional apply body. target_ontology_version_id selects the DRAFT version to receive the change; omit to use the project current DRAFT. note is an optional operator note recorded on the application audit entry.",
+        "properties": {
+          "target_ontology_version_id": { "type": ["string", "null"], "description": "DRAFT ontology version id to apply into. Must be OntologyVersionStatus=DRAFT (else 409 APPLY_TARGET_NOT_DRAFT). Omit for project current DRAFT." },
+          "note": { "type": ["string", "null"], "description": "Optional operator note recorded on the application audit entry." }
+        }
+      },
+      "GovernanceApplicationAuditEntry": {
+        "type": "object",
+        "description": "Application audit entry. Reuses the MVP3/MVP5 audit shape (actor_id, action, reason/note, timestamp) by reference; action is GovernanceApplicationAuditAction. Records the resulting DRAFT target_ontology_version_id, applied item ids, and per-item before/after element refs so the exact draft mutation is reconstructable. Never hard-deleted.",
+        "properties": {
+          "id": { "type": "string" },
+          "project_id": { "type": "string" },
+          "change_request_id": { "type": "string" },
+          "action": { "$ref": "#/components/schemas/GovernanceApplicationAuditAction" },
+          "actor_id": { "type": "string" },
+          "actor_role": { "$ref": "#/components/schemas/Role" },
+          "target_ontology_version_id": { "type": ["string", "null"], "description": "Resulting DRAFT version id on APPLIED; the attempted target on SUPERSEDED." },
+          "applied_item_ids": { "type": "array", "items": { "type": "string" } },
+          "before_after_refs": { "type": "array", "items": { "$ref": "#/components/schemas/ApplicationBeforeAfterRef" } },
+          "before_application_state": { "anyOf": [{ "$ref": "#/components/schemas/GovernanceApplicationState" }, { "type": "null" }] },
+          "after_application_state": { "anyOf": [{ "$ref": "#/components/schemas/GovernanceApplicationState" }, { "type": "null" }] },
+          "note": { "type": ["string", "null"] },
+          "stale_detail": { "type": ["object", "null"], "additionalProperties": true, "description": "On CHANGE_REQUEST_SUPERSEDED, the mismatch detail (which items/elements were stale and why)." },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "project_id", "change_request_id", "action", "actor_id", "created_at"]
+      },
+      "ApplicationBeforeAfterRef": {
+        "type": "object",
+        "description": "Per-item before/after element ref pair for a successful apply. before is null for ADD; after is null for a DEPRECATE that archived (after status ARCHIVED) is still populated with the archived ref.",
+        "properties": {
+          "change_item_id": { "type": "string" },
+          "change_type": { "$ref": "#/components/schemas/ChangeRequestChangeType" },
+          "before": { "anyOf": [{ "$ref": "#/components/schemas/OntologyElementRef" }, { "type": "null" }] },
+          "after": { "anyOf": [{ "$ref": "#/components/schemas/OntologyElementRef" }, { "type": "null" }] }
+        },
+        "required": ["change_item_id", "change_type"]
+      },
+      "GovernanceApplyResponse": {
+        "type": "object",
+        "description": "Successful apply envelope. application_state is APPLIED. mutation_guard is the redefined GovernanceApplicationMutationGuard with ontology_draft_mutated=true (all others false). Carries the resulting DRAFT target_ontology_version_id, the application audit entry, and per-item before/after refs.",
+        "properties": {
+          "change_request_id": { "type": "string" },
+          "project_id": { "type": "string" },
+          "application_state": { "$ref": "#/components/schemas/GovernanceApplicationState" },
+          "target_ontology_version_id": { "type": "string", "description": "The DRAFT version that received the change." },
+          "applied_item_ids": { "type": "array", "items": { "type": "string" } },
+          "before_after_refs": { "type": "array", "items": { "$ref": "#/components/schemas/ApplicationBeforeAfterRef" } },
+          "audit_entry": { "$ref": "#/components/schemas/GovernanceApplicationAuditEntry" },
+          "mutation_guard": { "$ref": "#/components/schemas/GovernanceApplicationMutationGuard" },
+          "capabilities": { "$ref": "#/components/schemas/ApplicationCapabilities" }
+        },
+        "required": ["change_request_id", "project_id", "application_state", "target_ontology_version_id", "applied_item_ids", "audit_entry", "mutation_guard"]
+      },
+      "GovernanceApplicationAuditListResponse": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/GovernanceApplicationAuditEntry" } },
+          "total_count": { "type": "integer" },
+          "next_cursor": { "type": ["string", "null"] }
+        },
+        "required": ["items", "total_count"]
+      },
+      "ApiError": {
+        "type": "object",
+        "description": "Standard error. codes: PROJECT_NOT_FOUND, CHANGE_REQUEST_NOT_FOUND, ONTOLOGY_VERSION_NOT_FOUND, APPLY_TARGET_NOT_DRAFT (409), CHANGE_ALREADY_APPLIED (409), CHANGE_NOT_APPLICABLE (409), CHANGE_REQUEST_SUPERSEDED (409), PERMISSION_DENIED (403).",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "type": ["object", "null"], "additionalProperties": true }
+        },
+        "required": ["code", "message"]
+      }
+    }
+  }
+}

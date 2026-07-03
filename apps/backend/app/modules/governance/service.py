@@ -91,6 +91,10 @@ def reset_runtime_store() -> None:
     _request_counter = itertools.count(1)
     _item_counter = itertools.count(1)
     _decision_counter = itertools.count(1)
+    # MVP6.6: also reset the application submodule's process-local store.
+    from app.modules.governance import application as _application
+
+    _application.reset_application_store()
 
 
 def _next_audit_id() -> str:
@@ -719,6 +723,13 @@ def record_review_decision(
         request.decision_reason = payload.reason
         resulting_application_state = GovernanceApplicationState.QUEUED
         audit_action = GovernanceAuditAction.CHANGE_REQUEST_APPROVED
+        # MVP6.6 G3: capture the approve-time before-state snapshot on the QUEUED
+        # request so a later apply compares against the stored snapshot (additive;
+        # does not change MVP6.5 external behavior). Import locally to avoid a
+        # module import cycle.
+        from app.modules.governance import application as _application
+
+        _application.capture_approval_snapshot(request, _items.get(request.id, []))
     else:  # REJECT
         request.status = OntologyChangeRequestStatus.REJECTED
         request.decided_at = utc_now()

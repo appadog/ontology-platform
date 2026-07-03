@@ -1,7 +1,7 @@
 # MVP 6 Draft Backlog
 
-Status: `MVP6.5 WAVE42 GOVERNANCE WORKFLOW THIN IMPLEMENTATION (G1/G2/G4 FROZEN, G3 RATIFIED)`
-Date: 2026-07-01
+Status: `MVP6.7 WAVE45 IMPACT SIMULATION — CONTRACT-FIRST PLANNING ONLY (PM6-027 FROZEN, ADR 0014)`
+Date: 2026-07-02
 
 MVP6 is broad. Wave28 and Wave29 closed MVP6.1 Gold Set / Benchmark Studio.
 Wave30 freezes MVP6.2 Active Learning / Continuous Improvement as a
@@ -500,6 +500,160 @@ Backlog IDs: PM `PM6-024`; Backend `BE6-040`~`BE6-043`; Frontend
 `FE6-061`~`FE6-064`; QA `INT6-047`~`INT6-050` (continued cleanly from the Wave41
 ranges above).
 
+## Wave43 MVP6.6 Governance Change Application PM Freeze Summary
+
+Wave43 opens the next MVP6 theme as contract-first planning only. The chosen P0
+is the **deferred application slice from ADR 0012**: an APPROVED + QUEUED
+ontology change request is **explicitly applied by a human** onto a DRAFT
+ontology version (`GovernanceApplicationState` QUEUED → APPLIED), with separate
+audit. It is the FIRST governance operation that mutates ontology state; the
+durable boundary is recorded in **ADR 0013**. Runtime implementation waits for
+Wave44 after Backend contract draft + Frontend field/state/IA review + QA
+executable checklist. The full freeze is in
+`docs/pm/MVP6_6_GOVERNANCE_APPLICATION_BRIEF.md`.
+
+Frozen MVP6.6 P0 demo flow:
+
+```text
+select project
+-> open Governance -> open an APPROVED change request (application_state = QUEUED)
+-> (read-only) application-status pre-check: target DRAFT version + per-item
+     before/after preview + staleness warning if the approved snapshot no longer
+     matches the current draft target
+-> a permitted role clicks "Apply to draft" and confirms (human-confirmation step)
+-> apply executes items via existing MVP1 ontology-edit semantics
+     (ADD=create, MODIFY=update, DEPRECATE=archive) on a DRAFT ontology version
+     and sets application_state = APPLIED
+-> "applied to DRAFT ontology, NOT published — publish separately" banner
+-> application audit: actor/timestamp/source request+items/resulting DRAFT
+     ontology version id/per-item before/after element refs
+-> re-apply -> 409 (idempotent, no double apply)
+-> stale draft target -> apply blocked, application_state = SUPERSEDED, no mutation
+```
+
+Frozen boundary (authority ADR 0013): application ≠ publish and is **draft-only**
+(published graph NEVER touched; publishing stays the separate MVP3 path);
+**human-initiated only** (approval never triggers apply); apply valid **only**
+from `APPROVED`+`QUEUED`; **idempotent** (already-`APPLIED` → `409
+CHANGE_ALREADY_APPLIED`, not-`APPROVED`/`QUEUED` → `409 CHANGE_NOT_APPLICABLE`);
+**staleness → `SUPERSEDED`** auto-detected at apply time when the approved
+snapshot no longer matches the current draft target — blocked, no mutation, `409
+CHANGE_REQUEST_SUPERSEDED` (the ADR-0012 reserved state becomes real); non-DRAFT
+target → `409 APPLY_TARGET_NOT_DRAFT`.
+
+Authorization: apply rights **= approver rights**
+(`ONTOLOGY_MANAGER`/`PROJECT_ADMIN`/`SYSTEM_ADMIN`), reusing MVP5 `Role`; no new
+role literal; applier **may differ** from approver/proposer (recommended +
+audited); no self-apply prohibition (SoD enforced at approve); unauthorized →
+`403 PERMISSION_DENIED`.
+
+Redefined mutation guard: the successful apply response carries a
+`GovernanceApplicationMutationGuard` with exactly one true flag —
+`ontology_draft_mutated: true` — and `published_graph_mutated`,
+`candidate_graph_mutated`, `prompt_version_mutated`, `publish_job_started`,
+`extraction_job_started`, `evaluation_run_started` all false. All read/lifecycle
+governance endpoints (MVP6.5 + the MVP6.6 pre-check/audit reads) and any blocked
+apply keep the existing **all-false** `GovernanceMutationGuard`. New audit events:
+`GovernanceApplicationAuditAction` (`CHANGE_REQUEST_APPLIED`,
+`CHANGE_REQUEST_SUPERSEDED`), reusing the MVP3/MVP5 audit shape by reference.
+
+`APPLIED`/`SUPERSEDED` are produced **only** by MVP6.6 apply. MVP1 ontology-edit
++ MVP3 publish + MVP5 `Role` + MVP6.5 governance shapes reused by reference, no
+renames.
+
+Frozen exclusions: publishing the applied draft (separate MVP3 path), auto-apply/
+auto-publish, automatic enforcement, autonomous/agent apply, rollback/undo,
+impact simulation, migration/release-note generation, post-apply re-validation/
+re-extraction, bulk/batch apply, conflict auto-merge, real LLM, copilot/agent
+runtime, connector/plugin SDK, multi-tenant runtime. Durable DB/Alembic
+persistence not required for P0 (process-local store with `reset_runtime_store()`
+acceptable); stays P1/P2.
+
+Backlog IDs: PM `PM6-025`; Backend `BE6-044`~`BE6-047`; Frontend
+`FE6-065`~`FE6-068`; QA `INT6-051`~`INT6-054` (continued cleanly; INT6 used
+through `INT6-050`, so the QA range starts at `INT6-051`).
+
+## Wave45 MVP6.7 Impact Simulation PM Freeze Summary
+
+Wave45 opens the next MVP6 theme as contract-first planning only. The chosen P0
+is the **deferred impact-simulation theme** (ADR 0013 "Out of scope", roadmap §7
+Theme 4): before a human commits the MVP6.6 apply (or the later MVP3 publish),
+they run a **read-only impact simulation** on an existing governance change
+request and read what it would touch. It is the **return to read-only** after the
+single MVP6.6 mutation surface — it mutates NOTHING and asserts an all-false
+guard. The durable boundary is recorded in **ADR 0014**. Runtime implementation
+waits for Wave46 after Backend contract draft + Frontend field/state/IA review +
+QA executable checklist. The full freeze is in
+`docs/pm/MVP6_7_IMPACT_SIMULATION_BRIEF.md`.
+
+Frozen MVP6.7 P0 demo flow:
+
+```text
+select project
+-> open Governance -> open a change request (any lifecycle state; typically
+     APPROVED + application_state = QUEUED)
+-> open the contextual "영향도(Impact)" panel and run impact simulation (read-only)
+-> read the impact report:
+     * affected ontology elements: direct target(s) + bounded transitive dependents (max depth 2)
+     * dependent candidate entities/relations: exact count + capped ref list
+     * dependent published elements: exact count + capped ref list
+     * affected MVP3 validations (ValidationRuleCode) + MVP4 quality (QualityMetricGroup) by ref
+     * severity rollup: per-item ImpactSeverity + report-level max + per-severity counts
+-> "read-only analysis — no apply / no publish / no enforcement" banner
+-> the human then decides via the SEPARATE MVP6.6 apply / MVP3 publish paths; the report changes nothing
+```
+
+Frozen boundary (authority ADR 0014): **read-only / no mutation** — mutates
+NOTHING (ontology draft/published, candidates, prompts, extraction, evaluation,
+governance state, published graph); every response carries an **all-false**
+`ImpactSimulationMutationGuard` (turns NO flag true, ever; distinct from the
+MVP6.6 `GovernanceApplicationMutationGuard`). **Advisory only** — decision-support
+before the separate MVP6.6 apply / MVP3 publish steps; never blocks/gates/
+pre-authorizes/auto-triggers; never flips a change request's `status`/
+`application_state`; never sets `SUPERSEDED` (staleness stays the MVP6.6 apply
+authority). **Deterministic + bounded** — byte-stable for a fixed change request +
+graph snapshot; max transitive dependent depth = 2; ref caps per dimension with
+`truncated=true` + exact `count`; no unbounded walk; no real LLM.
+
+Input (P0): an **existing change-request id** (reuse MVP6.5/6.6 shapes). A
+hypothetical free-form change set (target_kind × change_type + element ref, not
+tied to a stored request) is **P1**.
+
+Severity: new `ImpactSeverity` (`NONE`/`LOW`/`MEDIUM`/`HIGH`/`BREAKING`) computed
+deterministically from counted dimensions — `BREAKING` = DEPRECATE/MODIFY on an
+element with dependent published elements; `HIGH` = DEPRECATE/MODIFY on an element
+with dependent candidates or affected `FAILED` validations; `MEDIUM` = transitive
+ontology dependents affected or affected `WARNING` validations/quality groups;
+`LOW` = only the direct element; `NONE` = ADD with no existing dependents. Report
+rollup = max item severity + per-severity counts.
+
+Consumption (reuse ADR 0010 IA): a contextual "영향도(Impact)" panel/tab on the
+Governance change-request detail — **no new global LNB item**, no new Analyze
+destination; D6 badges for `ImpactSeverity`; closed Section+Card design language.
+
+Authorization: read-only, so any project member who can view the change request
+can view its impact report (no elevated role, unlike MVP6.6 apply); reuse MVP5
+`Role` project read check; unauthorized → `403 PERMISSION_DENIED`; missing
+request → `404 CHANGE_REQUEST_NOT_FOUND`.
+
+Reuse by reference (no renames): MVP6.5/6.6 governance change request + items,
+MVP1 ontology definition, candidate + MVP3 published graph, MVP3 validation
+(`ValidationRuleCode`/`ValidationResultSeverity`), MVP4 quality
+(`QualityMetricGroup`), MVP5 `Role`, and the MVP6.3 persist-by-id pattern.
+
+Frozen exclusions: any mutation of any kind; applying/publishing/enforcing/gating
+on the report; auto-triggering apply/publish; hypothetical free-form change set
+(P1); unbounded transitive closure beyond the depth cap; migration/release-note
+generation; automated remediation/auto-fix; post-apply re-validation/
+re-extraction; cost/performance impact modelling; multi-request/cross-project
+impact; real LLM; copilot/agent runtime; connector/plugin SDK; multi-tenant
+runtime. Durable DB/Alembic persistence not required for P0 (process-local store
+with `reset_runtime_store()` acceptable); stays P1/P2.
+
+Backlog IDs: PM `PM6-027`; Backend `BE6-052`~`BE6-055`; Frontend
+`FE6-073`~`FE6-076`; QA `INT6-059`~`INT6-062` (continued cleanly; INT6 used
+through `INT6-058`, so the QA range starts at `INT6-059`).
+
 ## PM Backlog
 
 | ID | Priority | Owner | Task | Dependencies | Acceptance draft |
@@ -527,11 +681,22 @@ ranges above).
 | PM6-021 | P0 | PM | MVP6.4 Gold Set Authoring + dataset revisioning P0 scope freeze | MVP6.1 closeout, MVP6 roadmap Theme 1 §4.2-4.4, PM6-005 | `docs/pm/MVP6_4_GOLD_SET_AUTHORING_BRIEF.md` freezes the expert-owned authoring P0: demo flow, source artifacts (reuse MVP6.1 shapes by ref, no rename), enums/states (`GoldItemStatus`, `DatasetRevisionStatus`, `GoldAuthoringAction`, `GoldSetImportCompatibility`), the reproducibility decision (runs keep `dataset_version_id` pin, FROZEN revision immutability, no hard delete), import dry-run/confirm policy, the candidate/analysis-only safety boundary + all-false `GoldAuthoringMutationGuard`, and exclusions; durable boundary recorded in ADR 0011; planning-only, no runtime/API/DTO/enum change |
 | PM6-022 | P0 | PM | MVP6.4 Wave40 freeze-on-pin freeze + scope guard | PM6-021, BE6-028~BE6-031 | freezes the single freeze-on-pin rule for Wave40 thin implementation: `pinned_run_count > 0` ⇒ the revision **transitions to `status=FROZEN`** (`frozen_reason=PINNED_BY_RUN`, `is_immutable=true`), no ACTIVE-but-immutable state, `is_immutable == status in {FROZEN,ARCHIVED}`, freeze of an ACTIVE revision vacates the ACTIVE slot until a new one is cut/activated; mutating FROZEN ⇒ `409 REVISION_FROZEN`/`GOLD_ITEM_IMMUTABLE`; refines brief/ADR 0011/contract-draft minimally; confirms no scope expansion beyond P0 + the 5 endpoint families; restates Wave40 acceptance gates; planning/docs-only, no `apps/` change |
 | PM6-023 | P0 | PM | MVP6.5 Governance workflow P0 scope freeze | MVP6.4 closeout, MVP6 roadmap Theme 3 §6.1-6.5 | `docs/pm/MVP6_5_GOVERNANCE_BRIEF.md` freezes the auditable ontology change-request lifecycle P0: demo flow (propose → review → approve/reject → audit); target kinds (`ChangeRequestTargetKind` CLASS/PROPERTY/RELATION × `ChangeRequestChangeType` ADD/MODIFY/DEPRECATE); request states (`OntologyChangeRequestStatus` DRAFT/OPEN/IN_REVIEW/APPROVED/REJECTED/WITHDRAWN) + decision commands (`GovernanceReviewAction` COMMENT/REQUEST_CHANGES/APPROVE/REJECT, reusing MVP3 `ReviewDecisionType` literals, no `MODIFY_AND_APPROVE`) + reason rules; RBAC (reuse shipped `Role`, approver ≠ proposer); audit content (`GovernanceAuditAction`); the **approval-is-intent-not-auto-apply** boundary + orthogonal `GovernanceApplicationState` (QUEUED on approve; APPLIED/SUPERSEDED reserved) + all-false `GovernanceMutationGuard`; and exclusions (auto-apply, enforcement, autonomous publish/rollback, impact simulation, migration/release-note, re-validation/re-extraction, multi-tenant, agents, connectors); durable boundary recorded in ADR 0012; planning-only, no runtime/API/DTO/enum change |
+| PM6-025 | P0 | PM | MVP6.6 Governance Change Application P0 scope freeze | MVP6.5 closeout, ADR 0012 (deferred application slice), MVP6 roadmap Theme 3 §6 | `docs/pm/MVP6_6_GOVERNANCE_APPLICATION_BRIEF.md` freezes the human-initiated apply P0: an `APPROVED`+`application_state==QUEUED` change request is explicitly applied by a permitted human onto a **DRAFT** ontology version via existing MVP1 ontology-edit semantics (ADD=create/MODIFY=update/DEPRECATE=archive) → `application_state=APPLIED`; **application ≠ publish, draft-only** (published graph never touched; publishing stays the separate MVP3 path); idempotency (`409 CHANGE_ALREADY_APPLIED`/`CHANGE_NOT_APPLICABLE`); **staleness → `SUPERSEDED`** auto-detected at apply time (`409 CHANGE_REQUEST_SUPERSEDED`, no mutation — the ADR-0012 reserved state becomes real); non-DRAFT target `409 APPLY_TARGET_NOT_DRAFT`; authz = approver rights (`ONTOLOGY_MANAGER`/`PROJECT_ADMIN`/`SYSTEM_ADMIN`), applier may differ from approver (audited), no self-apply bar, `403 PERMISSION_DENIED`; redefined `GovernanceApplicationMutationGuard` with the ONE legitimately-true flag `ontology_draft_mutated` (all others false; read/lifecycle endpoints stay all-false); application audit (actor/timestamp/source request+items/resulting DRAFT version id/per-item before-after refs) via new `GovernanceApplicationAuditAction`; exclusions (publish, auto-apply, enforcement, autonomous/agent apply, rollback, impact sim, migration/release-note, re-validation/re-extraction, bulk, auto-merge, multi-tenant, agents, connectors); durable boundary recorded in ADR 0013; planning-only, no runtime/API/DTO/enum change |
+| PM6-026 | P0 | PM | MVP6.6 Wave44 gate freeze + thin-implementation scope guard | PM6-025, BE6-044~BE6-047, FE6-065~FE6-068, INT6-051~INT6-054 | freezes the six open apply gates for Wave44 runtime (records into brief §9): **G1 target-draft default** = omitted `target_ontology_version_id` resolves to the project's single current DRAFT version; if zero DRAFT versions exist `409 APPLY_TARGET_NOT_DRAFT` (never auto-create); if the caller supplies an explicit id it must be `OntologyVersionStatus=DRAFT` (else `409 APPLY_TARGET_NOT_DRAFT`) and existing (else `404 ONTOLOGY_VERSION_NOT_FOUND`). **G2 per-`change_type` staleness key**: `ADD` stale only if its `ontology_version_id` context no longer resolves to the resolved target draft (no before-state); `MODIFY`/`DEPRECATE` stale if the target element is absent (`TARGET_ELEMENT_DELETED`), or its current `OntologyElementStatus` ≠ the approval-captured status (`TARGET_ELEMENT_ARCHIVED`/`TARGET_ELEMENT_MODIFIED`), or its captured content fingerprint (`target_kind` + element id + `OntologyElementStatus` + a stable hash of the approval-time `proposed_change`/element payload) ≠ current. **G3 snapshot capture point**: the approved before-state snapshot is captured at APPROVE time and stored on the QUEUED request; apply compares against that stored snapshot (not recomputed from audit history). **G4 partial-apply** = ALL-OR-NOTHING: if any item is stale/invalid, apply mutates nothing, transitions `QUEUED→SUPERSEDED`, and returns `409 CHANGE_REQUEST_SUPERSEDED`; no per-item partial application. **G5 pre-check side-effects** = the `GET .../application-status` pre-check is PURELY ADVISORY — it never mutates state and never flips `QUEUED→SUPERSEDED`; only the `POST .../apply` attempt is authoritative and may set `SUPERSEDED`. **G6 post-apply capabilities** = after a terminal `APPLIED`/`SUPERSEDED` state, `can_apply=false` (`ApplicationCapabilities{can_view, can_apply}`; `can_apply=true` only when actor holds apply rights AND `status==APPROVED` AND `application_state==QUEUED`). Confirms **G7** (FE adds an `APPLIED` `StatusBadge` token, tone `success`, KO `초안에 적용됨 (미게시)`; overrides `SUPERSEDED` from neutral to `warning` tone, KO `대체됨 (미적용)`) and **G8** (apply-response guard uses the 7 `GovernanceApplicationMutationGuard` keys `ontology_draft_mutated`/`published_graph_mutated`/`candidate_graph_mutated`/`prompt_version_mutated`/`publish_job_started`/`extraction_job_started`/`evaluation_run_started`; distinct from the all-false MVP6.5 `GovernanceMutationGuard` which uses `ontology_definition_mutated`/`change_auto_applied`; FE renders the correct proof line per endpoint). Confirms scope unchanged (frozen apply P0 + the 3 endpoint families only; no publish, no auto-apply, no partial apply); restates INT6.6 acceptance gates; docs-only, no `apps/` change |
+| PM6-027 | P0 | PM | MVP6.7 Impact Simulation P0 scope freeze | MVP6.6 closeout, ADR 0013 (deferred impact-sim), MVP6 roadmap §7 Theme 4 | `docs/pm/MVP6_7_IMPACT_SIMULATION_BRIEF.md` freezes the **read-only** impact-analysis P0: given an **existing governance change-request id** (reuse MVP6.5/6.6 shapes; a hypothetical free-form change set is **P1**), run an impact simulation and read a report over five dimensions — (1) affected ontology elements = direct target(s) + **bounded transitive dependents** (max depth 2), (2) dependent candidate entities/relations = exact count + capped `truncated` ref list, (3) dependent published elements = exact count + capped ref list, (4) affected MVP3 validations (`ValidationRuleCode`) + MVP4 quality (`QualityMetricGroup`) by reference, (5) a deterministic severity rollup; new `ImpactSeverity` (`NONE`/`LOW`/`MEDIUM`/`HIGH`/`BREAKING`) computed deterministically from counted dimensions (BREAKING=DEPRECATE/MODIFY on element with dependent published; HIGH=on element with dependent candidates or affected `FAILED` validations; MEDIUM=transitive dependents or affected `WARNING` validations/quality groups; LOW=direct only; NONE=ADD no dependents), rollup = max item severity + per-severity counts; **READ-ONLY / NO MUTATION** — mutates NOTHING (ontology draft/published, candidates, prompts, extraction, evaluation, governance state, published graph), every response carries an **all-false** `ImpactSimulationMutationGuard` (turns NO flag true, ever; distinct from MVP6.6 `GovernanceApplicationMutationGuard`); **advisory only** — never applies/publishes/enforces/gates/auto-triggers, never flips `status`/`application_state`, never sets `SUPERSEDED` (staleness stays the MVP6.6 apply authority); **deterministic + bounded** (byte-stable per change request + graph snapshot; depth 2; ref caps + exact count + `truncated`; no real LLM); consumed as a contextual "영향도(Impact)" panel on the Governance change-request detail — **no new global LNB item** (reuse ADR 0010 IA), D6 severity badges; read authz = any project member who can view the request (no elevated role), `403 PERMISSION_DENIED`/`404 CHANGE_REQUEST_NOT_FOUND`; reuse MVP6.5/6.6 + MVP1 ontology + candidate + MVP3 published/validation + MVP4 quality + MVP5 `Role` + MVP6.3 persist-by-id pattern by reference (no rename); exclusions (any mutation, apply/publish/enforce/gate, auto-trigger, hypothetical change set (P1), unbounded transitive closure, migration/release-note, auto-remediation, re-validation/re-extraction, cost/perf modelling, multi-request/cross-project, real LLM, agents, connectors, multi-tenant); durable boundary recorded in ADR 0014; planning-only, no runtime/API/DTO/enum change |
 
 ## Backend Backlog
 
 | ID | Priority | Owner | Task | Dependencies | Acceptance draft |
 |---|---|---|---|---|---|
+| BE6-052 | P0 | Backend | MVP6.7 impact-simulation contract draft (read-only) | PM6-027, ADR 0014 | draft `docs/api/MVP6_7_IMPACT_SIMULATION_API_CONTRACT_DRAFT.md`: additive read-only endpoint(s) for an impact report of a change request (e.g. `POST/GET .../ontology-change-requests/{id}/impact-report`), and — if persisted — list + GET-by-id (MVP6.3 pattern); reuse MVP6.5/6.6 + MVP1 ontology + candidate + MVP3 published/validation + MVP4 quality + MVP5 `Role` shapes by `$ref` (no rename); capture open questions (compute-on-demand vs persisted `impact_report_id`; per-target_kind transitive traversal rules; ref-cap value + per-dimension vs global cap; quality-group live vs by-reference) |
+| BE6-053 | P0 | Backend | MVP6.7 impact dimensions + severity + bounding DTOs/enums | PM6-027, BE6-052 | model the five bounded dimensions (affected ontology elements incl. bounded transitive dependents at max depth 2; dependent candidate/published exact `count` + capped ref list with `truncated`; affected `ValidationRuleCode`/`QualityMetricGroup` refs); `ImpactSeverity` (`NONE`/`LOW`/`MEDIUM`/`HIGH`/`BREAKING`) per item + deterministic report rollup (max + per-severity counts); byte-stable ordering; reuse `OntologyElementRef`/`ChangeRequestTargetKind`/`ChangeRequestChangeType`/`ValidationResultSeverity` by ref (no rename) |
+| BE6-054 | P0 | Backend | MVP6.7 all-false mutation guard + authz + error model | PM6-027, BE6-052 | every impact response carries an **all-false** `ImpactSimulationMutationGuard` (turns NO flag true, ever; never flips governance `status`/`application_state`, never SUPERSEDES); read authz = project-member view of the request (no elevated role), `403 PERMISSION_DENIED`, `404 CHANGE_REQUEST_NOT_FOUND`; advisory only (never applies/publishes/enforces/gates/auto-triggers) |
+| BE6-055 | P0 | Backend | MVP6.7 OpenAPI planning artifact | PM6-027, BE6-052~BE6-054 | produce `docs/api/openapi-mvp6-7-draft.json` (OpenAPI 3.1.0, additive/disjoint to MVP1–MVP6.6, version `0.6.7-draft`); parses; redefines no MVP1–MVP6.6 path; no runtime code; captures open questions |
+| BE6-048 | P0 | Backend | MVP6.6 application-status pre-check runtime | PM6-026, BE6-044~BE6-047 | implement `GET /api/v1/ontology-change-requests/{id}/application-status` in the governance module: resolve the effective DRAFT target (G1), per-item before/after `OntologyElementRef` preview, advisory `would_supersede`/per-item `stale`+`stale_reason` (G2), `capabilities.can_apply` (G6), all-false `GovernanceMutationGuard`; PURELY ADVISORY — never flips `QUEUED→SUPERSEDED` (G5) |
+| BE6-049 | P0 | Backend | MVP6.6 apply action + DRAFT mutation + state transitions | PM6-026, BE6-048 | implement `POST /api/v1/ontology-change-requests/{id}/apply`: valid only from `APPROVED`+`QUEUED`; ALL-OR-NOTHING (G4) apply of items to a DRAFT ontology version via MVP1 ontology-edit semantics (ADD=create/MODIFY=update/DEPRECATE=`OntologyElementStatus=ARCHIVED`); `application_state=APPLIED`; store reflects applied element state for honest re-check/audit; published graph never touched |
+| BE6-050 | P0 | Backend | MVP6.6 staleness/idempotency/authz + one-true-flag guard | PM6-026, BE6-049 | staleness auto-detect at apply against the APPROVE-time snapshot (G3) → `409 CHANGE_REQUEST_SUPERSEDED` + `QUEUED→SUPERSEDED` (terminal), nothing mutated; idempotency `409 CHANGE_ALREADY_APPLIED`/`CHANGE_NOT_APPLICABLE`; target `409 APPLY_TARGET_NOT_DRAFT`; authz `403 PERMISSION_DENIED` (approver rights, applier may differ, no self-apply bar); successful apply returns `GovernanceApplicationMutationGuard` with only `ontology_draft_mutated=true` (G8); blocked apply keeps all-false guard |
+| BE6-051 | P0 | Backend | MVP6.6 application audit + OpenAPI export/alignment + no-published-mutation regression guard | PM6-026, BE6-049, BE6-050 | `GET .../application-audit` (`CHANGE_REQUEST_APPLIED`/`CHANGE_REQUEST_SUPERSEDED`, chronological ASC, limit/cursor); audit records actor/role/timestamp/source request+applied item ids/resulting DRAFT version id/per-item before-after refs (`stale_detail` on supersede); actual OpenAPI matches `openapi-mvp6-6-draft.json` (3 paths/3 ops); tests: pre-check, apply happy path, published/candidate/prompt/publish-job UNCHANGED after apply (data-level), staleness 409, idempotency 409s, authz 403, guard, audit; MVP6.5 regression + ruff clean |
 | BE6-001 | P0 | Backend | Evaluation dataset schemas/API | PM6-001 | project-scoped create/list/detail endpoints expose dataset status, counts, timestamps, and OpenAPI schemas |
 | BE6-002 | P0 | Backend | Evaluation sample and gold item schemas/API | BE6-001 | sample create/list plus gold entity/relation create/list preserve sample/source evidence context |
 | BE6-003 | P0 | Backend | Deterministic evaluation run service | BE6-001, BE6-002, PM6-003 | `DETERMINISTIC_MOCK` run stores ontology/prompt/model/parser context and produces reproducible candidate-vs-gold comparison |
@@ -571,11 +736,23 @@ ranges above).
 | BE6-037 | P0 | Backend | MVP6.5 review/decision + approval-is-intent contract | PM6-023, BE6-036 | define review actions (`comment`/`request-changes`) and `approve`/`reject` with reason rules (REJECT/REQUEST_CHANGES/APPROVE require reason); state machine `DRAFT→OPEN→IN_REVIEW→{APPROVED|REJECTED}` + WITHDRAWN; `409 CHANGE_REQUEST_STATE_CONFLICT` on terminal/wrong-state; approver≠proposer (`403`); orthogonal `GovernanceApplicationState` (`QUEUED` on approve; `APPLIED`/`SUPERSEDED` reserved, not produced in P0); document that approval applies nothing |
 | BE6-038 | P0 | Backend | MVP6.5 audit log + no-mutation guard contract | PM6-023, BE6-036 | governance audit-log GET reusing the MVP3/MVP5 audit shape; `GovernanceAuditAction` enum (9 events); every governance write response exposes all-false `GovernanceMutationGuard` (`ontology_definition_mutated`, `published_graph_mutated`, `candidate_graph_mutated`, `prompt_version_mutated`, `publish_job_started`, `extraction_job_started`, `change_auto_applied`); no ontology/candidate/published/prompt mutation; no hard delete |
 | BE6-039 | P0 | Backend | MVP6.5 OpenAPI planning artifact | PM6-023, BE6-036~BE6-038 | produce `docs/api/openapi-mvp6-5-draft.json` — parses as OpenAPI 3.1.0, version label `0.6.5-draft`, additive/disjoint to MVP1-MVP6.4 paths; capture open questions (OPEN→IN_REVIEW auto-advance timing; whether `approve` needs a distinct `application_note` vs decision reason); no runtime code/models/migrations/tests |
+| BE6-044 | P0 | Backend | MVP6.6 change-application contract draft | PM6-025, BE6-036~BE6-039 | draft additive endpoint(s) + DTO/enum names in `docs/api/MVP6_6_GOVERNANCE_APPLICATION_API_CONTRACT_DRAFT.md`: an `apply` action on a change request (e.g. `POST .../change-requests/{id}/apply` with optional `target_ontology_version_id`) valid only from `APPROVED`+`QUEUED`; a read-only application-status pre-check (target DRAFT version + per-item before/after preview + staleness/would-supersede hint); an application-audit read; reuse MVP6.5 governance + MVP1 ontology-version + MVP3/MVP5 audit/`Role` shapes by `$ref` (no rename); ontology-edit semantics ADD=create/MODIFY=update/DEPRECATE=archive on a DRAFT version only |
+| BE6-045 | P0 | Backend | MVP6.6 apply state + staleness/idempotency contract | PM6-025, BE6-044 | `application_state` QUEUED→APPLIED on success; QUEUED→SUPERSEDED on staleness (auto-detected at apply time: approved snapshot ≠ current draft target); `409 CHANGE_ALREADY_APPLIED` (already APPLIED), `409 CHANGE_NOT_APPLICABLE` (not APPROVED/QUEUED), `409 CHANGE_REQUEST_SUPERSEDED` (stale, no mutation), `409 APPLY_TARGET_NOT_DRAFT` (non-DRAFT target); authz = approver rights (`403 PERMISSION_DENIED`), applier may differ from approver, no self-apply bar; `APPLIED`/`SUPERSEDED` produced only here; document that publish is NOT part of this slice |
+| BE6-046 | P0 | Backend | MVP6.6 redefined mutation guard + application audit contract | PM6-025, BE6-044 | new `GovernanceApplicationMutationGuard` on the successful-apply response with exactly one true flag `ontology_draft_mutated: true` (all of `published_graph_mutated`/`candidate_graph_mutated`/`prompt_version_mutated`/`publish_job_started`/`extraction_job_started`/`evaluation_run_started` false); read/lifecycle endpoints + blocked apply keep the existing all-false `GovernanceMutationGuard`; application audit records actor/role/timestamp/source request+applied item ids/resulting DRAFT `target_ontology_version_id`/per-item before-after element refs via new `GovernanceApplicationAuditAction` (`CHANGE_REQUEST_APPLIED`, `CHANGE_REQUEST_SUPERSEDED`), reusing MVP3/MVP5 audit shape by reference; no hard delete; no published-graph write |
+| BE6-047 | P0 | Backend | MVP6.6 OpenAPI planning artifact | PM6-025, BE6-044~BE6-046 | produce `docs/api/openapi-mvp6-6-draft.json` — parses as OpenAPI 3.1.0, version label `0.6.6-draft`, additive/disjoint to MVP1-MVP6.5 paths; capture open questions (target-draft default vs explicit; exact staleness comparison key per change_type; whether the read-only pre-check may itself flip QUEUED→SUPERSEDED or only the apply attempt); no runtime code/models/migrations/tests |
 
 ## Frontend Backlog
 
 | ID | Priority | Owner | Task | Dependencies | Acceptance draft |
 |---|---|---|---|---|---|
+| FE6-073 | P0 | Frontend | MVP6.7 Impact Simulation UX/API requirements (planning) | PM6-027, BE6-052~BE6-055 | document `docs/pm/MVP6_7_FRONTEND_UX_REQUIREMENTS.md`: a contextual "영향도(Impact)" panel/tab on the Governance change-request detail — **no new global LNB item** (ADR 0010), no new Analyze destination; closed Section+Card design language; run-impact-simulation affordance (read-only); no route/component/type/mock/smoke code |
+| FE6-074 | P0 | Frontend | MVP6.7 impact report layout + severity badges | PM6-027, FE6-073 | report layout for the five dimensions: affected ontology elements + transitive dependents (depth 2); dependent candidate/published counts + capped lists with a "truncated / N total" affordance; affected MVP3 validations (`ValidationRuleCode`) + MVP4 quality (`QualityMetricGroup`) refs; `ImpactSeverity` per-item + rollup with **D6 badges** (`NONE`/`LOW`/`MEDIUM`/`HIGH`/`BREAKING`); KO titles |
+| FE6-075 | P0 | Frontend | MVP6.7 read-only/advisory copy + states | PM6-027, FE6-073 | first-class loading/empty/error/permission states; a "read-only analysis — no apply / no publish / no enforcement" banner + reassurance line (never reads as a gate or an apply; running the simulation mutates nothing); severity is informational and never blocks the separate MVP6.6 apply / MVP3 publish paths |
+| FE6-076 | P0 | Frontend | MVP6.7 DTO gap analysis vs Backend draft | PM6-027, BE6-052~BE6-055 | DTO/field/enum gap analysis of the FE impact-report needs vs `docs/api/MVP6_7_IMPACT_SIMULATION_API_CONTRACT_DRAFT.md` + `openapi-mvp6-7-draft.json` (dimensions, `truncated`+`count`, `ImpactSeverity`, all-false `ImpactSimulationMutationGuard`); confirm reuse-by-reference (no rename); no code |
+| FE6-069 | P0 | Frontend | MVP6.6 types/client/mocks + StatusBadge APPLIED/SUPERSEDED (G7/G8) | PM6-026, BE6-048~BE6-051 | TS types/client/query/mocks match `openapi-mvp6-6-draft.json` exactly (new application DTOs/enums, `GovernanceApplicationMutationGuard` 7 keys per G8, `capabilities.can_apply`); add an `APPLIED` `StatusBadge` token (tone `success`, KO `초안에 적용됨 (미게시)`) and override `SUPERSEDED` from neutral to `warning` tone (KO `대체됨 (미적용)`) per G7; reuse MVP6.5/MVP1/MVP5 shapes by reference, no rename |
+| FE6-070 | P0 | Frontend | MVP6.6 application-status pre-check panel | PM6-026, FE6-069 | read-only pre-check panel in the existing Governance detail: resolved target DRAFT version (+ `OntologyVersionStatus` badge), per-item before/after preview (ADD/MODIFY/DEPRECATE), advisory `would_supersede`/per-item `STALE` hint (G5 advisory-only copy — opening the panel never mutates), read-only reassurance line; loading/empty/error states |
+| FE6-071 | P0 | Frontend | MVP6.6 apply confirmation + APPLIED/SUPERSEDED/conflict + applied-not-published banner | PM6-026, FE6-069 | single primary `초안에 적용` gated on `APPROVED`+`QUEUED`+`can_apply` (G6), behind a human-confirmation modal (draft-only, cancel non-destructive); `APPLIED`/`SUPERSEDED` badges; 409 conflict/idempotency (`CHANGE_REQUEST_SUPERSEDED`/`CHANGE_ALREADY_APPLIED`/`CHANGE_NOT_APPLICABLE`/`APPLY_TARGET_NOT_DRAFT`) + `403` notices; applied-not-published banner + one-true-flag `ontology_draft_mutated=true` proof line; no auto-apply/publish copy |
+| FE6-072 | P0 | Frontend | MVP6.6 mock + actual smoke | PM6-026, FE6-069~FE6-071 | `npm run smoke:mvp6:governance-apply:mock` and (if backend runnable) `:actual` assert apply→APPLIED + one-true-flag guard + staleness 409 SUPERSEDED + published-graph-untouched + 403; `npm run test`/`build` pass; responsive 0-overflow re-check on the Governance detail |
 | FE6-001 | P0 | Frontend | Evaluation Studio IA/route | PM6-001 | one stable Evaluation/Benchmark area is added without ID-bound pages in global LNB; loading/empty/error states exist |
 | FE6-002 | P0 | Frontend | Gold Set Manager mock/actual boundary | BE6-001, BE6-002 | users can see/create dataset, sample, gold entity, and gold relation through mock fixtures first and actual API when available |
 | FE6-003 | P0 | Frontend | Benchmark Dashboard metric cards/table | BE6-003, BE6-004, PM6-003 | entity/relation precision, recall, F1, direction accuracy, evidence match, formula, and not-applicable states are visible |
@@ -635,11 +812,23 @@ ranges above).
 | FE6-058 | P0 | Frontend | MVP6.5 propose + detail/review UX requirements | PM6-023, FE6-057 | propose form (title/summary + change items: `ChangeRequestTargetKind`/`ChangeRequestChangeType` + element ref + `ontology_version_id`, ADD has null ref); change-request detail (change items + review thread + decision panel); reason-required decision inputs; reviewer/approver permission-boundary UX (non-authorized read-only hint); design language (Section+Card, KO titles, one primary action) |
 | FE6-059 | P0 | Frontend | MVP6.5 approval-is-intent + audit UX requirements | PM6-023, FE6-057 | explicit "approved = queued intent, not yet applied" banner surfacing `GovernanceApplicationState` (QUEUED); D6 status badges for request states; audit-trail view (actor/action/reason/timestamp/target element + version/before-after state); no auto-apply/publish copy; make clear application is a later slice |
 | FE6-060 | P0 | Frontend | MVP6.5 types/client/mocks alignment plan | PM6-023, BE6-039 | requirements note that Wave42 TS types/client/mocks must match `openapi-mvp6-5-draft.json` exactly and reuse MVP3 review-decision + `Role` + audit shapes without rename; enumerate the new governance DTOs/enums + all-false `GovernanceMutationGuard` display; planning-only |
+| FE6-065 | P0 | Frontend | MVP6.6 apply action + field/state review | PM6-025, BE6-044~BE6-047 | requirements note (planning-only, no route/component/type/mock/smoke code) in `docs/pm/MVP6_6_FRONTEND_UX_REQUIREMENTS.md`: how the apply action appears in the existing MVP6.5 Governance detail — visible only for `APPROVED`+`application_state==QUEUED`, only for permitted roles (`ONTOLOGY_MANAGER`/`PROJECT_ADMIN`/`SYSTEM_ADMIN`), behind an explicit human-confirmation step; the application-status pre-check panel (target DRAFT version + per-item before/after preview); first-class loading/empty/error/permission states; DTO gaps vs the Backend draft |
+| FE6-066 | P0 | Frontend | MVP6.6 APPLIED + staleness/SUPERSEDED UX | PM6-025, FE6-065 | `APPLIED` state D6 badge; staleness/`SUPERSEDED` conflict UX (warn from the pre-check before apply; on the QUEUED→SUPERSEDED transition block + explain the mismatch, show that nothing was mutated, mark terminal-for-application); idempotency (re-apply disabled / already-applied state); non-permitted read-only hint; no auto-apply/auto-publish copy |
+| FE6-067 | P0 | Frontend | MVP6.6 applied-not-published banner + application audit UX | PM6-025, FE6-065 | explicit "applied to DRAFT ontology, NOT published — publish separately" banner (make clear the published graph is unchanged and publishing is a later separate MVP3 step); application-audit view (actor/action/reason/timestamp/source request+items/resulting DRAFT ontology version id/per-item before-after element refs); apply the closed design language (Section+Card, KO titles, D6 badges, one primary action) |
+| FE6-068 | P0 | Frontend | MVP6.6 types/client/mocks alignment plan | PM6-025, BE6-047 | requirements note that Wave44 TS types/client/mocks must match `openapi-mvp6-6-draft.json` exactly and reuse MVP6.5 governance + MVP1 ontology-version + MVP3/MVP5 audit/`Role` shapes without rename; enumerate the new application DTOs/enums (`GovernanceApplicationAuditAction`) + the redefined `GovernanceApplicationMutationGuard` display (one true flag `ontology_draft_mutated`); planning-only |
 
 ## QA / Integration Backlog
 
 | ID | Priority | Owner | Task | Dependencies | Acceptance draft |
 |---|---|---|---|---|---|
+| INT6-059 | P0 | QA | MVP6.7 Impact Simulation acceptance checklist | PM6-027, BE6-052~BE6-055, FE6-073~FE6-076 | executable `INT6-*` checklist in `docs/backlog/INT6_7_IMPACT_SIMULATION_ACCEPTANCE.md` (C planning + R NOT-RUNNABLE runtime gates) verifies PM/BE/FE agreement on the impact P0 (existing change-request input; hypothetical = P1), the five impact dimensions, the `ImpactSeverity` enum + deterministic rollup, the bounding (depth 2 + ref cap + exact `count` + `truncated`), the read-only/no-mutation boundary + all-false `ImpactSimulationMutationGuard`, the advisory-only (never-a-gate) boundary, the ADR 0010 consumption (no new LNB item), and exclusions; OpenAPI parse/additivity; planning-only with no runtime leakage under `apps/`/`infra/`; recommends Wave46 thin implementation, hardening, or PM redesign |
+| INT6-060 | P0 | QA | MVP6.7 read-only + all-false guard assertion | PM6-027, BE6-054 | checklist asserts **every** impact response carries an all-false `ImpactSimulationMutationGuard` (NO flag ever true) and that ontology draft/published, candidate, prompt, extraction, evaluation, and governance state (`status`/`application_state`, no `SUPERSEDED`) are provably unchanged at the data level after running a simulation; the report never applies/publishes/enforces/gates/auto-triggers; distinct from the MVP6.6 `GovernanceApplicationMutationGuard`; reuse-by-reference (no MVP1–MVP6.6 field/enum rename) |
+| INT6-061 | P0 | QA | MVP6.7 determinism + bounding + severity assertion | PM6-027, BE6-053 | checklist asserts the report is byte-stable for a fixed change request + graph snapshot; transitive dependents bounded at max depth 2; per-dimension ref lists capped with exact `count` + `truncated` when hit; `ImpactSeverity` per-item + rollup (max + per-severity counts) follows the frozen deterministic rule (BREAKING/HIGH/MEDIUM/LOW/NONE); affected MVP3 `ValidationRuleCode` + MVP4 `QualityMetricGroup` reported by reference |
+| INT6-062 | P0 | QA | Wave45 planning recommendation | PM6-027, INT6-059~INT6-061 | confirm brief/ADR 0014/backlog/Backend/Frontend artifacts agree on the impact P0 flow, dimensions, `ImpactSeverity` + bounding, the read-only/no-mutation + advisory-only boundary, ADR 0010 consumption, and exclusions; recommend Wave46 thin implementation, targeted hardening, or PM redesign with exact follow-up gates |
+| INT6-055 | P0 | QA | MVP6.6 backend runtime acceptance (R1/R3-R7) | PM6-026, BE6-048~BE6-051 | validate the 3 endpoint families + frozen G1-G6: apply→APPLIED + one-true-flag guard, pre-check advisory (never flips SUPERSEDED, G5), staleness→409 SUPERSEDED (nothing mutated, G4), idempotency 409s, target 409 APPLY_TARGET_NOT_DRAFT (G1), authz 403 (applier≠approver allowed+audited), application audit complete+chronological |
+| INT6-056 | P0 | QA | MVP6.6 frontend mock/API acceptance (R8) | PM6-026, FE6-069~FE6-072 | validate the FE apply UX: pre-check panel, confirmation modal, `APPLIED`/`SUPERSEDED` badges (G7), applied-not-published banner + one-true-flag proof line (G8), 409/403 notices; `smoke:mvp6:governance-apply:mock` + `:actual` (if runnable); 0-overflow re-check |
+| INT6-057 | P0 | QA | MVP6.6 application-≠-publish + one-true-flag data-level guard (R2) | PM6-026, BE6-050, BE6-051 | INDEPENDENTLY verify at DATA level that after a successful apply the DRAFT ontology IS updated but published-graph/candidate/prompt/publish-job/extraction/evaluation tables are UNCHANGED, and the guard has exactly one true flag `ontology_draft_mutated`; blocked/read endpoints all-false |
+| INT6-058 | P0 | QA | MVP6.6 Wave44 closeout + regression (R9) | PM6-026, INT6-055~INT6-057 | update `INT6_6_GOVERNANCE_APPLICATION_ACCEPTANCE.md` R1-R9 verdicts; run MVP6.5/earlier regression + touched smokes; confirm additive-only + candidate/published separation intact; recommend closeout / hardening / redesign |
 | INT6-001 | P0 | QA | MVP6.1 roadmap alignment | PM6-001~PM6-004 | implementation matches Theme 1 only and excludes real LLM, active learning, governance, agents, connectors, tenants |
 | INT6-002 | P0 | QA | Backend contract/runtime smoke | BE6-001~BE6-005 | OpenAPI parses; dataset/sample/gold/run/metric/error endpoints satisfy the PM contract |
 | INT6-003 | P0 | QA | Frontend mock/API contract consistency | FE6-001~FE6-005, BE6-005 | frontend types/mocks/client and route states match backend actual API for selected P0 scope |
@@ -677,6 +866,10 @@ ranges above).
 | INT6-044 | P0 | QA | MVP6.5 lifecycle + approval-is-intent guard | PM6-023, BE6-037 | checklist asserts the state machine `DRAFT→OPEN→IN_REVIEW→{APPROVED|REJECTED}`+WITHDRAWN; reason required for REJECT/REQUEST_CHANGES/APPROVE; `409 CHANGE_REQUEST_STATE_CONFLICT` on terminal/wrong-state decisions; approver≠proposer (`403`); on APPROVE `application_state=QUEUED` and NOTHING is applied; `APPLIED`/`SUPERSEDED` never produced in P0 |
 | INT6-045 | P0 | QA | MVP6.5 no-mutation + audit guard | PM6-023, BE6-038 | checklist asserts all-false `GovernanceMutationGuard` on every governance write response (no ontology-definition/published/candidate/prompt mutation, no publish/extraction job started, `change_auto_applied` false); full audit trail (actor/action/reason/timestamp/target change item + ontology element + version context/before-after state); no hard delete; ontology element refs read-only |
 | INT6-046 | P0 | QA | Wave41 planning recommendation | INT6-043~INT6-045 | confirm brief/ADR 0012/backlog/Backend/Frontend artifacts agree on P0 flow, states/commands, approval-≠-auto-apply boundary, safety, and exclusions; recommend Wave42 thin implementation, targeted hardening, or PM redesign with exact follow-up gates |
+| INT6-051 | P0 | QA | MVP6.6 change-application acceptance checklist | PM6-025, BE6-044~BE6-047, FE6-065~FE6-068 | executable `INT6-*` checklist in `docs/backlog/INT6_6_GOVERNANCE_APPLICATION_ACCEPTANCE.md` (C planning + R NOT-RUNNABLE runtime gates) verifies PM/BE/FE agreement on the apply P0, states (`APPLIED`/`SUPERSEDED` produced only here), the application-≠-publish + draft-only boundary, staleness→SUPERSEDED, idempotency, authz, the redefined guard (one true flag), the application audit content, and exclusions; OpenAPI parse/additivity; planning-only with no runtime leakage under `apps/`/`infra/`; recommends Wave44 thin implementation, hardening, or PM redesign |
+| INT6-052 | P0 | QA | MVP6.6 apply-only-from-QUEUED + draft-only + idempotency + staleness guard | PM6-025, BE6-045 | checklist asserts apply is valid only from `status==APPROVED`+`application_state==QUEUED`; on success `application_state=APPLIED` and the change lands ONLY in a DRAFT ontology version (never the published graph, no publish/extraction job); idempotency `409 CHANGE_ALREADY_APPLIED`/`CHANGE_NOT_APPLICABLE` (no double apply); non-DRAFT target `409 APPLY_TARGET_NOT_DRAFT`; staleness auto-detected at apply time → `application_state=SUPERSEDED`, `409 CHANGE_REQUEST_SUPERSEDED`, nothing mutated; authz = approver rights `403 PERMISSION_DENIED`, applier-may-differ-from-approver audited |
+| INT6-053 | P0 | QA | MVP6.6 redefined mutation guard + application audit guard | PM6-025, BE6-046 | checklist asserts the successful-apply response carries `GovernanceApplicationMutationGuard` with exactly one true flag `ontology_draft_mutated: true` and all others false, and that the published graph is provably unchanged at data level; read/lifecycle governance endpoints (MVP6.5 + MVP6.6 pre-check/audit reads) and any blocked apply keep the all-false `GovernanceMutationGuard`; full application audit (actor/role/timestamp/source request+applied item ids/resulting DRAFT `target_ontology_version_id`/per-item before-after element refs) via `GovernanceApplicationAuditAction`; no hard delete; MVP1 ontology-version + MVP3/MVP5 + MVP6.5 shapes reused by reference (no rename) |
+| INT6-054 | P0 | QA | Wave43 planning recommendation | INT6-051~INT6-053 | confirm brief/ADR 0013/backlog/Backend/Frontend artifacts agree on the apply P0 flow, states, the application-≠-publish + draft-only + human-initiated boundary, staleness→SUPERSEDED, idempotency, authz, the redefined guard, and exclusions; recommend Wave44 thin implementation, targeted hardening, or PM redesign with exact follow-up gates |
 
 QA ID correction (Wave39): the QA rows above were re-ranged from the PM-proposed
 `INT6-026`~`INT6-029` to `INT6-035`~`INT6-038` because `INT6-026`~`INT6-034` were

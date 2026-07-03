@@ -74,6 +74,10 @@ const tokenTable: Record<string, TokenSpec> = {
   ACCEPTED: { tone: "success", icon: CheckCircle2, ko: "채택됨" },
   DISMISSED: { tone: "neutral", icon: XCircle, ko: "기각됨" },
   SUPERSEDED: { tone: "neutral", icon: History, ko: "대체됨" },
+  // MVP6.6 (G7): APPLIED = successful apply into a DRAFT ontology version. The KO
+  // gloss states 미게시 so "applied" never reads as "published". SUPERSEDED is
+  // reused above (neutral); the governance-apply context passes warning + gloss.
+  APPLIED: { tone: "success", icon: CheckCircle2, ko: "초안에 적용됨 (미게시)" },
   IMPROVED: { tone: "success", icon: TrendingUp, ko: "개선" },
   REGRESSED: { tone: "danger", icon: TrendingDown, ko: "하락" },
   UNCHANGED: { tone: "neutral", icon: Minus, ko: "변동 없음" },

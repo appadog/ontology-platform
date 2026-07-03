@@ -7,7 +7,15 @@ from app.core.enums import Role
 from app.core.errors import ApiErrorResponse
 from app.db.session import get_db
 from app.modules.evaluation import service as evaluation_service
+from app.modules.governance import application as application_service
 from app.modules.governance import service
+from app.modules.governance.application import (
+    GovernanceApplicationAuditAction,
+    GovernanceApplicationAuditListResponse,
+    GovernanceApplicationStatusResponse,
+    GovernanceApplyRequest,
+    GovernanceApplyResponse,
+)
 from app.modules.governance.schemas import (
     GovernanceApplicationState,
     GovernanceAuditAction,
@@ -231,6 +239,63 @@ def list_change_request_audit(
     cursor: str | None = Query(None),
 ) -> GovernanceAuditListResponse:
     return service.list_change_request_audit(change_request_id, action, limit, cursor)
+
+
+# --- F. MVP6.6 Governance Change Application --------------------------------
+
+
+@router.get(
+    "/ontology-change-requests/{change_request_id}/application-status",
+    response_model=GovernanceApplicationStatusResponse,
+    summary="Read-only application-status pre-check (advisory)",
+    responses=_ERRORS,
+    tags=["MVP6.6 Governance Application"],
+)
+def get_application_status(
+    change_request_id: str,
+    target_ontology_version_id: str | None = Query(None),
+    actor_id: str = ActorId,
+    actor_role: Role = ActorRole,
+) -> GovernanceApplicationStatusResponse:
+    return application_service.get_application_status(
+        change_request_id, target_ontology_version_id, actor_id, actor_role
+    )
+
+
+@router.post(
+    "/ontology-change-requests/{change_request_id}/apply",
+    response_model=GovernanceApplyResponse,
+    summary="Apply an APPROVED+QUEUED change request to a DRAFT ontology version",
+    responses=_ERRORS,
+    tags=["MVP6.6 Governance Application"],
+)
+def apply_change_request(
+    change_request_id: str,
+    payload: GovernanceApplyRequest | None = None,
+    actor_id: str = ActorId,
+    actor_role: Role = ActorRole,
+) -> GovernanceApplyResponse:
+    return application_service.apply_change_request(
+        change_request_id, payload, actor_id, actor_role
+    )
+
+
+@router.get(
+    "/ontology-change-requests/{change_request_id}/application-audit",
+    response_model=GovernanceApplicationAuditListResponse,
+    summary="Read the application audit trail for a change request",
+    responses=_ERRORS,
+    tags=["MVP6.6 Governance Application"],
+)
+def list_application_audit(
+    change_request_id: str,
+    action: GovernanceApplicationAuditAction | None = Query(None),
+    limit: int | None = Query(None, ge=1, le=100),
+    cursor: str | None = Query(None),
+) -> GovernanceApplicationAuditListResponse:
+    return application_service.list_application_audit(
+        change_request_id, action, limit, cursor
+    )
 
 
 @router.get(

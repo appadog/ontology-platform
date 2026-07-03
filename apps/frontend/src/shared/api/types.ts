@@ -3137,3 +3137,128 @@ export interface GovernanceAuditListResponse {
   total_count: number;
   next_cursor?: string | null;
 }
+
+// ---- MVP6.6 Governance change application (APPROVED+QUEUED -> APPLIED into a DRAFT ontology version) ----
+// Additive/disjoint to MVP6.5. Field/enum names match docs/api/openapi-mvp6-6-draft.json
+// EXACTLY. Apply is human-initiated only, from APPROVED + application_state==QUEUED
+// only; it mutates ONLY a DRAFT ontology version (never the published graph).
+// MVP6.6 is the FIRST slice that produces APPLIED (successful apply) and
+// SUPERSEDED (staleness block); both reserved in MVP6.5. Reuses MVP6.5
+// GovernanceApplicationState / ChangeRequestChangeType / ChangeRequestTargetKind
+// and MVP1 OntologyElementStatus / OntologyVersionStatus by reference (no renames).
+
+// OntologyElementStatus / OntologyVersionStatus are reused verbatim from the
+// existing top-of-file MVP1 declarations (DEPRECATE -> ARCHIVED; apply targets a
+// DRAFT version only). No re-declaration here.
+
+/** MVP6.6 application audit events. Additive; does NOT rename MVP6.5 GovernanceAuditAction. */
+export type GovernanceApplicationAuditAction = "CHANGE_REQUEST_APPLIED" | "CHANGE_REQUEST_SUPERSEDED";
+
+/**
+ * REDEFINED guard for the SUCCESSFUL apply response ONLY. Exactly one flag is
+ * legitimately true: ontology_draft_mutated. Distinct from the all-false MVP6.5
+ * GovernanceMutationGuard (which keys on ontology_definition_mutated / change_auto_applied).
+ */
+export interface GovernanceApplicationMutationGuard {
+  ontology_draft_mutated: boolean;
+  published_graph_mutated: false;
+  candidate_graph_mutated: false;
+  prompt_version_mutated: false;
+  publish_job_started: false;
+  extraction_job_started: false;
+  evaluation_run_started: false;
+}
+
+/** A reference to a single ontology element the apply touches. Exactly one id field matches target_kind. */
+export interface OntologyElementRef {
+  target_kind: ChangeRequestTargetKind;
+  ontology_class_id?: string | null;
+  ontology_property_id?: string | null;
+  ontology_relation_id?: string | null;
+  ontology_version_id: string;
+  status?: OntologyElementStatus | null;
+}
+
+/** Per-change-item before/after preview for the pre-check. before_ref null for ADD. stale is advisory. */
+export interface ApplicationItemPreview {
+  change_item_id: string;
+  target_kind: ChangeRequestTargetKind;
+  change_type: ChangeRequestChangeType;
+  before_ref?: OntologyElementRef | null;
+  after_ref?: OntologyElementRef | null;
+  stale: boolean;
+  stale_reason?: string | null;
+}
+
+/** Read-only permission + eligibility hint. can_apply is true only for apply rights AND APPROVED AND QUEUED. */
+export interface ApplicationCapabilities {
+  can_view: boolean;
+  can_apply: boolean;
+}
+
+/** Read-only apply pre-check. Never mutates; mutation_guard is all-false. Never flips QUEUED->SUPERSEDED. */
+export interface GovernanceApplicationStatusResponse {
+  change_request_id: string;
+  project_id: string;
+  status: string;
+  application_state: GovernanceApplicationState;
+  target_ontology_version_id?: string | null;
+  target_version_status?: OntologyVersionStatus | null;
+  target_is_draft: boolean;
+  applicable: boolean;
+  would_supersede: boolean;
+  item_previews: ApplicationItemPreview[];
+  capabilities: ApplicationCapabilities;
+  mutation_guard: GovernanceMutationGuard;
+}
+
+/** Optional apply body. Omit target_ontology_version_id for the project current DRAFT. */
+export interface GovernanceApplyRequest {
+  target_ontology_version_id?: string | null;
+  note?: string | null;
+}
+
+/** Per-item before/after element ref pair for a successful apply. before null for ADD. */
+export interface ApplicationBeforeAfterRef {
+  change_item_id: string;
+  change_type: ChangeRequestChangeType;
+  before?: OntologyElementRef | null;
+  after?: OntologyElementRef | null;
+}
+
+/** Application audit entry. action is GovernanceApplicationAuditAction. Never hard-deleted. */
+export interface GovernanceApplicationAuditEntry {
+  id: string;
+  project_id: string;
+  change_request_id: string;
+  action: GovernanceApplicationAuditAction;
+  actor_id: string;
+  actor_role?: GovernanceRole;
+  target_ontology_version_id?: string | null;
+  applied_item_ids?: string[];
+  before_after_refs?: ApplicationBeforeAfterRef[];
+  before_application_state?: GovernanceApplicationState | null;
+  after_application_state?: GovernanceApplicationState | null;
+  note?: string | null;
+  stale_detail?: Record<string, unknown> | null;
+  created_at: string;
+}
+
+/** Successful apply envelope. application_state=APPLIED; guard ontology_draft_mutated=true (all others false). */
+export interface GovernanceApplyResponse {
+  change_request_id: string;
+  project_id: string;
+  application_state: GovernanceApplicationState;
+  target_ontology_version_id: string;
+  applied_item_ids: string[];
+  before_after_refs?: ApplicationBeforeAfterRef[];
+  audit_entry: GovernanceApplicationAuditEntry;
+  mutation_guard: GovernanceApplicationMutationGuard;
+  capabilities?: ApplicationCapabilities;
+}
+
+export interface GovernanceApplicationAuditListResponse {
+  items: GovernanceApplicationAuditEntry[];
+  total_count: number;
+  next_cursor?: string | null;
+}
