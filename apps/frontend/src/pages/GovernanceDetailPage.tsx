@@ -45,6 +45,7 @@ import {
   reviewActionKo,
   targetKindKo,
 } from "./governanceShared";
+import { ImpactSimulationSection } from "./governanceImpact";
 
 // MVP6.5 Change-request detail — the single working surface for review + decision.
 // Summary + permission band + change items + review thread + decision panel +
@@ -207,6 +208,8 @@ export function GovernanceDetailPage() {
         </HanaCard>
 
         <ChangeItemsSection items={detail.items} />
+
+        <ImpactSimulationSection changeRequestId={changeRequestId} />
 
         {changeRequest.status === "APPROVED" ? (
           <ApplicationBlock changeRequestId={changeRequestId} changeRequest={changeRequest} />

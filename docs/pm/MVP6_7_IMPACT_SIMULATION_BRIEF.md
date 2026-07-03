@@ -1,8 +1,8 @@
 # MVP 6.7 — Impact Simulation (read-only impact analysis of a governance change request) — PM Freeze
 
-Status: `FROZEN / WAVE 45 PM DECISION (CONTRACT-FIRST PLANNING ONLY)`
-Date: 2026-07-02
-Backlog: `PM6-027` (impact-simulation P0 freeze)
+Status: `FROZEN / WAVE 45 PM DECISION (CONTRACT-FIRST) + WAVE 46 PM G1-G3 IMPLEMENTATION FREEZE (§9)`
+Date: 2026-07-03 (Wave46 §9 freeze; original Wave45 body 2026-07-02)
+Backlog: `PM6-027` (P0 freeze) + `PM6-028` (Wave46 G1-G3 implementation freeze, §9)
 
 Wave45 is contract-first planning only. No runtime API route, FastAPI service,
 DB model, Alembic migration, frontend route/component, seed, smoke, or test is
@@ -103,7 +103,8 @@ never sets `SUPERSEDED` (staleness stays the MVP6.6 apply-time authority).
   Report rollup = max item severity + per-severity counts. Byte-stable for a
   fixed change request + graph snapshot.
 - **Bounding (deterministic + cheap):** max transitive dependent **depth = 2**
-  (direct + one hop); max returned **refs per dimension** capped (e.g. 50) with
+  (direct + one hop); max returned **refs per dimension** capped (Wave46 freeze:
+  default `ref_cap = 20` per dimension; query override `1..200`) with
   `truncated=true` + exact `count` when hit (count is always exact; only the ref
   list is capped). No unbounded walk.
 - **Consumption (reuse ADR 0010 IA):** a contextual "영향도(Impact)" panel/tab on
@@ -227,6 +228,97 @@ draft; the invariant is "all false, always".)
   **read-only analysis — no apply / no publish / no enforcement** (never reads as a
   gate or an apply). DTO gap analysis vs the Backend draft. No
   route/component/type/mock/smoke code.
+
+---
+
+## 9. Wave46 Implementation Freeze — G1/G2/G3 (authority for BE/FE/QA)
+
+Status: `FROZEN / WAVE 46 PM (PM6-028)`. Scope unchanged (read-only, all-false
+guard, 1 GET endpoint, 5 dimensions). These three gates were flagged open in the
+Wave45 acceptance checklist; the contract draft already recommended each and the PM
+now freezes them as single implementable rules. Grounded against the real reads:
+`OntologyProperty.class_id` (property→class), `OntologyRelation.domain_class_id`/
+`range_class_id` (relation→class), `CandidateEntity.class_id`/
+`CandidateRelation.relation_id` (candidate→ontology),
+`PublishedEntity.class_id`/`PublishedRelation.relation_id` (published→ontology),
+`ValidationResultSeverity` INFO/WARNING/FAILED.
+
+### G1 — dependency-graph source for the transitive walk (FROZEN)
+
+The transitive walk reads the **MVP1 ontology definition tables** on the analyzed
+ontology version and returns **BOTH candidate and published dependents, each
+clearly labeled by layer** so severity can weight published dependents as BREAKING.
+"Depends on" is the deterministic adjacency:
+
+- **CLASS target** → dependents = its properties (`OntologyProperty.class_id ==
+  target`), relations whose `domain_class_id` or `range_class_id == target`, and
+  direct sub/superclasses; depth-2 = the classes reached through those depth-1
+  relations. `DependencyRelation` = `PROPERTY_OF_CLASS` / `RELATION_DOMAIN` /
+  `RELATION_RANGE` / `SUBCLASS_OF` / `SUPERCLASS_OF`.
+- **PROPERTY target** → dependents = its owning class (`RELATED_ELEMENT`, depth 1)
+  and, at depth 2, that class's other dependents. Candidate dependents = candidate
+  entities of the owning class.
+- **RELATION target** → dependents = its `domain_class_id` + `range_class_id`
+  classes (`RELATION_DOMAIN`/`RELATION_RANGE`, depth 1) and their depth-2
+  dependents.
+- **Dimension 2 (candidate dependents)** = candidate rows whose ontology ref is an
+  affected element: `CandidateEntity.class_id ∈ affected classes`,
+  `CandidateRelation.relation_id ∈ affected relations` — labeled layer=CANDIDATE.
+- **Dimension 3 (published dependents)** = `PublishedEntity.class_id` /
+  `PublishedRelation.relation_id ∈ affected elements` — labeled layer=PUBLISHED.
+
+Walk is depth-bounded (2) and deterministically ordered (by id) so it is
+byte-stable.
+
+### G2 — per-dimension ref-cap sizes (FROZEN)
+
+A **single small cap of `ref_cap = 20` per capped ref dimension** (the
+`dependent_candidates` and `dependent_published` `DependentRefBucket`s and any
+capped affected-elements list), overridable via the `ref_cap` query param
+(`1..200`, default `20`). Each capped bucket carries the **exact** `count` (never
+capped) and `truncated = true` iff `count > len(refs)`. Aggregate summary totals
+are summed from the exact per-item counts even when ref lists are truncated. This
+lowers the Wave45 draft default (50→20); the `ref_cap` param bounds are unchanged.
+
+### G3 — severity edge cases (FROZEN, deterministic; highest rule wins)
+
+Per change item, evaluate top-down and stop at the first match (matches ADR 0014 §
+Decision + contract draft `ImpactSeverity`; `ImpactSeverityReason` records the rule):
+
+1. `DEPRECATE`/`MODIFY` on an element with **≥1 published dependent** →
+   **`BREAKING`** (`DEPRECATE_MODIFY_WITH_PUBLISHED_DEPENDENTS`). Published wins
+   even when candidate dependents also exist.
+2. `DEPRECATE`/`MODIFY` on an element with **≥1 candidate dependent (and no
+   published dependent)**, OR **≥1 affected `FAILED` validation** →
+   **`HIGH`** (`DEPRECATE_MODIFY_WITH_CANDIDATE_DEPENDENTS` /
+   `AFFECTED_FAILED_VALIDATION`).
+3. **≥1 transitive ontology dependent** (depth ≥1, no candidate/published
+   dependents), OR **≥1 affected `WARNING` validation**, OR **≥1 affected quality
+   group** → **`MEDIUM`** (`TRANSITIVE_ONTOLOGY_DEPENDENTS` /
+   `AFFECTED_WARNING_VALIDATION` / `AFFECTED_QUALITY_GROUP`).
+4. Direct element only, **no dependents** → **`LOW`** (`DIRECT_ELEMENT_ONLY`).
+5. `ADD` of a new element with **no existing dependents** → **`NONE`**
+   (`ADD_NEW_ELEMENT_NO_DEPENDENTS`).
+
+Edge cases: (a) both candidate+published dependents → BREAKING (rule 1). (b) `ADD`
+that references an element with existing dependents → the referenced element counts
+as a transitive dependent → MEDIUM (rule 3), not NONE. (c) target already
+`ARCHIVED`/`DELETED` at read time → still reported (advisory); if it has 0
+dependents → LOW/NONE by the rules above. (d) empty change request (0 items) →
+`max_severity = NONE`, empty `items`. Report rollup = **max item severity** +
+per-severity counts (`severity_counts` sum == `total_change_items`).
+
+### Scope confirmation (unchanged)
+
+Read-only; every response carries the **all-false** `ImpactSimulationMutationGuard`
+(no flag ever true); **1 GET endpoint**
+(`GET /api/v1/ontology-change-requests/{id}/impact-simulation`); **5 dimensions**;
+advisory only (never applies/publishes/enforces/gates, never flips
+`status`/`application_state`, never sets `SUPERSEDED`). No contract impact beyond
+the `ref_cap` default 50→20 refinement (bounds unchanged, so `openapi-mvp6-7-draft.json`
+`ref_cap` schema `default` moves 50→20 at Backend export; no shape/enum change).
+
+---
 
 - **QA (`INT6-059`~`INT6-062`)**: executable acceptance checklist in
   `docs/backlog/INT6_7_IMPACT_SIMULATION_ACCEPTANCE.md` (C planning gates + R

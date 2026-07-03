@@ -124,6 +124,10 @@ import {
   MVP6_GOVERNANCE_TARGET_DRAFT_VERSION_ID,
 } from "../mocks/mvp6GovernanceFixtures";
 import {
+  buildEmptyImpactReport,
+  mockImpactReports,
+} from "../mocks/mvp6ImpactFixtures";
+import {
   AuditEvent,
   AutoApprovalCandidatePreview,
   AutomaticApprovalPolicyDocument,
@@ -199,6 +203,7 @@ import {
   GovernanceReviewDecision,
   GovernanceReviewDecisionRequest,
   GovernanceWithdrawRequest,
+  ImpactSimulationReport,
   OntologyChangeItem,
   OntologyChangeItemRequest,
   OntologyChangeRequest,
@@ -4429,6 +4434,33 @@ export const apiClient = {
     }
     return request<GovernanceApplicationAuditListResponse>(
       `/api/v1/ontology-change-requests/${changeRequestId}/application-audit`,
+    );
+  },
+
+  // ---- MVP6.7 Impact Simulation (read-only impact analysis of a change request) ----
+  // Idempotent GET. Mutates NOTHING (all-false ImpactSimulationMutationGuard on
+  // every response). Advisory only; never applies/publishes/enforces/gates.
+  async getChangeRequestImpactSimulation(
+    changeRequestId: string,
+    params?: { targetOntologyVersionId?: string; refCap?: number },
+  ): Promise<ImpactSimulationReport> {
+    if (USE_MOCK_API) {
+      const req = mockGovernanceRequestStore.find((cr) => cr.id === changeRequestId);
+      if (!req) {
+        throw new GovernanceError("Change request was not found.", "CHANGE_REQUEST_NOT_FOUND", 404);
+      }
+      const report =
+        mockImpactReports[changeRequestId] ??
+        buildEmptyImpactReport(changeRequestId, req.project_id, req.status);
+      // Read-only echo of the request's current lifecycle status; never mutated.
+      return delay({ ...report, change_request_status: req.status });
+    }
+    const query = new URLSearchParams();
+    if (params?.targetOntologyVersionId) query.set("target_ontology_version_id", params.targetOntologyVersionId);
+    if (params?.refCap != null) query.set("ref_cap", String(params.refCap));
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<ImpactSimulationReport>(
+      `/api/v1/ontology-change-requests/${changeRequestId}/impact-simulation${suffix}`,
     );
   },
 };

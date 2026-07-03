@@ -58,8 +58,8 @@
         "name": "ref_cap",
         "in": "query",
         "required": false,
-        "description": "Optional override for the per-dimension returned-refs cap (dependent candidate refs, dependent published refs, affected-element dependent refs). Default 50, max 200. The dimension count is ALWAYS exact regardless of the cap; only the returned ref list is capped, with truncated=true when the cap is hit.",
-        "schema": { "type": "integer", "default": 50, "minimum": 1, "maximum": 200 }
+        "description": "Optional override for the per-dimension returned-refs cap (dependent candidate refs, dependent published refs, affected-element dependent refs). Default 20, max 200. The dimension count is ALWAYS exact regardless of the cap; only the returned ref list is capped, with truncated=true when the cap is hit.",
+        "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 200 }
       }
     },
     "responses": {
@@ -354,7 +354,7 @@
         "description": "NEW (MVP6.7). The deterministic bounding parameters actually applied to this report. Echoed so the FE can render honest truncation affordances and QA can assert the caps.",
         "properties": {
           "max_dependent_depth": { "type": "integer", "const": 2, "description": "P0 fixed at 2 (direct target + one hop)." },
-          "ref_cap": { "type": "integer", "description": "Per-dimension returned-refs cap actually applied (default 50)." },
+          "ref_cap": { "type": "integer", "description": "Per-dimension returned-refs cap actually applied (default 20)." },
           "any_dimension_truncated": { "type": "boolean", "description": "true if any DependentRefBucket in the report has truncated=true." }
         },
         "required": ["max_dependent_depth", "ref_cap", "any_dimension_truncated"]

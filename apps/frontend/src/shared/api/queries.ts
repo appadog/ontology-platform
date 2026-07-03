@@ -1155,6 +1155,8 @@ const governanceKeys = {
     ["governance", "change-request", changeRequestId, "application-status"] as const,
   applicationAudit: (changeRequestId: string) =>
     ["governance", "change-request", changeRequestId, "application-audit"] as const,
+  impact: (changeRequestId: string) =>
+    ["governance", "change-request", changeRequestId, "impact-simulation"] as const,
 };
 
 export function useOntologyChangeRequests(projectId: string, status?: OntologyChangeRequestStatus) {
@@ -1209,6 +1211,23 @@ export function useChangeRequestApplicationAudit(changeRequestId: string, enable
     queryKey: governanceKeys.applicationAudit(changeRequestId),
     queryFn: () => apiClient.listChangeRequestApplicationAudit(changeRequestId),
     enabled: Boolean(changeRequestId) && enabled,
+  });
+}
+
+// ---- MVP6.7 Impact Simulation (read-only impact analysis of a change request) ----
+
+/**
+ * Read-only impact simulation for a change request. Idempotent GET; mutates
+ * NOTHING (all-false ImpactSimulationMutationGuard). Disabled until `enabled`
+ * (the panel runs it on demand via the read-only "영향도 분석 실행" trigger).
+ * Advisory only for ANY lifecycle state (not gated on APPROVED).
+ */
+export function useChangeRequestImpactSimulation(changeRequestId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: governanceKeys.impact(changeRequestId),
+    queryFn: () => apiClient.getChangeRequestImpactSimulation(changeRequestId),
+    enabled: Boolean(changeRequestId) && enabled,
+    staleTime: Infinity, // Byte-stable for a fixed change request + graph snapshot.
   });
 }
 

@@ -45,16 +45,30 @@ NOT RUNNABLE by design until Wave46.
 | C9 | FE placement = contextual "영향도(Impact)" panel on the Governance change-request detail (no new global LNB item, ADR 0010); severity D6 badges; truncation + read-only states | PASS |
 | C10 | Durable invariants preserved: mutates nothing, candidate/published separation, evidence/version traceability, additive-only, no real LLM | PASS |
 
-## R-Series — Runtime Gates (Wave46, NOT RUNNABLE now)
-| ID | Runtime gate | Status |
+## R-Series — Runtime Gates (Wave46 — QA verified)
+Verdicts from Wave46 (INT6-063..066). Wave46 QA-agent connection dropped before
+writing; the commander independently re-ran the verifications (backend pytest +
+data-level test + ruff; frontend test + build) and finalized. Evidence in
+`docs/handoffs/wave-046/QA_REPORT.md`.
+| ID | Runtime gate | Verdict |
 |---|---|---|
-| R1 | endpoint returns a deterministic `ImpactSimulationReport` for a change request | NOT RUNNABLE |
-| R2 | data-level: NO table mutated by the call; all-false guard on the response | NOT RUNNABLE |
-| R3 | 5 dimensions populated correctly incl. bounded transitive + `truncated`/`count` | NOT RUNNABLE |
-| R4 | severity computed per the frozen rules (NONE..BREAKING) + rollup | NOT RUNNABLE |
-| R5 | read authz (viewer allowed); governance status/application_state never changed | NOT RUNNABLE |
-| R6 | frontend impact panel (5 dimensions + severity badges + truncation + read-only copy), mock + actual smoke | NOT RUNNABLE |
-| R7 | MVP1-MVP6.6 regression, additive-only, no renames | NOT RUNNABLE |
+| R1 | endpoint returns a deterministic `ImpactSimulationReport` for a change request | PASS |
+| R2 | data-level: NO table mutated by the call; all-false guard on the response | PASS |
+| R3 | 5 dimensions populated correctly incl. bounded transitive + `truncated`/`count` | PASS |
+| R4 | severity computed per the frozen rules (NONE..BREAKING) + rollup | PASS |
+| R5 | read authz (viewer allowed); governance status/application_state never changed | PASS |
+| R6 | frontend impact panel (5 dimensions + severity badges + truncation + read-only copy), mock + actual smoke | PASS |
+| R7 | MVP1-MVP6.6 regression, additive-only, no renames | PASS |
+
+Wave46 QA overall verdict: **PASS** (R1-R7 7/7). Recommendation: **MVP6.7 thin closeout**.
+Evidence: backend `pytest tests/test_mvp6_7_impact_simulation_api.py` 20 passed (incl.
+2 data-level no-mutation cases) + `tests/test_mvp6_6_governance_application_api.py` 21
+passed + full suite 146 passed + ruff clean + OpenAPI aligned (`ref_cap.default=20`);
+frontend 66 tests + build clean; FE mock smoke (3 routes) + actual smoke (4 checks:
+5 dimensions, rollup, depth-2/ref_cap, byte-stable idempotency, VIEWER authz,
+all-false guard) PASS. P0 uses a deterministic self-contained dependency universe
+(real MVP1-table wiring is P1, non-blocking, consistent with the MVP6.6 process-local
+precedent).
 
 ## Wave46 Gates (freeze at implementation)
 - G1 dependency-graph source for the transitive walk (candidate vs published vs both).

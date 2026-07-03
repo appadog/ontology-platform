@@ -3262,3 +3262,136 @@ export interface GovernanceApplicationAuditListResponse {
   total_count: number;
   next_cursor?: string | null;
 }
+
+// ---- MVP6.7 Impact Simulation (read-only impact analysis of a change request) ----
+// Additive. Matches docs/api/openapi-mvp6-7-draft.json EXACTLY. Every response
+// carries an ALL-FALSE ImpactSimulationMutationGuard (no flag ever true; distinct
+// from the MVP6.6 GovernanceApplicationMutationGuard). Read-only + advisory only:
+// the report mutates NOTHING and never gates apply/publish. Reuses OntologyElementRef,
+// ChangeRequestTargetKind/ChangeRequestChangeType, ValidationRuleCode/
+// ValidationResultSeverity, QualityMetricGroup, GovernanceRole by reference (no rename).
+
+/** NEW (MVP6.7). Deterministic per-item / report-rollup impact severity. Order low->high: NONE < LOW < MEDIUM < HIGH < BREAKING. Advisory only; never gates apply/publish. */
+export type ImpactSeverity = "NONE" | "LOW" | "MEDIUM" | "HIGH" | "BREAKING";
+
+/** NEW (MVP6.7). Deterministic machine reason code explaining which rule set an item's ImpactSeverity. Display/audit aid; ImpactSeverity is the authority. */
+export type ImpactSeverityReason =
+  | "DEPRECATE_MODIFY_WITH_PUBLISHED_DEPENDENTS"
+  | "DEPRECATE_MODIFY_WITH_CANDIDATE_DEPENDENTS"
+  | "AFFECTED_FAILED_VALIDATION"
+  | "TRANSITIVE_ONTOLOGY_DEPENDENTS"
+  | "AFFECTED_WARNING_VALIDATION"
+  | "AFFECTED_QUALITY_GROUP"
+  | "DIRECT_ELEMENT_ONLY"
+  | "ADD_NEW_ELEMENT_NO_DEPENDENTS";
+
+/** NEW (MVP6.7). How a transitive dependent relates to the change item's direct target. DIRECT_TARGET = depth 0. */
+export type DependencyRelation =
+  | "DIRECT_TARGET"
+  | "PROPERTY_OF_CLASS"
+  | "RELATION_DOMAIN"
+  | "RELATION_RANGE"
+  | "SUBCLASS_OF"
+  | "SUPERCLASS_OF"
+  | "RELATED_ELEMENT";
+
+/** NEW (MVP6.7). ALL FLAGS FALSE on EVERY response, no exceptions. Impact simulation turns NO flag true, ever. */
+export interface ImpactSimulationMutationGuard {
+  ontology_draft_mutated: false;
+  published_graph_mutated: false;
+  candidate_graph_mutated: false;
+  prompt_version_mutated: false;
+  governance_state_mutated: false;
+  publish_job_started: false;
+  extraction_job_started: false;
+  evaluation_run_started: false;
+}
+
+/** NEW (MVP6.7). An ontology element affected by a change item: the DIRECT target (depth 0) or a bounded transitive dependent (max depth 2). */
+export interface AffectedOntologyElement {
+  element_ref: OntologyElementRef;
+  relation_to_target: DependencyRelation;
+  /** 0 = direct target; 1 = first-hop dependent; 2 = second-hop dependent (cap). */
+  depth: number;
+  display_name?: string | null;
+}
+
+/** NEW (MVP6.7). A bounded dependent-reference dimension: EXACT count (never capped) + capped ref list + truncated when ref_cap hit. */
+export interface DependentRefBucket {
+  count: number;
+  refs: OntologyElementRef[];
+  truncated: boolean;
+}
+
+/** NEW (MVP6.7). An affected MVP3 validation reported BY REFERENCE (advisory). No validation job is run. */
+export interface AffectedValidationRef {
+  rule_code: ValidationRuleCode;
+  severity: ValidationResultSeverity;
+}
+
+/** NEW (MVP6.7). The impact analysis for a single change item. Carries the five dimensions + item-level ImpactSeverity. */
+export interface ImpactItem {
+  change_item_id: string;
+  target_kind: ChangeRequestTargetKind;
+  change_type: ChangeRequestChangeType;
+  target_ref: OntologyElementRef;
+  affected_ontology_elements: AffectedOntologyElement[];
+  dependent_candidates: DependentRefBucket;
+  dependent_published: DependentRefBucket;
+  affected_validations: AffectedValidationRef[];
+  affected_quality_groups: QualityMetricGroup[];
+  severity: ImpactSeverity;
+  severity_reason: ImpactSeverityReason;
+}
+
+/** NEW (MVP6.7). Per-severity item counts for the report rollup. Sum == number of change items. */
+export interface ImpactSeverityCounts {
+  NONE: number;
+  LOW: number;
+  MEDIUM: number;
+  HIGH: number;
+  BREAKING: number;
+}
+
+/** NEW (MVP6.7). Dimension 5: the deterministic report-level rollup. Aggregate totals are EXACT even when per-item ref lists are truncated. */
+export interface ImpactSummary {
+  max_severity: ImpactSeverity;
+  severity_counts: ImpactSeverityCounts;
+  total_change_items: number;
+  total_affected_ontology_elements: number;
+  total_dependent_candidates: number;
+  total_dependent_published: number;
+  affected_validation_rule_codes: ValidationRuleCode[];
+  affected_quality_groups: QualityMetricGroup[];
+}
+
+/** NEW (MVP6.7). The deterministic bounding parameters actually applied to the report. */
+export interface ImpactBounding {
+  /** P0 fixed at 2 (direct target + one hop). */
+  max_dependent_depth: number;
+  ref_cap: number;
+  any_dimension_truncated: boolean;
+}
+
+/** NEW (MVP6.7). Display-only capability hint. can_apply is an advisory echo of the SEPARATE MVP6.6 apply capability; MVP6.7 never grants/gates apply. */
+export interface ImpactSimulationCapabilities {
+  can_view: boolean;
+  can_apply: boolean;
+  actor_role?: GovernanceRole | null;
+}
+
+/** NEW (MVP6.7). The read-only impact report. Deterministic + byte-stable for a fixed change request + graph snapshot. mutation_guard is ALL-FALSE. */
+export interface ImpactSimulationReport {
+  impact_report_id?: string | null;
+  change_request_id: string;
+  project_id: string;
+  change_request_status?: string | null;
+  analyzed_ontology_version_id: string;
+  analyzed_ontology_version_status: OntologyVersionStatus;
+  items: ImpactItem[];
+  summary: ImpactSummary;
+  bounding: ImpactBounding;
+  capabilities: ImpactSimulationCapabilities;
+  mutation_guard: ImpactSimulationMutationGuard;
+  computed_at?: string;
+}

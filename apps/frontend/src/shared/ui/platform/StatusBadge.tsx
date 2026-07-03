@@ -144,6 +144,14 @@ const tokenTable: Record<string, TokenSpec> = {
   ONTOLOGY_VERSION_MISMATCH: { tone: "warning", icon: AlertTriangle, ko: "온톨로지 버전 불일치" },
   PUBLISH_PERMISSION_REQUIRED: { tone: "warning", icon: Lock, ko: "게시 권한 필요" },
   CORRECTION_DIFF_REQUIRED: { tone: "warning", icon: AlertTriangle, ko: "정정 차이 필요" },
+  // MVP6.7 ImpactSeverity (read-only impact simulation). Deterministic severity is
+  // a VISUAL cue, NOT a block: BREAKING/HIGH never gate apply/publish. Order
+  // low->high: NONE < LOW < MEDIUM < HIGH < BREAKING.
+  NONE: { tone: "neutral", icon: MinusCircle, ko: "영향 없음" },
+  LOW: { tone: "info", icon: Info, ko: "낮음" },
+  MEDIUM: { tone: "warning", icon: AlertTriangle, ko: "중간" },
+  HIGH: { tone: "warning", icon: AlertTriangle, ko: "높음" },
+  BREAKING: { tone: "danger", icon: XCircle, ko: "심각(파손 가능)" },
 };
 
 interface StatusBadgeProps {

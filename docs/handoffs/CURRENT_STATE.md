@@ -4,9 +4,9 @@
 
 ## Latest Wave
 
-- Current wave: `wave-045`
-- Overall status: `MVP6.7 IMPACT SIMULATION CONTRACT-FIRST PLANNING PASS / WAVE46 THIN IMPLEMENTATION READY (rate-limit paused)`
-- 기준일: 2026-07-02
+- Current wave: `wave-046`
+- Overall status: `MVP6.7 IMPACT SIMULATION THIN IMPLEMENTATION CLOSED (PASS)`
+- 기준일: 2026-07-03
 
 ## Latest Decisions
 
@@ -222,6 +222,12 @@
 - Wave45 note: both the Backend and Frontend agents completed their deliverables but hit account session limits at the report step; the FE report was written by the agent, while the Backend report + the QA checklist (`INT6_7_IMPACT_SIMULATION_ACCEPTANCE.md`) + QA report were authored by the commander from the artifacts + mechanical validation (PARSE_OK, no leakage, git clean). Independent adversarial runtime verification is deferred to the Wave46 implementation QA.
 - Wave46 gates (recorded): G1 dependency-graph source for the transitive walk (candidate/published/both); G2 per-dimension ref-cap sizes; G3 severity edge cases.
 - Operational note: the account hit repeated agent session limits during Wave45 (reset ~20:50 Asia/Seoul). Wave46 implementation needs subagents and is paused until the limit resets.
+- Wave46 implemented and closed the MVP6.7 Impact Simulation thin slice as PASS. PM (G1-G3 freeze), Backend, Frontend all PASS; QA finalized by the commander after the QA agent's connection dropped (commander independently re-ran backend pytest + data-level test + ruff and frontend test + build).
+- PM froze G1-G3 (PM6-028): G1 dependency source = walk MVP1 ontology relationships on the analyzed version, returning BOTH candidate + published dependents each labeled by layer (depth-2, id-ordered); G2 `ref_cap` default 20 (override 1..200) + exact `count` + `truncated`; G3 deterministic ImpactSeverity highest-wins (published dependent=BREAKING; candidate-only/FAILED validation=HIGH; transitive/WARNING/affected quality=MEDIUM; direct-only=LOW; ADD no-dependents=NONE). ref_cap default changed 50->20 (only value change; shapes/enums unchanged).
+- Backend implemented `GET /api/v1/ontology-change-requests/{id}/impact-simulation` (governance `impact.py` + route), read-only, assembling the 5-dimension `ImpactSimulationReport` from a deterministic self-contained dependency universe (same process-local pattern as MVP6.6 `application.py`); reused `OntologyElementRef`/`ValidationRuleCode`/`QualityMetricGroup` by reference (no renames/no duplicate). impact 20 + gov-application 21 + full-suite 146 tests pass, ruff clean, OpenAPI aligned (`ref_cap.default=20`).
+- Frontend added a contextual read-only "영향도(Impact)" panel on the Governance detail (no new LNB/route): 5 dimensions, ImpactSeverity D6 badges (BREAKING=danger/HIGH=warning), truncation ("총 N개 중 처음 M개 표시"), loading/empty(NONE)/error/permission-limited states, read-only/advisory copy + all-false proof line, no apply/publish affordance. 66 FE tests, build clean; `smoke:mvp6:impact:mock` (3 routes) + `:actual` (4 checks) both PASS; 0 overflow (fixed a 768 flex overflow same-wave).
+- QA verdict PASS (R1-R7 7/7). Read-only invariant verified at the data level (backend `test_data_level_no_mutation`: all governance/application/element state byte-identical before==after the GET, run twice incl. ref_cap override; all-false guard). Regression clean; `core/enums.py` untouched. This returns the platform to the all-false-guard posture (impact-sim mutates nothing).
+- MVP6.7 non-blocking P1 follow-up: real MVP1-table dependency wiring (P0 uses a deterministic self-contained dependency universe).
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -315,7 +321,8 @@
 | MVP6.6 Governance Application Thin Runtime/UI | Closed in Wave44 (PASS). apply/pre-check/audit in governance module; DRAFT-only mutation via MVP1 ontology-edit; staleness->409 SUPERSEDED (all-or-nothing); idempotency/authz 409/403; one-true-flag `ontology_draft_mutated` guard (data-level: 13 other tables before==after). FE apply UX + StatusBadge APPLIED/SUPERSEDED; mock+actual smoke PASS; R1-R9 9/9; regression clean. | BE6-048~051, FE6-069~072, INT6-055~058 |
 | MVP6.6 Wave44 Follow-ups | Non-blocking P1. Durable persistence; real MVP1 ontology-edit DB integration (apply store keys DRAFT on literal demo ids aligned with `seed_mvp3`); document the seed alignment. | BE6/FE6 P1 |
 | MVP6.7 Impact Simulation Contract | Closed in Wave45 (planning PASS). PM brief + ADR 0014, Backend contract + `openapi-mvp6-7-draft.json` (1 read-only path/23 schemas), Frontend UX requirements, QA `INT6_7` checklist (C1-C10 / R1-R7); no runtime leakage; PARSE_OK. | PM6-027, BE6-052~055, FE6-073~076, INT6-059~062 |
-| MVP6.7 Impact Simulation Thin Runtime/UI | Open for Wave46 (rate-limit paused). Implement the read-only impact endpoint (5 dimensions, deterministic ImpactSeverity, bounding/truncation, all-false guard) + the "영향도" panel on the Governance detail; mock+actual smoke. PM freezes G1-G3 first. | BE6-056+, FE6-077+, INT6-063+ |
+| MVP6.7 Impact Simulation Thin Runtime/UI | Closed in Wave46 (PASS). Read-only impact endpoint (5 dimensions, deterministic ImpactSeverity, depth-2 bounding, ref_cap 20/truncated, all-false guard, VIEWER authz) + "영향도" panel on the Governance detail; data-level no-mutation verified; mock+actual smoke PASS; R1-R7 7/7; regression clean. | BE6-056~059, FE6-077~080, INT6-063~066 |
+| MVP6.7 Wave46 Follow-up | Non-blocking P1. Real MVP1-table dependency wiring (P0 uses a deterministic self-contained dependency universe). | BE6 P1 |
 
 ## Next Gate
 
@@ -323,9 +330,11 @@ Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benc
 
 MVP6.6 Governance Change Application is closed (Wave43 planning + Wave44 implementation both PASS). Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison, 6.4 Gold Set authoring + dataset revisioning, 6.5 Governance workflow, 6.6 Governance Change Application. UI/UX review remediation + reference-driven design upgrade also closed (Wave35-38).
 
-MVP6.7 Impact Simulation contract-first planning (Wave45) is PASS. **Wave46 = MVP6.7 thin implementation** is the next gate — but it is PAUSED on the account agent session limit (reset ~20:50 Asia/Seoul). When agents are available again: PM freezes G1-G3, Backend implements the read-only impact endpoint (5 dimensions, deterministic ImpactSeverity, bounding/truncation, all-false guard) reusing candidate/published/validation/quality reads by reference, Frontend implements the "영향도" panel on the Governance detail + mock/actual smoke, and QA independently verifies R1-R7 incl. the data-level "nothing mutated / all-false guard" proof.
+MVP6.7 Impact Simulation is closed (Wave45 planning + Wave46 implementation both PASS). Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison, 6.4 Gold Set authoring + dataset revisioning, 6.5 Governance workflow, 6.6 Governance Change Application, 6.7 Impact Simulation. UI/UX review remediation + reference-driven design upgrade also closed (Wave35-38).
 
-Remaining user-directed theme sequence after MVP6.7: agents -> connectors -> multi-tenant -> ontology packs -> advanced viz (each a contract-first planning wave then a thin-implementation wave).
+Per the user-directed sequence, the next theme is **agents (copilot/agent runtime)** — MVP6.8. **Wave47 = agents contract-first planning** is the next gate (PM freezes the smallest coherent, safe P0 first; agent runtime is the largest/most safety-sensitive theme so far — it must be cut to a minimal auditable, human-in-the-loop, non-autonomous P0 preserving all the candidate/published + no-autonomous-action invariants).
+
+Remaining user-directed theme sequence: agents -> connectors -> multi-tenant -> ontology packs -> advanced viz (each a contract-first planning wave then a thin-implementation wave).
 1. Next MVP6 theme (PM contract-first freeze first): Gold Set authoring/dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance, impact simulation, copilot/agents, connector/plugin SDK, multi-tenant, ontology packs, advanced viz).
 2. Sweep accumulated MVP6.x P1/P2 follow-ups (stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, strict-required field promotion, divergent-run seed) in one hardening wave.
 3. Resume the paused Wave27 release/demo packaging.
@@ -501,6 +510,10 @@ Remaining user-directed theme sequence after MVP6.7: agents -> connectors -> mul
 | Backend | wave-045 | `PASS / MVP6.7 CONTRACT DRAFT READY (commander-reported)` | 1 read-only GET path/23 schemas `openapi-mvp6-7-draft.json` 0.6.7-draft; all-false ImpactSimulationMutationGuard; PARSE_OK; agent hit session limit at report step |
 | Frontend | wave-045 | `PASS / MVP6.7 UX REQUIREMENTS READY` | Contextual "영향도" panel on Governance detail (no new LNB); 5 dimensions + severity D6 badges + truncation + read-only states |
 | QA | wave-045 | `PASS / WAVE46 RECOMMENDED (commander-authored)` | INT6_7 checklist C1-C10 PASS / R1-R7 NOT RUNNABLE; PM/BE/FE agree; PARSE_OK; no leakage; gates G1-G3; runtime QA deferred to Wave46 |
+| PM | wave-046 | `PASS / G1-G3 FROZEN` | Dep source both-layers depth-2; ref_cap 20; deterministic severity; scope unchanged; PM6-028 + BE6-056~059/FE6-077~080/INT6-063~066 |
+| Backend | wave-046 | `PASS / MVP6.7 THIN RUNTIME READY` | read-only impact endpoint, 5-dim report, deterministic severity, all-false guard, data-level no-mutation; 20+21/146 tests, ruff clean, 0 OpenAPI mismatch |
+| Frontend | wave-046 | `PASS / IMPACT PANEL READY` | Read-only "영향도" panel on Governance detail; 5 dims + severity D6 badges + truncation + read-only copy; 66 tests/build; mock(3)+actual(4) smoke PASS; 0 overflow |
+| QA | wave-046 | `PASS / MVP6.7 CLOSEOUT (commander-finalized)` | R1-R7 7/7; data-level no-mutation verified (state before==after, all-false guard); regression clean; QA agent dropped -> commander re-ran core validations |
 
 ## Report Index
 
@@ -551,3 +564,4 @@ Remaining user-directed theme sequence after MVP6.7: agents -> connectors -> mul
 | wave-043 | `wave-043/PM_REPORT.md` | `wave-043/BACKEND_REPORT.md` | `wave-043/FRONTEND_REPORT.md` | `wave-043/QA_REPORT.md` | `wave-043/NEXT_ORDERS.md` |
 | wave-044 | `wave-044/PM_REPORT.md` | `wave-044/BACKEND_REPORT.md` | `wave-044/FRONTEND_REPORT.md` | `wave-044/QA_REPORT.md` | `wave-044/NEXT_ORDERS.md` |
 | wave-045 | `wave-045/PM_REPORT.md` | `wave-045/BACKEND_REPORT.md` | `wave-045/FRONTEND_REPORT.md` | `wave-045/QA_REPORT.md` | `wave-045/NEXT_ORDERS.md` |
+| wave-046 | `wave-046/PM_REPORT.md` | `wave-046/BACKEND_REPORT.md` | `wave-046/FRONTEND_REPORT.md` | `wave-046/QA_REPORT.md` | `wave-046/NEXT_ORDERS.md` |

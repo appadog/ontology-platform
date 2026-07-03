@@ -54,7 +54,7 @@ APPLICATION_BANNER_MESSAGE = (
 )
 
 # Ontology refs known to resolve in the seeded demo project.
-_KNOWN_CLASS_IDS = {"class-clause", "class-company", "class-extra"}
+_KNOWN_CLASS_IDS = {"class-clause", "class-company", "class-extra", "class-isolated"}
 _KNOWN_PROPERTY_IDS = {"property-claim-deadline", "property-name", "property-extra"}
 _KNOWN_RELATION_IDS = {"relation-has-clause", "relation-extra"}
 _KNOWN_ONTOLOGY_VERSION_IDS = {"ontology-v7", "ontology-v1"}

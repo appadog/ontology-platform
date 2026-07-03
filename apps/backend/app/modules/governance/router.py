@@ -8,7 +8,9 @@ from app.core.errors import ApiErrorResponse
 from app.db.session import get_db
 from app.modules.evaluation import service as evaluation_service
 from app.modules.governance import application as application_service
+from app.modules.governance import impact as impact_service
 from app.modules.governance import service
+from app.modules.governance.impact import ImpactSimulationReport
 from app.modules.governance.application import (
     GovernanceApplicationAuditAction,
     GovernanceApplicationAuditListResponse,
@@ -295,6 +297,28 @@ def list_application_audit(
 ) -> GovernanceApplicationAuditListResponse:
     return application_service.list_application_audit(
         change_request_id, action, limit, cursor
+    )
+
+
+# --- G. MVP6.7 Impact Simulation (read-only, advisory) ---------------------
+
+
+@router.get(
+    "/ontology-change-requests/{change_request_id}/impact-simulation",
+    response_model=ImpactSimulationReport,
+    summary="Read-only impact simulation for a change request (advisory)",
+    responses=_ERRORS,
+    tags=["MVP6.7 Impact Simulation"],
+)
+def get_change_request_impact_simulation(
+    change_request_id: str,
+    target_ontology_version_id: str | None = Query(None),
+    ref_cap: int = Query(20, ge=1, le=200),
+    actor_id: str = ActorId,
+    actor_role: Role = ActorRole,
+) -> ImpactSimulationReport:
+    return impact_service.get_impact_simulation(
+        change_request_id, target_ontology_version_id, ref_cap, actor_id, actor_role
     )
 
 
