@@ -1,0 +1,1030 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP6.8 Copilot Planning API",
+    "description": "Planning-only OpenAPI artifact for MVP6.8 Agents / Copilot (advisory-only, non-autonomous, audit-only). This artifact is additive to MVP1-MVP6.7 and does not replace any prior OpenAPI draft. The copilot SUGGESTS/DRAFTS and executes NOTHING: it produces deterministic, source-grounded suggestions; accept records an audit-only decision and returns a routing-target descriptor (deep-link + optional pre-fill payload) into an EXISTING human-gated flow with NO authority; every response carries an all-false CopilotMutationGuard (14 flags incl. copilot_executed_action:false and real_model_invoked:false). No real LLM in P0.",
+    "version": "0.6.8-draft"
+  },
+  "tags": [
+    {
+      "name": "MVP6.8 Copilot",
+      "description": "Advisory-only, non-autonomous copilot suggestions + audit-only decisions. Accept routes into existing gated flows; it never executes."
+    }
+  ],
+  "paths": {
+    "/api/v1/projects/{project_id}/copilot/summary": {
+      "get": {
+        "tags": ["MVP6.8 Copilot"],
+        "summary": "Get project copilot summary",
+        "description": "Read-only, project-scoped copilot summary deterministically derived from approved MVP3/MVP4/MVP6.1/MVP6.2/MVP6.5-6.6/MVP6.7 source artifacts. Returns suggestion counts by kind/state and advisory safety notes. Must not create, refresh, or persist suggestions as a side effect, and must not invoke a real model. Any project member who can read the project may view.",
+        "operationId": "getCopilotSummary",
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Copilot summary",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CopilotSummaryResponse" },
+                "examples": { "summary": { "$ref": "#/components/examples/CopilotSummaryExample" } }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/copilot/suggestions": {
+      "get": {
+        "tags": ["MVP6.8 Copilot"],
+        "summary": "List deterministic copilot suggestions",
+        "description": "Read-only, project-scoped, byte-stable deterministic list of copilot suggestions (same project state -> same list/order). Every returned suggestion cites non-empty source-artifact references; a suggestion without traceable source artifacts is invalid for P0 display and cannot be created. No ungrounded generation, no real model call. Each suggestion names the existing gated flow it would route into on accept but executes nothing.",
+        "operationId": "listCopilotSuggestions",
+        "parameters": [
+          { "$ref": "#/components/parameters/ProjectId" },
+          { "$ref": "#/components/parameters/KindFilter" },
+          { "$ref": "#/components/parameters/StateFilter" },
+          { "$ref": "#/components/parameters/RiskLabelFilter" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deterministic copilot suggestion list",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CopilotSuggestionListResponse" },
+                "examples": { "list": { "$ref": "#/components/examples/CopilotSuggestionListExample" } }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/copilot-suggestions/{suggestion_id}": {
+      "get": {
+        "tags": ["MVP6.8 Copilot"],
+        "summary": "Get a copilot suggestion by id",
+        "description": "Read-only detail for a single copilot suggestion, including full source-artifact grounding, routing-target descriptor (destination only, no authority), and the current decision audit note when decided. Read-derived and advisory; invokes no real model and mutates nothing.",
+        "operationId": "getCopilotSuggestion",
+        "parameters": [
+          { "$ref": "#/components/parameters/SuggestionId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Copilot suggestion detail",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CopilotSuggestionDetailResponse" },
+                "examples": { "detail": { "$ref": "#/components/examples/CopilotSuggestionDetailExample" } }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/copilot-suggestions/{suggestion_id}/decisions": {
+      "post": {
+        "tags": ["MVP6.8 Copilot"],
+        "summary": "Record copilot suggestion decision (audit-only)",
+        "description": "Records a human ACCEPT or DISMISS decision as an audit note ONLY. ACCEPT moves SUGGESTED -> ACCEPTED and returns a routing-target descriptor (deep-link + optional pre-fill payload) into an existing gated flow; it creates/mutates/applies/approves/publishes NOTHING. DISMISS moves SUGGESTED -> DISMISSED and requires a reason code. A decision command against ACCEPTED/DISMISSED/SUPERSEDED returns 409 COPILOT_SUGGESTION_DECISION_CONFLICT. The response always carries an all-false CopilotMutationGuard (incl. copilot_executed_action:false, real_model_invoked:false). Any project member may decide; decisions grant no downstream authority and the target flow keeps its own RBAC.",
+        "operationId": "createCopilotSuggestionDecision",
+        "parameters": [
+          { "$ref": "#/components/parameters/SuggestionId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CopilotSuggestionDecisionRequest" },
+              "examples": {
+                "accept": { "$ref": "#/components/examples/CopilotDecisionAcceptRequestExample" },
+                "dismiss": { "$ref": "#/components/examples/CopilotDecisionDismissRequestExample" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Decision audit note created (nothing executed)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CopilotSuggestionDecisionResponse" },
+                "examples": {
+                  "accept": { "$ref": "#/components/examples/CopilotDecisionAcceptResponseExample" },
+                  "dismiss": { "$ref": "#/components/examples/CopilotDecisionDismissResponseExample" }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ProjectId": {
+        "name": "project_id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "SuggestionId": {
+        "name": "suggestion_id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": { "type": ["string", "null"] }
+      },
+      "KindFilter": {
+        "name": "kind",
+        "in": "query",
+        "required": false,
+        "schema": { "$ref": "#/components/schemas/CopilotSuggestionKind" }
+      },
+      "StateFilter": {
+        "name": "state",
+        "in": "query",
+        "required": false,
+        "schema": { "$ref": "#/components/schemas/CopilotSuggestionState" }
+      },
+      "RiskLabelFilter": {
+        "name": "risk_label",
+        "in": "query",
+        "required": false,
+        "schema": { "$ref": "#/components/schemas/CopilotRiskLabel" }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      },
+      "Forbidden": {
+        "description": "Permission denied",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      },
+      "Conflict": {
+        "description": "Suggestion decision state conflict",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+      }
+    },
+    "schemas": {
+      "CopilotSuggestionKind": {
+        "type": "string",
+        "description": "The four frozen P0 suggestion kinds. Each names the existing gated flow it routes into on accept and the source artifacts it must cite. New kinds are P1+ (later PM freeze only).",
+        "enum": [
+          "DRAFT_GOVERNANCE_CHANGE_REQUEST",
+          "REVIEW_THESE_CANDIDATES",
+          "INSPECT_QUALITY_OR_VALIDATION_SIGNAL",
+          "RUN_IMPACT_SIMULATION"
+        ]
+      },
+      "CopilotSuggestionState": {
+        "type": "string",
+        "description": "Mirrors the MVP6.2 suggestion state vocabulary (no rename of the MVP6.2 enum). SUGGESTED -> {ACCEPTED | DISMISSED | SUPERSEDED}. SUPERSEDED is read-side only and is not set by the human decision endpoint.",
+        "enum": ["SUGGESTED", "ACCEPTED", "DISMISSED", "SUPERSEDED"]
+      },
+      "CopilotDecisionCommand": {
+        "type": "string",
+        "description": "Human decision request command. These are COMMANDS, not the resulting states ACCEPTED/DISMISSED. ACCEPT returns a routing-target descriptor and executes nothing; DISMISS requires a reason code.",
+        "enum": ["ACCEPT", "DISMISS"]
+      },
+      "CopilotDismissReasonCode": {
+        "type": "string",
+        "description": "Reason code required when the decision command is DISMISS. Reuses the MVP6.2 SuggestionDismissReasonCode set verbatim (no rename).",
+        "enum": [
+          "NOT_RELEVANT",
+          "INSUFFICIENT_EVIDENCE",
+          "DUPLICATE",
+          "OUT_OF_SCOPE",
+          "RISK_TOO_HIGH",
+          "OTHER"
+        ]
+      },
+      "CopilotRoutingTargetKind": {
+        "type": "string",
+        "description": "The four frozen routing-target destinations. A routing target is a reference/deep-link descriptor (+ optional pre-fill payload) into an EXISTING gated flow. It carries NO authority: it does not create, mutate, apply, approve, or publish. The human still passes every gate of the target flow.",
+        "enum": [
+          "GOVERNANCE_CHANGE_REQUEST_DRAFT",
+          "CANDIDATE_REVIEW_LOCATION",
+          "QUALITY_OR_VALIDATION_LOCATION",
+          "IMPACT_REPORT_LOCATION"
+        ]
+      },
+      "CopilotConfidenceLabel": {
+        "type": "string",
+        "description": "Advisory confidence label. Mirrors MVP6.2 LearningConfidenceLabel values (no rename of the MVP6.2 enum).",
+        "enum": ["LOW", "MEDIUM", "HIGH"]
+      },
+      "CopilotRiskLabel": {
+        "type": "string",
+        "description": "Advisory risk label. Mirrors MVP6.2 LearningRiskLabel values (no rename of the MVP6.2 enum).",
+        "enum": ["LOW", "MEDIUM", "HIGH"]
+      },
+      "CopilotSourceArtifactType": {
+        "type": "string",
+        "description": "Source-grounding artifact types the copilot may cite. Reuses the MVP6.2 LearningSourceArtifactType vocabulary plus governance/candidate/impact refs already defined by closed MVPs, referenced (no rename). Every suggestion must cite at least one.",
+        "enum": [
+          "REVIEW_DECISION",
+          "REVIEW_CORRECTION",
+          "VALIDATION_RESULT",
+          "QUALITY_METRIC",
+          "QUALITY_DRILLDOWN",
+          "EVALUATION_RUN",
+          "EVALUATION_METRIC",
+          "EVALUATION_ERROR_CASE",
+          "LEARNING_SIGNAL",
+          "CANDIDATE",
+          "GOVERNANCE_CHANGE_REQUEST",
+          "IMPACT_REPORT"
+        ]
+      },
+      "CopilotMutationGuard": {
+        "type": "object",
+        "description": "All-false mutation guard present on EVERY copilot response (summary, list, detail, and decision accept/dismiss). Every flag is false, always, on every response including accept. MVP6.8 turns NO flag true, ever. copilot_executed_action and real_model_invoked are the copilot-specific assertions QA verifies on every response.",
+        "additionalProperties": false,
+        "properties": {
+          "ontology_draft_mutated": { "type": "boolean", "const": false, "default": false },
+          "ontology_published_mutated": { "type": "boolean", "const": false, "default": false },
+          "candidate_graph_mutated": { "type": "boolean", "const": false, "default": false },
+          "published_graph_mutated": { "type": "boolean", "const": false, "default": false },
+          "prompt_version_mutated": { "type": "boolean", "const": false, "default": false },
+          "governance_state_mutated": { "type": "boolean", "const": false, "default": false },
+          "change_request_created": { "type": "boolean", "const": false, "default": false },
+          "change_request_applied": { "type": "boolean", "const": false, "default": false },
+          "candidate_approved_or_published": { "type": "boolean", "const": false, "default": false },
+          "extraction_job_started": { "type": "boolean", "const": false, "default": false },
+          "evaluation_run_started": { "type": "boolean", "const": false, "default": false },
+          "auto_approval_policy_mutated": { "type": "boolean", "const": false, "default": false },
+          "copilot_executed_action": { "type": "boolean", "const": false, "default": false },
+          "real_model_invoked": { "type": "boolean", "const": false, "default": false }
+        },
+        "required": [
+          "ontology_draft_mutated",
+          "ontology_published_mutated",
+          "candidate_graph_mutated",
+          "published_graph_mutated",
+          "prompt_version_mutated",
+          "governance_state_mutated",
+          "change_request_created",
+          "change_request_applied",
+          "candidate_approved_or_published",
+          "extraction_job_started",
+          "evaluation_run_started",
+          "auto_approval_policy_mutated",
+          "copilot_executed_action",
+          "real_model_invoked"
+        ]
+      },
+      "CopilotEvidenceRef": {
+        "type": "object",
+        "description": "Evidence pointer reused by reference from MVP2/MVP3 evidence shapes (no rename). Locates the source segment/quote backing a cited artifact.",
+        "properties": {
+          "source_id": { "type": "string" },
+          "source_segment_id": { "type": ["string", "null"] },
+          "locator": { "type": ["string", "null"] },
+          "quote": { "type": ["string", "null"] }
+        },
+        "required": ["source_id"]
+      },
+      "CopilotSourceArtifactRef": {
+        "type": "object",
+        "description": "A single source-artifact grounding reference, reused by reference from MVP6.2 LearningSourceArtifactRef + governance/candidate/impact refs (no rename). Null fields are allowed only when that source surface does not produce the identifier. At least one CopilotSourceArtifactRef is required per suggestion (no ungrounded generation).",
+        "properties": {
+          "artifact_type": { "$ref": "#/components/schemas/CopilotSourceArtifactType" },
+          "artifact_id": { "type": "string" },
+          "project_id": { "type": "string" },
+          "candidate_id": { "type": ["string", "null"] },
+          "candidate_kind": { "type": ["string", "null"], "description": "Reuses MVP3 CandidateKind values by reference (e.g. ENTITY/RELATION)." },
+          "review_task_id": { "type": ["string", "null"] },
+          "review_decision_id": { "type": ["string", "null"] },
+          "validation_result_id": { "type": ["string", "null"], "description": "Backed by MVP3 ValidationRuleCode results." },
+          "quality_metric_id": { "type": ["string", "null"], "description": "Backed by MVP4 QualityMetricGroup drilldown." },
+          "evaluation_run_id": { "type": ["string", "null"] },
+          "evaluation_error_case_id": { "type": ["string", "null"] },
+          "learning_signal_id": { "type": ["string", "null"], "description": "Backed by MVP6.2 learning signal / correction pattern." },
+          "governance_change_request_id": { "type": ["string", "null"], "description": "Backed by MVP6.5/6.6 governance change request." },
+          "impact_report_id": { "type": ["string", "null"], "description": "Backed by MVP6.7 impact report." },
+          "ontology_version_id": { "type": ["string", "null"] },
+          "prompt_version_id": { "type": ["string", "null"] },
+          "model_run_id": { "type": ["string", "null"] },
+          "evidence_refs": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CopilotEvidenceRef" }
+          },
+          "observed_at": { "type": ["string", "null"], "format": "date-time" }
+        },
+        "required": ["artifact_type", "artifact_id", "project_id"]
+      },
+      "OntologyElementRef": {
+        "type": "object",
+        "description": "Ontology element reference reused by reference from MVP6.5/6.6 governance OntologyElementRef (no rename). Used inside a GOVERNANCE_CHANGE_REQUEST_DRAFT pre-fill payload.",
+        "properties": {
+          "element_kind": { "type": "string", "description": "e.g. CLASS / PROPERTY / RELATION, reusing the existing ontology element kind vocabulary by reference." },
+          "element_id": { "type": "string" },
+          "label": { "type": ["string", "null"] }
+        },
+        "required": ["element_kind", "element_id"]
+      },
+      "GovernanceChangeRequestDraftPrefill": {
+        "type": "object",
+        "description": "Pre-fill payload for CopilotRoutingTargetKind.GOVERNANCE_CHANGE_REQUEST_DRAFT. A draft the human takes INTO the MVP6.5 create/propose screen. The copilot does NOT create the change request. Reuses ChangeRequestTargetKind / ChangeRequestChangeType / OntologyElementRef by reference (no rename).",
+        "properties": {
+          "target_kind": { "type": "string", "description": "Reuses MVP6.5/6.6 ChangeRequestTargetKind by reference." },
+          "change_type": { "type": "string", "description": "Reuses MVP6.5/6.6 ChangeRequestChangeType by reference." },
+          "ontology_version_id": { "type": ["string", "null"] },
+          "element_refs": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/OntologyElementRef" }
+          },
+          "proposed_title": { "type": ["string", "null"] },
+          "proposed_rationale": { "type": ["string", "null"] }
+        },
+        "required": ["target_kind", "change_type", "element_refs"]
+      },
+      "CopilotRoutingTarget": {
+        "type": "object",
+        "description": "Routing-target descriptor: a destination (deep-link) + optional pre-fill payload into an EXISTING gated flow. It carries NO authority and executes nothing. Returned on ACCEPT and also embedded (as the intended destination) in each suggestion. deep_link is a relative frontend path; the human still passes every gate of the target flow.",
+        "properties": {
+          "kind": { "$ref": "#/components/schemas/CopilotRoutingTargetKind" },
+          "deep_link": { "type": "string", "description": "Relative frontend deep-link path into the existing gated flow (destination only)." },
+          "target_ref": {
+            "type": "object",
+            "description": "Opaque reference identifiers for the destination (e.g. change_request_id, candidate_ids, quality_metric_group, validation_rule_code, impact_report_id). No authority; identifies where to go.",
+            "additionalProperties": true
+          },
+          "governance_change_request_draft_prefill": {
+            "description": "Present only when kind == GOVERNANCE_CHANGE_REQUEST_DRAFT.",
+            "anyOf": [
+              { "$ref": "#/components/schemas/GovernanceChangeRequestDraftPrefill" },
+              { "type": "null" }
+            ]
+          },
+          "executes_nothing": {
+            "type": "boolean",
+            "const": true,
+            "default": true,
+            "description": "Always true. This descriptor is a destination; accepting it executes no gated-flow action."
+          },
+          "human_gate_note": {
+            "type": "string",
+            "description": "Human-readable statement that the human must still pass the target flow's own gates (propose->review->approve->apply; review->correct->decide; etc.)."
+          }
+        },
+        "required": ["kind", "deep_link", "target_ref", "executes_nothing", "human_gate_note"]
+      },
+      "CopilotSuggestion": {
+        "type": "object",
+        "description": "A single deterministic, source-grounded copilot suggestion. source_artifacts is required and non-empty (no ungrounded generation). routing_target is the destination it would route into on accept; it is a descriptor with no authority.",
+        "properties": {
+          "id": { "type": "string" },
+          "project_id": { "type": "string" },
+          "kind": { "$ref": "#/components/schemas/CopilotSuggestionKind" },
+          "state": { "$ref": "#/components/schemas/CopilotSuggestionState" },
+          "title": { "type": "string", "description": "Short human-readable 'what' (KO/EN display title)." },
+          "rationale": { "type": "string", "description": "The 'why' — plain-language explanation grounded in the cited artifacts." },
+          "expected_next_step": { "type": "string", "description": "Plain-language expected next step the human takes in the target gated flow." },
+          "routing_target": { "$ref": "#/components/schemas/CopilotRoutingTarget" },
+          "source_artifacts": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Non-empty grounding references. A suggestion with an empty array is invalid and cannot be created/displayed.",
+            "items": { "$ref": "#/components/schemas/CopilotSourceArtifactRef" }
+          },
+          "confidence_label": { "$ref": "#/components/schemas/CopilotConfidenceLabel" },
+          "risk_label": { "$ref": "#/components/schemas/CopilotRiskLabel" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "decision_audit_note": {
+            "description": "Present (non-null) only when the suggestion has been decided.",
+            "anyOf": [
+              { "$ref": "#/components/schemas/CopilotDecisionAuditNote" },
+              { "type": "null" }
+            ]
+          },
+          "safety_note": {
+            "type": "string",
+            "description": "Advisory statement: the copilot executes nothing; accepting records human intent and routes into an existing gated flow only."
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "kind",
+          "state",
+          "title",
+          "rationale",
+          "expected_next_step",
+          "routing_target",
+          "source_artifacts",
+          "confidence_label",
+          "risk_label",
+          "created_at",
+          "updated_at",
+          "decision_audit_note",
+          "safety_note"
+        ]
+      },
+      "CopilotSuggestionKindCount": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "$ref": "#/components/schemas/CopilotSuggestionKind" },
+          "count": { "type": "integer", "minimum": 0 },
+          "high_risk_count": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["kind", "count", "high_risk_count"]
+      },
+      "CopilotSummaryResponse": {
+        "type": "object",
+        "description": "Read-only project copilot summary. Deterministically derived from approved source artifacts; carries an all-false mutation guard.",
+        "properties": {
+          "project_id": { "type": "string" },
+          "generated_at": { "type": "string", "format": "date-time" },
+          "source_artifact_scope": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CopilotSourceArtifactType" }
+          },
+          "total_suggestion_count": { "type": "integer", "minimum": 0 },
+          "suggested_count": { "type": "integer", "minimum": 0 },
+          "accepted_count": { "type": "integer", "minimum": 0 },
+          "dismissed_count": { "type": "integer", "minimum": 0 },
+          "superseded_count": { "type": "integer", "minimum": 0 },
+          "high_risk_count": { "type": "integer", "minimum": 0 },
+          "counts_by_kind": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CopilotSuggestionKindCount" }
+          },
+          "advisory_notes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Advisory / reassurance copy, e.g. that the copilot is advisory-only, executes nothing, and calls no real model."
+          },
+          "mutation_guard": { "$ref": "#/components/schemas/CopilotMutationGuard" }
+        },
+        "required": [
+          "project_id",
+          "generated_at",
+          "source_artifact_scope",
+          "total_suggestion_count",
+          "suggested_count",
+          "accepted_count",
+          "dismissed_count",
+          "superseded_count",
+          "high_risk_count",
+          "counts_by_kind",
+          "advisory_notes",
+          "mutation_guard"
+        ]
+      },
+      "CopilotSuggestionListResponse": {
+        "type": "object",
+        "description": "Deterministic (byte-stable) copilot suggestion list. Carries an all-false mutation guard.",
+        "properties": {
+          "project_id": { "type": "string" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CopilotSuggestion" }
+          },
+          "next_cursor": { "type": ["string", "null"] },
+          "mutation_guard": { "$ref": "#/components/schemas/CopilotMutationGuard" }
+        },
+        "required": ["project_id", "items", "next_cursor", "mutation_guard"]
+      },
+      "CopilotSuggestionDetailResponse": {
+        "type": "object",
+        "description": "Single copilot suggestion detail. Carries an all-false mutation guard.",
+        "properties": {
+          "suggestion": { "$ref": "#/components/schemas/CopilotSuggestion" },
+          "mutation_guard": { "$ref": "#/components/schemas/CopilotMutationGuard" }
+        },
+        "required": ["suggestion", "mutation_guard"]
+      },
+      "CopilotSuggestionDecisionRequest": {
+        "type": "object",
+        "description": "Human decision request. decision is a COMMAND (ACCEPT/DISMISS), not a resulting state. dismiss_reason_code is required when decision is DISMISS and must be omitted/null when ACCEPT.",
+        "properties": {
+          "decision": { "$ref": "#/components/schemas/CopilotDecisionCommand" },
+          "dismiss_reason_code": {
+            "description": "Required when decision == DISMISS; must be omitted/null when decision == ACCEPT.",
+            "anyOf": [
+              { "$ref": "#/components/schemas/CopilotDismissReasonCode" },
+              { "type": "null" }
+            ]
+          },
+          "note": {
+            "type": ["string", "null"],
+            "description": "Optional free-text note. Required when dismiss_reason_code == OTHER."
+          },
+          "client_request_id": {
+            "type": ["string", "null"],
+            "description": "Optional idempotency metadata for future runtime. Must not be treated as authorization."
+          }
+        },
+        "required": ["decision"]
+      },
+      "CopilotSuggestionSnapshot": {
+        "type": "object",
+        "description": "Immutable snapshot of the decided suggestion captured in the audit note.",
+        "properties": {
+          "kind": { "$ref": "#/components/schemas/CopilotSuggestionKind" },
+          "title": { "type": "string" },
+          "rationale": { "type": "string" },
+          "confidence_label": { "$ref": "#/components/schemas/CopilotConfidenceLabel" },
+          "risk_label": { "$ref": "#/components/schemas/CopilotRiskLabel" }
+        },
+        "required": ["kind", "title", "rationale", "confidence_label", "risk_label"]
+      },
+      "CopilotDecisionAuditNote": {
+        "type": "object",
+        "description": "Audit-only decision record. For ACCEPT it includes the returned routing_target (so the audit shows WHERE the human was routed and that nothing was executed). Carries an all-false mutation guard.",
+        "properties": {
+          "id": { "type": "string" },
+          "suggestion_id": { "type": "string" },
+          "project_id": { "type": "string" },
+          "actor_id": { "type": "string" },
+          "actor_role": { "type": "string", "description": "Reuses MVP5 Role by reference (no new role literal)." },
+          "decision": { "$ref": "#/components/schemas/CopilotDecisionCommand" },
+          "dismiss_reason_code": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/CopilotDismissReasonCode" },
+              { "type": "null" }
+            ]
+          },
+          "note": { "type": ["string", "null"] },
+          "decided_at": { "type": "string", "format": "date-time" },
+          "suggestion_snapshot": { "$ref": "#/components/schemas/CopilotSuggestionSnapshot" },
+          "source_artifact_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "routing_target": {
+            "description": "Present (non-null) only for ACCEPT decisions. The destination descriptor returned to the human; it executed nothing.",
+            "anyOf": [
+              { "$ref": "#/components/schemas/CopilotRoutingTarget" },
+              { "type": "null" }
+            ]
+          },
+          "mutation_guard": { "$ref": "#/components/schemas/CopilotMutationGuard" }
+        },
+        "required": [
+          "id",
+          "suggestion_id",
+          "project_id",
+          "actor_id",
+          "actor_role",
+          "decision",
+          "dismiss_reason_code",
+          "note",
+          "decided_at",
+          "suggestion_snapshot",
+          "source_artifact_ids",
+          "routing_target",
+          "mutation_guard"
+        ]
+      },
+      "CopilotSuggestionDecisionResponse": {
+        "type": "object",
+        "description": "Decision result. previous_state/new_state reflect the state transition (SUGGESTED->ACCEPTED or SUGGESTED->DISMISSED). routing_target is non-null only for ACCEPT and is a destination descriptor with no authority. Carries an all-false mutation guard.",
+        "properties": {
+          "suggestion_id": { "type": "string" },
+          "project_id": { "type": "string" },
+          "previous_state": { "$ref": "#/components/schemas/CopilotSuggestionState" },
+          "new_state": { "$ref": "#/components/schemas/CopilotSuggestionState" },
+          "decision_audit_note": { "$ref": "#/components/schemas/CopilotDecisionAuditNote" },
+          "routing_target": {
+            "description": "Present (non-null) only for ACCEPT. Deep-link + optional pre-fill payload into the existing gated flow; no authority, executes nothing.",
+            "anyOf": [
+              { "$ref": "#/components/schemas/CopilotRoutingTarget" },
+              { "type": "null" }
+            ]
+          },
+          "mutation_guard": { "$ref": "#/components/schemas/CopilotMutationGuard" }
+        },
+        "required": [
+          "suggestion_id",
+          "project_id",
+          "previous_state",
+          "new_state",
+          "decision_audit_note",
+          "routing_target",
+          "mutation_guard"
+        ]
+      },
+      "ApiError": {
+        "type": "object",
+        "description": "Standard error envelope. P0 copilot codes: PROJECT_NOT_FOUND, COPILOT_SUGGESTION_NOT_FOUND, COPILOT_SUGGESTION_DECISION_CONFLICT, DISMISS_REASON_REQUIRED, DISMISS_REASON_NOT_ALLOWED, DECISION_NOTE_REQUIRED, PERMISSION_DENIED.",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "type": ["object", "null"], "additionalProperties": true }
+        },
+        "required": ["code", "message"]
+      }
+    },
+    "examples": {
+      "CopilotSummaryExample": {
+        "summary": "Project copilot summary",
+        "value": {
+          "project_id": "project-insurance-demo",
+          "generated_at": "2026-07-03T09:00:00Z",
+          "source_artifact_scope": [
+            "REVIEW_CORRECTION",
+            "QUALITY_METRIC",
+            "EVALUATION_ERROR_CASE",
+            "GOVERNANCE_CHANGE_REQUEST"
+          ],
+          "total_suggestion_count": 4,
+          "suggested_count": 3,
+          "accepted_count": 1,
+          "dismissed_count": 0,
+          "superseded_count": 0,
+          "high_risk_count": 1,
+          "counts_by_kind": [
+            { "kind": "DRAFT_GOVERNANCE_CHANGE_REQUEST", "count": 1, "high_risk_count": 0 },
+            { "kind": "REVIEW_THESE_CANDIDATES", "count": 1, "high_risk_count": 1 },
+            { "kind": "INSPECT_QUALITY_OR_VALIDATION_SIGNAL", "count": 1, "high_risk_count": 0 },
+            { "kind": "RUN_IMPACT_SIMULATION", "count": 1, "high_risk_count": 0 }
+          ],
+          "advisory_notes": [
+            "Copilot is advisory only. It executes nothing, calls no real model, and mutates no ontology/candidate/published/governance state.",
+            "Accepting a suggestion records human intent and routes you into an existing human-gated flow, pre-filled. You still pass every gate."
+          ],
+          "mutation_guard": {
+            "ontology_draft_mutated": false,
+            "ontology_published_mutated": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false,
+            "prompt_version_mutated": false,
+            "governance_state_mutated": false,
+            "change_request_created": false,
+            "change_request_applied": false,
+            "candidate_approved_or_published": false,
+            "extraction_job_started": false,
+            "evaluation_run_started": false,
+            "auto_approval_policy_mutated": false,
+            "copilot_executed_action": false,
+            "real_model_invoked": false
+          }
+        }
+      },
+      "CopilotSuggestionListExample": {
+        "summary": "Deterministic copilot suggestion list",
+        "value": {
+          "project_id": "project-insurance-demo",
+          "items": [
+            {
+              "id": "copilot-suggestion-001",
+              "project_id": "project-insurance-demo",
+              "kind": "DRAFT_GOVERNANCE_CHANGE_REQUEST",
+              "state": "SUGGESTED",
+              "title": "Clarify the boundary between InsuranceProduct and Rider",
+              "rationale": "Twelve recent review corrections and two evaluation error cases show repeated class confusion between InsuranceProduct and Rider.",
+              "expected_next_step": "Open the governance change-request create screen (pre-filled) and propose a class-boundary clarification. You still propose, review, approve, and apply.",
+              "routing_target": {
+                "kind": "GOVERNANCE_CHANGE_REQUEST_DRAFT",
+                "deep_link": "/projects/project-insurance-demo/governance/change-requests/new",
+                "target_ref": { "ontology_version_id": "ontology-v7" },
+                "governance_change_request_draft_prefill": {
+                  "target_kind": "ONTOLOGY_CLASS",
+                  "change_type": "MODIFY",
+                  "ontology_version_id": "ontology-v7",
+                  "element_refs": [
+                    { "element_kind": "CLASS", "element_id": "class-insurance-product", "label": "InsuranceProduct" },
+                    { "element_kind": "CLASS", "element_id": "class-rider", "label": "Rider" }
+                  ],
+                  "proposed_title": "Clarify InsuranceProduct vs Rider boundary",
+                  "proposed_rationale": "Repeated review corrections indicate an ambiguous class boundary."
+                },
+                "executes_nothing": true,
+                "human_gate_note": "This only opens a pre-filled draft. The copilot creates nothing; you still propose -> review -> approve -> apply."
+              },
+              "source_artifacts": [
+                {
+                  "artifact_type": "REVIEW_CORRECTION",
+                  "artifact_id": "review-correction-441",
+                  "project_id": "project-insurance-demo",
+                  "candidate_id": "candidate-entity-201",
+                  "candidate_kind": "ENTITY",
+                  "review_task_id": "review-task-88",
+                  "review_decision_id": "review-decision-777",
+                  "validation_result_id": null,
+                  "quality_metric_id": null,
+                  "evaluation_run_id": null,
+                  "evaluation_error_case_id": null,
+                  "learning_signal_id": "signal-class-confusion-003",
+                  "governance_change_request_id": null,
+                  "impact_report_id": null,
+                  "ontology_version_id": "ontology-v7",
+                  "prompt_version_id": "prompt-v12",
+                  "model_run_id": "model-run-982",
+                  "evidence_refs": [
+                    {
+                      "source_id": "source-policy-001",
+                      "source_segment_id": "segment-42",
+                      "locator": "page=3:paragraph=8",
+                      "quote": "The rider is an optional add-on to the base product."
+                    }
+                  ],
+                  "observed_at": "2026-07-01T15:10:00Z"
+                }
+              ],
+              "confidence_label": "MEDIUM",
+              "risk_label": "MEDIUM",
+              "created_at": "2026-07-03T09:00:00Z",
+              "updated_at": "2026-07-03T09:00:00Z",
+              "decision_audit_note": null,
+              "safety_note": "Advisory only. Accepting records your intent and opens a pre-filled governance draft; the copilot creates/mutates/applies nothing."
+            }
+          ],
+          "next_cursor": null,
+          "mutation_guard": {
+            "ontology_draft_mutated": false,
+            "ontology_published_mutated": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false,
+            "prompt_version_mutated": false,
+            "governance_state_mutated": false,
+            "change_request_created": false,
+            "change_request_applied": false,
+            "candidate_approved_or_published": false,
+            "extraction_job_started": false,
+            "evaluation_run_started": false,
+            "auto_approval_policy_mutated": false,
+            "copilot_executed_action": false,
+            "real_model_invoked": false
+          }
+        }
+      },
+      "CopilotSuggestionDetailExample": {
+        "summary": "Copilot suggestion detail (REVIEW_THESE_CANDIDATES)",
+        "value": {
+          "suggestion": {
+            "id": "copilot-suggestion-002",
+            "project_id": "project-insurance-demo",
+            "kind": "REVIEW_THESE_CANDIDATES",
+            "state": "SUGGESTED",
+            "title": "Review 6 high-risk relation candidates",
+            "rationale": "Six relation candidates share an evaluation error cluster and low evidence-match rate.",
+            "expected_next_step": "Open the candidate review inbox deep-linked to these 6 candidates. You still review, correct, and decide.",
+            "routing_target": {
+              "kind": "CANDIDATE_REVIEW_LOCATION",
+              "deep_link": "/projects/project-insurance-demo/review?candidate_ids=candidate-relation-778,candidate-relation-779",
+              "target_ref": { "candidate_ids": ["candidate-relation-778", "candidate-relation-779"] },
+              "governance_change_request_draft_prefill": null,
+              "executes_nothing": true,
+              "human_gate_note": "This only deep-links you to the review inbox. The copilot approves/corrects nothing; you still review and decide."
+            },
+            "source_artifacts": [
+              {
+                "artifact_type": "EVALUATION_ERROR_CASE",
+                "artifact_id": "error-case-101",
+                "project_id": "project-insurance-demo",
+                "candidate_id": "candidate-relation-778",
+                "candidate_kind": "RELATION",
+                "review_task_id": null,
+                "review_decision_id": null,
+                "validation_result_id": null,
+                "quality_metric_id": null,
+                "evaluation_run_id": "eval-run-20260701-001",
+                "evaluation_error_case_id": "error-case-101",
+                "learning_signal_id": null,
+                "governance_change_request_id": null,
+                "impact_report_id": null,
+                "ontology_version_id": "ontology-v7",
+                "prompt_version_id": "prompt-v12",
+                "model_run_id": "model-run-982",
+                "evidence_refs": [],
+                "observed_at": "2026-07-01T15:10:00Z"
+              }
+            ],
+            "confidence_label": "HIGH",
+            "risk_label": "HIGH",
+            "created_at": "2026-07-03T09:00:00Z",
+            "updated_at": "2026-07-03T09:00:00Z",
+            "decision_audit_note": null,
+            "safety_note": "Advisory only. Accepting deep-links you into review; the copilot decides nothing."
+          },
+          "mutation_guard": {
+            "ontology_draft_mutated": false,
+            "ontology_published_mutated": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false,
+            "prompt_version_mutated": false,
+            "governance_state_mutated": false,
+            "change_request_created": false,
+            "change_request_applied": false,
+            "candidate_approved_or_published": false,
+            "extraction_job_started": false,
+            "evaluation_run_started": false,
+            "auto_approval_policy_mutated": false,
+            "copilot_executed_action": false,
+            "real_model_invoked": false
+          }
+        }
+      },
+      "CopilotDecisionAcceptRequestExample": {
+        "summary": "Accept decision request",
+        "value": {
+          "decision": "ACCEPT",
+          "dismiss_reason_code": null,
+          "note": "Agree; will open the pre-filled governance draft.",
+          "client_request_id": "copilot-decision-req-20260703-001"
+        }
+      },
+      "CopilotDecisionDismissRequestExample": {
+        "summary": "Dismiss decision request",
+        "value": {
+          "decision": "DISMISS",
+          "dismiss_reason_code": "INSUFFICIENT_EVIDENCE",
+          "note": "Wait for more review evidence before drafting a change request.",
+          "client_request_id": "copilot-decision-req-20260703-002"
+        }
+      },
+      "CopilotDecisionAcceptResponseExample": {
+        "summary": "Accept decision response (routing target returned, nothing executed)",
+        "value": {
+          "suggestion_id": "copilot-suggestion-001",
+          "project_id": "project-insurance-demo",
+          "previous_state": "SUGGESTED",
+          "new_state": "ACCEPTED",
+          "decision_audit_note": {
+            "id": "copilot-decision-001",
+            "suggestion_id": "copilot-suggestion-001",
+            "project_id": "project-insurance-demo",
+            "actor_id": "user-123",
+            "actor_role": "PROJECT_MEMBER",
+            "decision": "ACCEPT",
+            "dismiss_reason_code": null,
+            "note": "Agree; will open the pre-filled governance draft.",
+            "decided_at": "2026-07-03T09:20:00Z",
+            "suggestion_snapshot": {
+              "kind": "DRAFT_GOVERNANCE_CHANGE_REQUEST",
+              "title": "Clarify the boundary between InsuranceProduct and Rider",
+              "rationale": "Twelve recent review corrections and two evaluation error cases show repeated class confusion.",
+              "confidence_label": "MEDIUM",
+              "risk_label": "MEDIUM"
+            },
+            "source_artifact_ids": ["review-correction-441"],
+            "routing_target": {
+              "kind": "GOVERNANCE_CHANGE_REQUEST_DRAFT",
+              "deep_link": "/projects/project-insurance-demo/governance/change-requests/new",
+              "target_ref": { "ontology_version_id": "ontology-v7" },
+              "governance_change_request_draft_prefill": {
+                "target_kind": "ONTOLOGY_CLASS",
+                "change_type": "MODIFY",
+                "ontology_version_id": "ontology-v7",
+                "element_refs": [
+                  { "element_kind": "CLASS", "element_id": "class-insurance-product", "label": "InsuranceProduct" },
+                  { "element_kind": "CLASS", "element_id": "class-rider", "label": "Rider" }
+                ],
+                "proposed_title": "Clarify InsuranceProduct vs Rider boundary",
+                "proposed_rationale": "Repeated review corrections indicate an ambiguous class boundary."
+              },
+              "executes_nothing": true,
+              "human_gate_note": "This only opens a pre-filled draft. The copilot creates nothing; you still propose -> review -> approve -> apply."
+            },
+            "mutation_guard": {
+              "ontology_draft_mutated": false,
+              "ontology_published_mutated": false,
+              "candidate_graph_mutated": false,
+              "published_graph_mutated": false,
+              "prompt_version_mutated": false,
+              "governance_state_mutated": false,
+              "change_request_created": false,
+              "change_request_applied": false,
+              "candidate_approved_or_published": false,
+              "extraction_job_started": false,
+              "evaluation_run_started": false,
+              "auto_approval_policy_mutated": false,
+              "copilot_executed_action": false,
+              "real_model_invoked": false
+            }
+          },
+          "routing_target": {
+            "kind": "GOVERNANCE_CHANGE_REQUEST_DRAFT",
+            "deep_link": "/projects/project-insurance-demo/governance/change-requests/new",
+            "target_ref": { "ontology_version_id": "ontology-v7" },
+            "governance_change_request_draft_prefill": {
+              "target_kind": "ONTOLOGY_CLASS",
+              "change_type": "MODIFY",
+              "ontology_version_id": "ontology-v7",
+              "element_refs": [
+                { "element_kind": "CLASS", "element_id": "class-insurance-product", "label": "InsuranceProduct" },
+                { "element_kind": "CLASS", "element_id": "class-rider", "label": "Rider" }
+              ],
+              "proposed_title": "Clarify InsuranceProduct vs Rider boundary",
+              "proposed_rationale": "Repeated review corrections indicate an ambiguous class boundary."
+            },
+            "executes_nothing": true,
+            "human_gate_note": "This only opens a pre-filled draft. The copilot creates nothing; you still propose -> review -> approve -> apply."
+          },
+          "mutation_guard": {
+            "ontology_draft_mutated": false,
+            "ontology_published_mutated": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false,
+            "prompt_version_mutated": false,
+            "governance_state_mutated": false,
+            "change_request_created": false,
+            "change_request_applied": false,
+            "candidate_approved_or_published": false,
+            "extraction_job_started": false,
+            "evaluation_run_started": false,
+            "auto_approval_policy_mutated": false,
+            "copilot_executed_action": false,
+            "real_model_invoked": false
+          }
+        }
+      },
+      "CopilotDecisionDismissResponseExample": {
+        "summary": "Dismiss decision response",
+        "value": {
+          "suggestion_id": "copilot-suggestion-001",
+          "project_id": "project-insurance-demo",
+          "previous_state": "SUGGESTED",
+          "new_state": "DISMISSED",
+          "decision_audit_note": {
+            "id": "copilot-decision-002",
+            "suggestion_id": "copilot-suggestion-001",
+            "project_id": "project-insurance-demo",
+            "actor_id": "user-123",
+            "actor_role": "PROJECT_MEMBER",
+            "decision": "DISMISS",
+            "dismiss_reason_code": "INSUFFICIENT_EVIDENCE",
+            "note": "Wait for more review evidence before drafting a change request.",
+            "decided_at": "2026-07-03T09:25:00Z",
+            "suggestion_snapshot": {
+              "kind": "DRAFT_GOVERNANCE_CHANGE_REQUEST",
+              "title": "Clarify the boundary between InsuranceProduct and Rider",
+              "rationale": "Twelve recent review corrections and two evaluation error cases show repeated class confusion.",
+              "confidence_label": "MEDIUM",
+              "risk_label": "MEDIUM"
+            },
+            "source_artifact_ids": ["review-correction-441"],
+            "routing_target": null,
+            "mutation_guard": {
+              "ontology_draft_mutated": false,
+              "ontology_published_mutated": false,
+              "candidate_graph_mutated": false,
+              "published_graph_mutated": false,
+              "prompt_version_mutated": false,
+              "governance_state_mutated": false,
+              "change_request_created": false,
+              "change_request_applied": false,
+              "candidate_approved_or_published": false,
+              "extraction_job_started": false,
+              "evaluation_run_started": false,
+              "auto_approval_policy_mutated": false,
+              "copilot_executed_action": false,
+              "real_model_invoked": false
+            }
+          },
+          "routing_target": null,
+          "mutation_guard": {
+            "ontology_draft_mutated": false,
+            "ontology_published_mutated": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false,
+            "prompt_version_mutated": false,
+            "governance_state_mutated": false,
+            "change_request_created": false,
+            "change_request_applied": false,
+            "candidate_approved_or_published": false,
+            "extraction_job_started": false,
+            "evaluation_run_started": false,
+            "auto_approval_policy_mutated": false,
+            "copilot_executed_action": false,
+            "real_model_invoked": false
+          }
+        }
+      }
+    }
+  }
+}

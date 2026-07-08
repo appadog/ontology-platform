@@ -4,8 +4,8 @@
 
 ## Latest Wave
 
-- Current wave: `wave-046`
-- Overall status: `MVP6.7 IMPACT SIMULATION THIN IMPLEMENTATION CLOSED (PASS)`
+- Current wave: `wave-047`
+- Overall status: `MVP6.8 COPILOT CONTRACT-FIRST PLANNING PASS / WAVE48 THIN IMPLEMENTATION READY`
 - 기준일: 2026-07-03
 
 ## Latest Decisions
@@ -228,6 +228,13 @@
 - Frontend added a contextual read-only "영향도(Impact)" panel on the Governance detail (no new LNB/route): 5 dimensions, ImpactSeverity D6 badges (BREAKING=danger/HIGH=warning), truncation ("총 N개 중 처음 M개 표시"), loading/empty(NONE)/error/permission-limited states, read-only/advisory copy + all-false proof line, no apply/publish affordance. 66 FE tests, build clean; `smoke:mvp6:impact:mock` (3 routes) + `:actual` (4 checks) both PASS; 0 overflow (fixed a 768 flex overflow same-wave).
 - QA verdict PASS (R1-R7 7/7). Read-only invariant verified at the data level (backend `test_data_level_no_mutation`: all governance/application/element state byte-identical before==after the GET, run twice incl. ref_cap override; all-false guard). Regression clean; `core/enums.py` untouched. This returns the platform to the all-false-guard posture (impact-sim mutates nothing).
 - MVP6.7 non-blocking P1 follow-up: real MVP1-table dependency wiring (P0 uses a deterministic self-contained dependency universe).
+- Wave47 opened the next MVP6 theme (user-directed sequence): **MVP6.8 Agents / Copilot** — the largest/most safety-sensitive theme, cut to a minimal ADVISORY-ONLY, non-autonomous, human-in-the-loop P0. Contract-first planning; PM/BE/FE/QA all PASS (planning). Runtime NOT RUNNABLE until Wave48.
+- MVP6.8 P0 frozen: a project-scoped copilot produces deterministic, source-grounded suggestions -> a human ACCEPTs (which ROUTES them into an existing human-gated flow, pre-filled/deep-linked — the copilot executes NOTHING) or DISMISSes (reason) -> decision audit note. 4 suggestion kinds (`CopilotSuggestionKind`: DRAFT_GOVERNANCE_CHANGE_REQUEST -> MVP6.5; REVIEW_THESE_CANDIDATES -> MVP3 review; INSPECT_QUALITY_OR_VALIDATION_SIGNAL -> MVP4/MVP3; RUN_IMPACT_SIMULATION -> MVP6.7). States mirror MVP6.2 (SUGGESTED->ACCEPTED/DISMISSED/SUPERSEDED); non-SUGGESTED decision -> 409 COPILOT_SUGGESTION_DECISION_CONFLICT.
+- MVP6.8 durable boundary recorded in ADR 0015: ADVISORY-ONLY / NON-AUTONOMOUS / audit-only / accept-routes-not-executes / NO real LLM (deterministic mock). ACCEPT returns a `CopilotRoutingTarget` (deep-link + optional pre-fill) with NO authority — it creates/mutates nothing; every real change still goes through the existing human gate. Every response carries an all-false 14-flag `CopilotMutationGuard` (incl. `copilot_executed_action:false`, `real_model_invoked:false`). Every suggestion cites non-empty source-artifact refs (no ungrounded generation).
+- MVP6.8 OpenAPI planning artifact `docs/api/openapi-mvp6-8-draft.json` parses 3.1.0 `0.6.8-draft`, 4 paths (copilot/summary, copilot/suggestions, copilot-suggestions/{id}, .../decisions), 24 schemas, additive/disjoint. Frontend copilot surface is project-scoped (ADR 0010). Reuses MVP6.2 + governance/candidate/quality/impact shapes by reference (no renames).
+- Wave47 note: both the BE and FE agents completed their deliverables (OpenAPI draft; FE requirements doc) but dropped their connections at the report step; the commander authored the companion contract markdown + BE/FE reports + the QA checklist (`INT6_8_COPILOT_ACCEPTANCE.md`) + QA report from the verified artifacts + mechanical validation (PARSE_OK, no leakage, git clean). Independent adversarial runtime verification is deferred to the Wave48 implementation QA.
+- Wave48 gates (recorded): G1 deterministic suggestion-generation source rules per `CopilotSuggestionKind`; G2 routing pre-fill payload shape per `CopilotRoutingTargetKind`; G3 summary DTO fields.
+- Operational note: repeated account agent session-limit / connection-drop interruptions occurred across Waves 44-47; several planning-QA + report artifacts were commander-finalized after agents completed the substantive deliverable but dropped at the report step. Runtime implementation waves still require healthy subagents.
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -323,6 +330,8 @@
 | MVP6.7 Impact Simulation Contract | Closed in Wave45 (planning PASS). PM brief + ADR 0014, Backend contract + `openapi-mvp6-7-draft.json` (1 read-only path/23 schemas), Frontend UX requirements, QA `INT6_7` checklist (C1-C10 / R1-R7); no runtime leakage; PARSE_OK. | PM6-027, BE6-052~055, FE6-073~076, INT6-059~062 |
 | MVP6.7 Impact Simulation Thin Runtime/UI | Closed in Wave46 (PASS). Read-only impact endpoint (5 dimensions, deterministic ImpactSeverity, depth-2 bounding, ref_cap 20/truncated, all-false guard, VIEWER authz) + "영향도" panel on the Governance detail; data-level no-mutation verified; mock+actual smoke PASS; R1-R7 7/7; regression clean. | BE6-056~059, FE6-077~080, INT6-063~066 |
 | MVP6.7 Wave46 Follow-up | Non-blocking P1. Real MVP1-table dependency wiring (P0 uses a deterministic self-contained dependency universe). | BE6 P1 |
+| MVP6.8 Copilot Contract | Closed in Wave47 (planning PASS). PM brief + ADR 0015, Backend `openapi-mvp6-8-draft.json` (4 paths/24 schemas) + companion contract, Frontend UX requirements, QA `INT6_8` checklist (C1-C11 / R1-R7); advisory-only/accept-routes-not-executes/all-false 14-flag guard/no-real-LLM; no runtime leakage; PARSE_OK. | PM6-029, BE6-060~063, FE6-081~084, INT6-067~070 |
+| MVP6.8 Copilot Thin Runtime/UI | Open for Wave48. Implement deterministic source-grounded suggestions + accept-routing(-not-execution) + audit-only decisions + all-false guard (no real LLM); copilot surface UI; mock+actual smoke. PM freezes G1-G3 first. | BE6-064+, FE6-085+, INT6-071+ |
 
 ## Next Gate
 
@@ -332,9 +341,9 @@ MVP6.6 Governance Change Application is closed (Wave43 planning + Wave44 impleme
 
 MVP6.7 Impact Simulation is closed (Wave45 planning + Wave46 implementation both PASS). Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison, 6.4 Gold Set authoring + dataset revisioning, 6.5 Governance workflow, 6.6 Governance Change Application, 6.7 Impact Simulation. UI/UX review remediation + reference-driven design upgrade also closed (Wave35-38).
 
-Per the user-directed sequence, the next theme is **agents (copilot/agent runtime)** — MVP6.8. **Wave47 = agents contract-first planning** is the next gate (PM freezes the smallest coherent, safe P0 first; agent runtime is the largest/most safety-sensitive theme so far — it must be cut to a minimal auditable, human-in-the-loop, non-autonomous P0 preserving all the candidate/published + no-autonomous-action invariants).
+MVP6.8 Copilot contract-first planning (Wave47) is PASS. **Wave48 = MVP6.8 Copilot thin implementation** is the next gate: PM freezes G1-G3 (deterministic suggestion source rules per kind; routing pre-fill payload shape per target kind; summary DTO fields); Backend implements the 4 advisory endpoints (deterministic source-grounded suggestions + accept-returns-routing-target-not-execution + audit-only decisions + all-false 14-flag guard + no real LLM), reusing MVP6.2/governance/candidate/quality/impact reads by reference; Frontend implements the copilot surface + mock/actual smoke; QA independently verifies R1-R7 incl. the data-level "copilot executes/mutates nothing / all-false guard / no real model" proof.
 
-Remaining user-directed theme sequence: agents -> connectors -> multi-tenant -> ontology packs -> advanced viz (each a contract-first planning wave then a thin-implementation wave).
+Remaining user-directed theme sequence after MVP6.8: connectors -> multi-tenant -> ontology packs -> advanced viz (each a contract-first planning wave then a thin-implementation wave).
 1. Next MVP6 theme (PM contract-first freeze first): Gold Set authoring/dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance, impact simulation, copilot/agents, connector/plugin SDK, multi-tenant, ontology packs, advanced viz).
 2. Sweep accumulated MVP6.x P1/P2 follow-ups (stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, strict-required field promotion, divergent-run seed) in one hardening wave.
 3. Resume the paused Wave27 release/demo packaging.
@@ -514,6 +523,10 @@ Remaining user-directed theme sequence: agents -> connectors -> multi-tenant -> 
 | Backend | wave-046 | `PASS / MVP6.7 THIN RUNTIME READY` | read-only impact endpoint, 5-dim report, deterministic severity, all-false guard, data-level no-mutation; 20+21/146 tests, ruff clean, 0 OpenAPI mismatch |
 | Frontend | wave-046 | `PASS / IMPACT PANEL READY` | Read-only "영향도" panel on Governance detail; 5 dims + severity D6 badges + truncation + read-only copy; 66 tests/build; mock(3)+actual(4) smoke PASS; 0 overflow |
 | QA | wave-046 | `PASS / MVP6.7 CLOSEOUT (commander-finalized)` | R1-R7 7/7; data-level no-mutation verified (state before==after, all-false guard); regression clean; QA agent dropped -> commander re-ran core validations |
+| PM | wave-047 | `PASS / MVP6.8 COPILOT FROZEN` | Advisory-only copilot P0 (4 suggestion kinds, accept-routes-not-executes, all-false 14-flag guard, no real LLM); ADR 0015; PM6-029 + BE6-060~063/FE6-081~084/INT6-067~070 |
+| Backend | wave-047 | `PASS / MVP6.8 CONTRACT DRAFT READY (commander-reported)` | `openapi-mvp6-8-draft.json` 0.6.8-draft, 4 paths/24 schemas, all frozen enums + 14-flag guard; PARSE_OK; agent dropped at report step |
+| Frontend | wave-047 | `PASS / MVP6.8 UX REQUIREMENTS READY (commander-reported)` | Project-scoped copilot surface; suggestion list + accept-routes/dismiss + audit + "executes nothing" copy; agent dropped at report step |
+| QA | wave-047 | `PASS / WAVE48 RECOMMENDED (commander-authored)` | INT6_8 checklist C1-C11 PASS / R1-R7 NOT RUNNABLE; PM/BE/FE agree; PARSE_OK; no leakage; gates G1-G3; runtime QA deferred to Wave48 |
 
 ## Report Index
 
@@ -565,3 +578,4 @@ Remaining user-directed theme sequence: agents -> connectors -> multi-tenant -> 
 | wave-044 | `wave-044/PM_REPORT.md` | `wave-044/BACKEND_REPORT.md` | `wave-044/FRONTEND_REPORT.md` | `wave-044/QA_REPORT.md` | `wave-044/NEXT_ORDERS.md` |
 | wave-045 | `wave-045/PM_REPORT.md` | `wave-045/BACKEND_REPORT.md` | `wave-045/FRONTEND_REPORT.md` | `wave-045/QA_REPORT.md` | `wave-045/NEXT_ORDERS.md` |
 | wave-046 | `wave-046/PM_REPORT.md` | `wave-046/BACKEND_REPORT.md` | `wave-046/FRONTEND_REPORT.md` | `wave-046/QA_REPORT.md` | `wave-046/NEXT_ORDERS.md` |
+| wave-047 | `wave-047/PM_REPORT.md` | `wave-047/BACKEND_REPORT.md` | `wave-047/FRONTEND_REPORT.md` | `wave-047/QA_REPORT.md` | `wave-047/NEXT_ORDERS.md` |
