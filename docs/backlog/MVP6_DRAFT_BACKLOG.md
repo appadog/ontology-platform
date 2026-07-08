@@ -1,7 +1,7 @@
 # MVP 6 Draft Backlog
 
-Status: `MVP6.8 WAVE48 AGENTS/COPILOT — THIN IMPLEMENTATION G1-G3 FROZEN (PM6-030, ADR 0015); impl IDs BE6-064~067, FE6-085~088, INT6-071~074 recorded (planning PM6-029, BE6-060~063, FE6-081~084, INT6-067~070)`
-Date: 2026-07-03
+Status: `MVP6.9 WAVE49 CONNECTORS/PLUGIN SDK — CONTRACT-FIRST PLANNING FROZEN (PM6-031, ADR 0016); planning IDs BE6-068~069, FE6-089, INT6-075 (prev: MVP6.8 PM6-030, ADR 0015, BE6-064~067, FE6-085~088, INT6-071~074)`
+Date: 2026-07-08
 
 MVP6 is broad. Wave28 and Wave29 closed MVP6.1 Gold Set / Benchmark Studio.
 Wave30 freezes MVP6.2 Active Learning / Continuous Improvement as a
@@ -975,6 +975,96 @@ Implementation Freeze — G1 / G2 / G3"` (authority for BE/FE/QA).
 | INT6-072 | P0 | QA | Frontend mock/API verification | FE6-085~088 | validate FE mock + actual copilot flow (list → accept-routes/dismiss → audit note); no execute affordance; D6 badges; states; responsive; R5 |
 | INT6-073 | P0 | QA | Advisory-only / no-execution + all-false guard DATA-LEVEL | BE6-065~066 | INDEPENDENTLY assert at DATA level that NO copilot call (esp. ACCEPT) mutates any table / governance state (before==after); 14-flag guard all-false (incl. `copilot_executed_action`/`real_model_invoked`); ACCEPT returns only a routing target; R2 |
 | INT6-074 | P0 | QA | Wave48 closeout | INT6-071~073 | run MVP6.7/earlier regression + touched smokes; confirm additive-only + candidate/published separation intact; recommend closeout / hardening / redesign; exact commands; no leftover listeners on 8000/5173; `git diff --check` |
+
+## Wave49 MVP6.9 Connectors / Plugin SDK PM Freeze Summary
+
+Wave49 opens the next MVP6 theme (roadmap §10 Theme 7) as contract-first planning
+only. The chosen P0 is the smallest coherent, SAFE slice: a project-scoped
+**read-only connector catalog** + a **deterministic dry-run import preview** —
+no external write, no live/scheduled sync, no real network/credential execution
+(deterministic mock connectors on fixture data), no plugin code execution, masked
+secrets only, all-false mutation guard. Runtime waits for Wave50 after Backend
+contract draft, Frontend field/state/IA review, and a QA executable checklist.
+Full freeze: `docs/pm/MVP6_9_CONNECTORS_BRIEF.md`; durable boundary:
+`docs/adr/0016-mvp6-9-connectors-read-only-catalog-dry-run-preview-no-external-write-no-real-network-masked-secret-boundary.md`.
+
+Frozen MVP6.9 P0 demo flow:
+
+```text
+select project
+-> open Connectors (Analyze/Sources area)
+-> view connector catalog (3 deterministic mock connector kinds)
+-> open a kind -> see its masked config schema (secret fields masked)
+-> fill mock config + run dry-run import PREVIEW
+-> read compatibility + summary counts + capped would-be candidate items
+-> read the explicit "preview only — nothing imported; a real run routes through
+   the existing extraction -> candidate -> review -> publish gate" boundary
+```
+
+Frozen enums:
+
+- `ConnectorKind`: `FILE_SOURCE`, `REST_SOURCE`, `KNOWLEDGE_BASE_SOURCE` (exactly 3).
+- `ConnectorConfigFieldKind`: `STRING`, `URL`, `ENUM`, `INTEGER`, `BOOLEAN`, `SECRET`.
+- `ConnectorPreviewStatus`: `READY`, `BLOCKED`.
+- `ConnectorPreviewCompatibility`: `COMPATIBLE`, `WARNING`, `INCOMPATIBLE`.
+- `ConnectorPreviewTargetLayer`: `CANDIDATE` (single literal; items map to
+  candidate layer only, never published).
+
+Reuse by reference (no renames): MVP5 masked-secret credential safety
+(`masked_secret` / never-log-raw / `raw_secret_present:false`) + MVP5 admin JSON
+import dry-run (`compatibility_status`/`summary`/nothing-applied); MVP6.4
+`GoldSetImportCompatibility` dry-run precedent; MVP2 candidate pipeline
+(`CandidateEntity`/`CandidateRelation`, `source_segment`, `SourceParseResponse`,
+extraction-job) as the would-be target shapes; MVP1 `OntologyElementRef` + version
+context; MVP5 `Role`.
+
+All-false `ConnectorMutationGuard` on every response (catalog list, config schema,
+import preview):
+
+- `external_system_read: false`
+- `external_system_write: false`
+- `real_network_call_made: false`
+- `credential_persisted: false`
+- `connector_instance_persisted: false`
+- `source_created: false`
+- `candidate_graph_mutated: false`
+- `published_graph_mutated: false`
+- `extraction_job_started: false`
+
+Authorization: read-only, mutates/grants nothing → any project member who can view
+the project may list catalog, read config schema, and run dry-run preview; no
+elevated role; reuse MVP5 `Role`, no new role literal. Unauthorized →
+`403 PERMISSION_DENIED`; missing project / unknown kind → `404 PROJECT_NOT_FOUND` /
+`404 CONNECTOR_KIND_NOT_FOUND`.
+
+Frozen exclusions: external write-back; live/scheduled/background sync;
+confirm-and-apply real import; real network / credential execution / external
+connection; credential storage/encryption/vault/rotation; connector instance
+persistence; autonomous/auto-confirmed ingestion; plugin code execution + the
+entire Plugin* family (`PluginDefinition`/`PluginVersion`/`PluginExecution`/
+`PluginPermission`); real Database/S3-MinIO/Web-Crawler/Notion-Confluence/Git
+connectors; setup wizard write; sync job monitor; plugin management/execution log;
+direct candidate/published-graph mutation; source create / extraction trigger from
+preview; multi-tenant/cross-project connector runtime; real LLM; any new connector
+kind beyond the frozen 3.
+
+Suggested endpoint families (Backend finalizes in `BE6-068`):
+
+- `GET  /api/v1/projects/{project_id}/connectors`
+- `GET  /api/v1/projects/{project_id}/connectors/{connector_kind}/config-schema`
+- `POST /api/v1/projects/{project_id}/connectors/{connector_kind}/import-preview`
+
+Persist-vs-compute for `preview_id` (list + GET-by-id, mirror MVP6.3/6.7) is a
+Backend decision; either way read-only + all-false guard. Process-local
+`reset_runtime_store()` acceptable; durable DB/Alembic is P1/P2.
+
+| ID | Priority | Role | Item | Depends on | Acceptance summary |
+|---|---|---|---|---|---|
+| PM6-031 | P0 | PM | MVP6.9 Connectors P0 freeze (contract-first planning) | ADR 0016 | freeze read-only catalog (`ConnectorKind` x3 + masked config schema / `ConnectorConfigFieldKind`) + deterministic dry-run import preview (`ConnectorPreviewStatus`/`ConnectorPreviewCompatibility`/`ConnectorPreviewTargetLayer`, bounded counts + capped items, would-be candidate mapping, "nothing imported" semantics), all-false `ConnectorMutationGuard`, masked-secret rule (mirror MVP5), read-only + no-external-write + no-real-network boundary, authz; explicit exclusions; `docs/pm/MVP6_9_CONNECTORS_BRIEF.md` + ADR 0016; no `apps/`/`infra/` |
+| BE6-068 | P0 | Backend | Connectors API contract draft (additive, planning) | PM6-031 | draft `docs/api/MVP6_9_CONNECTORS_API_CONTRACT_DRAFT.md`: additive endpoints (list catalog / get masked config schema / dry-run import preview) + DTO/enum names + all-false `ConnectorMutationGuard`; reuse MVP5 masked-secret + import-dry-run, MVP6.4 compatibility, MVP2 candidate, MVP1 ontology-ref shapes by `$ref` (no rename); preview creates nothing; masked secrets only (`raw_secret_present:false`); capture persist-vs-compute + fixture-shape open questions; no runtime code |
+| BE6-069 | P0 | Backend | OpenAPI planning artifact | BE6-068 | produce `docs/api/openapi-mvp6-9-draft.json` (OpenAPI 3.1.0, `0.6.9-draft`, disjoint-additive to MVP1–MVP6.8; redefines no prior path); non-secret placeholder examples only; JSON parse; `git diff --check`; no `apps/` |
+| FE6-089 | P0 | Frontend | Connectors UX/API requirements (planning) | PM6-031, BE6-068~069 | `docs/pm/MVP6_9_FRONTEND_UX_REQUIREMENTS.md`: catalog + dry-run preview UX in Analyze/Sources area (ADR 0010, no new global ID-bound LNB page); masked-secret config UX (no raw secret shown/entered in P0); persistent "preview only — nothing imported; routes through candidate review when actually run later" boundary copy; compatibility/summary + capped-sample result layout; live all-false-guard proof line; first-class loading/empty/error/permission states; closed design language; DTO gap vs Backend draft; no route/component/type/mock/smoke code |
+| INT6-075 | P0 | QA | Connectors acceptance checklist (planning) | PM6-031, BE6-068~069, FE6-089 | `docs/backlog/INT6_9_CONNECTORS_ACCEPTANCE.md` (C planning gates + R NOT-RUNNABLE runtime gates, continuing INT6 numbering); verify PM/BE/FE agree on P0, catalog/preview model, read-only + dry-run + no-external-write + no-real-network + masked-secret boundary, all-false guard, exclusions; confirm no runtime leaked (`apps/`+`infra/`); OpenAPI parse; no-raw-secret scan of artifacts; recommend Wave50 |
 
 ## Scope Limits
 

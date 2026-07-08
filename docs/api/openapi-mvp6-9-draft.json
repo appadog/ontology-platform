@@ -1,0 +1,917 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP6.9 Connectors Planning API",
+    "description": "Planning-only OpenAPI artifact for MVP6.9 Connectors / Plugin SDK P0 (read-only connector catalog + deterministic dry-run import preview). Additive to MVP1-MVP6.8; replaces no prior OpenAPI draft. The surface is READ-ONLY: it lists deterministic mock connector kinds, exposes each kind's MASKED config schema (SECRET fields never echoed/persisted/logged), and runs a DRY-RUN import preview that maps fixture sample records to WOULD-BE candidate-layer items. A preview CONNECTS NOTHING, WRITES NOTHING, and IMPORTS NOTHING: it creates no candidate/entity/relation, no source, no extraction job, and never touches the published graph; a real run would route through the existing extraction -> candidate -> review -> publish gate. No real network call, no credential execution (deterministic mock connectors on fixture data; the preview is independent of any secret value). Every response carries an all-false 9-flag ConnectorMutationGuard. See ADR 0016 and docs/pm/MVP6_9_CONNECTORS_BRIEF.md. All example values are non-secret placeholders.",
+    "version": "0.6.9-draft"
+  },
+  "tags": [
+    {
+      "name": "MVP6.9 Connectors",
+      "description": "Read-only connector catalog + deterministic dry-run import preview. Nothing connected, nothing written, nothing imported; masked secrets only; all-false mutation guard on every response."
+    }
+  ],
+  "paths": {
+    "/api/v1/projects/{project_id}/connectors": {
+      "get": {
+        "tags": [
+          "MVP6.9 Connectors"
+        ],
+        "summary": "List connector catalog",
+        "description": "Read-only, project-scoped list of the registered deterministic MOCK connector kinds (exactly 3: FILE_SOURCE, REST_SOURCE, KNOWLEDGE_BASE_SOURCE). Byte-stable for a given project state. Connects to no external system and reads no external data. Any project member who can view the project may list. Carries an all-false ConnectorMutationGuard.",
+        "operationId": "listConnectorCatalog",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Connector catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorCatalogListResponse"
+                },
+                "examples": {
+                  "default": {
+                    "$ref": "#/components/examples/ConnectorCatalogListExample"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/connectors/{connector_kind}/config-schema": {
+      "get": {
+        "tags": [
+          "MVP6.9 Connectors"
+        ],
+        "summary": "Get a connector kind's masked config schema",
+        "description": "Read-only masked config schema for one connector kind: an ordered list of ConnectorConfigField descriptors. SECRET fields (field_kind=SECRET or secret=true) are masked everywhere; only non-secret placeholders are exposed and no raw secret is ever echoed/persisted/logged (raw_secret_present=false). Unknown kind -> 404 CONNECTOR_KIND_NOT_FOUND. Carries an all-false ConnectorMutationGuard.",
+        "operationId": "getConnectorConfigSchema",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ConnectorKindPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Masked connector config schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorConfigSchemaResponse"
+                },
+                "examples": {
+                  "default": {
+                    "$ref": "#/components/examples/ConnectorConfigSchemaExample"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/connectors/{connector_kind}/import-preview": {
+      "post": {
+        "tags": [
+          "MVP6.9 Connectors"
+        ],
+        "summary": "Run a dry-run import preview (creates nothing)",
+        "description": "DRY-RUN import preview for a connector kind + mock config. Deterministically maps fixture sample records to WOULD-BE candidate-layer items and returns a compatibility/summary rollup plus a capped list of preview items. Creates NO candidate/entity/relation, NO source, NO extraction job; never touches the published graph; never bypasses the candidate-review gate. Makes no real network call and executes no credential: the preview is computed from fixture data keyed by connector_kind (+ non-secret config) and is INDEPENDENT of any secret value. Secret-field values in the request are never echoed/persisted/logged; response asserts raw_secret_present=false. Byte-stable for the same kind + non-secret config against the same fixture. Bounded: counts are always exact; only sample_items[] is capped (item_cap) with truncated + exact total_item_count. Invalid config / INCOMPATIBLE -> status BLOCKED with blocked_reasons (never a crash, never fabricated items). Any project member who can view the project may run it. Carries an all-false ConnectorMutationGuard.",
+        "operationId": "runConnectorImportPreview",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ConnectorKindPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectorImportPreviewRequest"
+              },
+              "examples": {
+                "previewRequest": {
+                  "$ref": "#/components/examples/ConnectorImportPreviewRequestExample"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deterministic dry-run import preview (nothing imported)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorImportPreviewResponse"
+                },
+                "examples": {
+                  "default": {
+                    "$ref": "#/components/examples/ConnectorImportPreviewResponseExample"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ProjectId": {
+        "name": "project_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ConnectorKindPath": {
+        "name": "connector_kind",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ConnectorKind"
+        },
+        "description": "One of the 3 frozen kinds; unknown -> 404 CONNECTOR_KIND_NOT_FOUND."
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Malformed request (INVALID_CONNECTOR_CONFIG)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Permission denied (PERMISSION_DENIED)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found (PROJECT_NOT_FOUND / CONNECTOR_KIND_NOT_FOUND)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ConnectorKind": {
+        "type": "string",
+        "description": "Registered deterministic mock connector kinds (exactly 3; frozen). No real connection is attempted for any kind.",
+        "enum": [
+          "FILE_SOURCE",
+          "REST_SOURCE",
+          "KNOWLEDGE_BASE_SOURCE"
+        ]
+      },
+      "ConnectorConfigFieldKind": {
+        "type": "string",
+        "description": "Kind of a connector config field. SECRET is always masked (never echoed/persisted/logged).",
+        "enum": [
+          "STRING",
+          "URL",
+          "ENUM",
+          "INTEGER",
+          "BOOLEAN",
+          "SECRET"
+        ]
+      },
+      "ConnectorPreviewStatus": {
+        "type": "string",
+        "description": "READY: preview computed from fixture data. BLOCKED: config invalid / INCOMPATIBLE; blocked_reasons explains (no crash, no fabricated items).",
+        "enum": [
+          "READY",
+          "BLOCKED"
+        ]
+      },
+      "ConnectorPreviewCompatibility": {
+        "type": "string",
+        "description": "Dry-run compatibility rollup, mirroring the MVP5 import dry-run / MVP6.4 GoldSetImportCompatibility precedent. COMPATIBLE: all sampled records map cleanly. WARNING: importable but some records need review. INCOMPATIBLE: config invalid or the mock source maps to no candidate-layer item.",
+        "enum": [
+          "COMPATIBLE",
+          "WARNING",
+          "INCOMPATIBLE"
+        ]
+      },
+      "ConnectorPreviewTargetLayer": {
+        "type": "string",
+        "description": "Target layer a preview item maps to. Single literal CANDIDATE: preview items are WOULD-BE candidate-layer items only, NEVER published.",
+        "enum": [
+          "CANDIDATE"
+        ],
+        "const": "CANDIDATE"
+      },
+      "ConnectorMutationGuard": {
+        "type": "object",
+        "description": "All-false mutation guard present on EVERY connector response (catalog list, config schema, import preview). Every flag is false, always; MVP6.9 turns NO flag true, ever. Mirrors the MVP6.1-6.5/6.7/6.8 all-false pattern.",
+        "additionalProperties": false,
+        "properties": {
+          "external_system_read": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "external_system_write": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "real_network_call_made": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "credential_persisted": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "connector_instance_persisted": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "source_created": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "candidate_graph_mutated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "published_graph_mutated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "extraction_job_started": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          }
+        },
+        "required": [
+          "external_system_read",
+          "external_system_write",
+          "real_network_call_made",
+          "credential_persisted",
+          "connector_instance_persisted",
+          "source_created",
+          "candidate_graph_mutated",
+          "published_graph_mutated",
+          "extraction_job_started"
+        ]
+      },
+      "OntologyElementRef": {
+        "type": "object",
+        "description": "Ontology element reference reused BY REFERENCE from MVP1 / MVP6.5-6.8 OntologyElementRef (no rename). Names the WOULD-BE mapped candidate-layer target ontology class of a preview item; references an existing ontology element, creates nothing.",
+        "properties": {
+          "element_kind": {
+            "type": "string",
+            "description": "e.g. CLASS / PROPERTY / RELATION, reusing the existing ontology element kind vocabulary by reference."
+          },
+          "element_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "element_kind",
+          "element_id"
+        ]
+      },
+      "ConnectorConfigField": {
+        "type": "object",
+        "description": "One masked config field descriptor for a connector kind. A SECRET field (field_kind=SECRET or secret=true) is masked everywhere; placeholder/help_text are non-secret only.",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Machine field name, e.g. base_url."
+          },
+          "label": {
+            "type": "string",
+            "description": "Human label."
+          },
+          "field_kind": {
+            "$ref": "#/components/schemas/ConnectorConfigFieldKind"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "secret": {
+            "type": "boolean",
+            "description": "True for secret fields; such values are never echoed/persisted/logged. Always true when field_kind=SECRET."
+          },
+          "placeholder": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Non-secret placeholder example only. For SECRET fields this is a masked non-secret placeholder (e.g. SECRET_PLACEHOLDER_NOT_A_REAL_SECRET)."
+          },
+          "help_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enum_values": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Allowed values when field_kind=ENUM; null otherwise."
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "field_kind",
+          "required",
+          "secret"
+        ]
+      },
+      "ConnectorCatalogItem": {
+        "type": "object",
+        "description": "One connector-catalog entry (a deterministic mock connector kind). Read-only descriptor; not a connector instance (no instance is ever persisted).",
+        "additionalProperties": false,
+        "properties": {
+          "connector_kind": {
+            "$ref": "#/components/schemas/ConnectorKind"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "mock": {
+            "type": "boolean",
+            "const": true,
+            "default": true,
+            "description": "Always true: deterministic mock connector on fixture data; no real connection."
+          },
+          "has_secret_fields": {
+            "type": "boolean",
+            "description": "Convenience flag: true if the kind's config schema has any SECRET field."
+          },
+          "config_field_count": {
+            "type": "integer"
+          },
+          "target_layer": {
+            "$ref": "#/components/schemas/ConnectorPreviewTargetLayer"
+          }
+        },
+        "required": [
+          "connector_kind",
+          "display_name",
+          "description",
+          "mock",
+          "has_secret_fields",
+          "config_field_count",
+          "target_layer"
+        ]
+      },
+      "ConnectorCatalogListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectorCatalogItem"
+            }
+          },
+          "total_count": {
+            "type": "integer",
+            "description": "Exact number of catalog kinds (P0: 3)."
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/ConnectorMutationGuard"
+          }
+        },
+        "required": [
+          "project_id",
+          "items",
+          "total_count",
+          "mutation_guard"
+        ]
+      },
+      "ConnectorConfigSchemaResponse": {
+        "type": "object",
+        "description": "Masked config schema for one connector kind.",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "connector_kind": {
+            "$ref": "#/components/schemas/ConnectorKind"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectorConfigField"
+            },
+            "description": "Ordered config field descriptors."
+          },
+          "raw_secret_present": {
+            "type": "boolean",
+            "const": false,
+            "default": false,
+            "description": "Always false: no raw secret is exposed."
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/ConnectorMutationGuard"
+          }
+        },
+        "required": [
+          "project_id",
+          "connector_kind",
+          "display_name",
+          "fields",
+          "raw_secret_present",
+          "mutation_guard"
+        ]
+      },
+      "ConnectorImportPreviewRequest": {
+        "type": "object",
+        "description": "Dry-run import preview request. config is a map of field name -> value using the kind's config schema; SECRET values (if provided) are never echoed/persisted/logged and do not affect the deterministic result. Use non-secret placeholder values only in examples.",
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "type": "object",
+            "description": "Field name -> value map. Values are non-secret placeholders in P0; the preview is computed from fixture data keyed by connector_kind + non-secret config and is independent of any secret value.",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "item_cap": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 50,
+            "default": 50,
+            "description": "Optional client cap on returned sample_items (server enforces a hard max, P0=50). Counts remain exact regardless."
+          }
+        },
+        "required": [
+          "config"
+        ]
+      },
+      "ConnectorPreviewSummary": {
+        "type": "object",
+        "description": "Exact rollup counts over the fixture sample (always exact, never capped).",
+        "additionalProperties": false,
+        "properties": {
+          "source_record_count": {
+            "type": "integer",
+            "description": "Fixture sample records read (no external read; external_system_read=false)."
+          },
+          "would_be_candidate_entity_count": {
+            "type": "integer"
+          },
+          "would_be_candidate_relation_count": {
+            "type": "integer"
+          },
+          "unmapped_record_count": {
+            "type": "integer"
+          },
+          "warning_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source_record_count",
+          "would_be_candidate_entity_count",
+          "would_be_candidate_relation_count",
+          "unmapped_record_count",
+          "warning_count"
+        ]
+      },
+      "ConnectorPreviewItem": {
+        "type": "object",
+        "description": "One WOULD-BE candidate-layer preview item. preview_ref is opaque and is NOT a created candidate id (nothing is created). mapped_ontology_class_ref reuses OntologyElementRef by reference. target_layer is always CANDIDATE.",
+        "additionalProperties": false,
+        "properties": {
+          "preview_ref": {
+            "type": "string",
+            "description": "Opaque, URL-safe, deterministic per (kind + non-secret config + fixture). NOT a persisted candidate id."
+          },
+          "target_layer": {
+            "$ref": "#/components/schemas/ConnectorPreviewTargetLayer"
+          },
+          "mapped_ontology_class_ref": {
+            "description": "WOULD-BE mapped candidate-layer ontology class (OntologyElementRef, by reference). null when the record is unmapped.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OntologyElementRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "source_locator": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Mock source locator (e.g. fixture row/segment), reusing MVP2 source_segment locator semantics by reference. Never a real fetched resource."
+          },
+          "compatibility": {
+            "$ref": "#/components/schemas/ConnectorPreviewCompatibility"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "preview_ref",
+          "target_layer",
+          "label",
+          "compatibility"
+        ]
+      },
+      "ConnectorImportPreviewResponse": {
+        "type": "object",
+        "description": "Deterministic dry-run import preview. preview_only=true; creates nothing. mutation_guard is all-false; raw_secret_present=false.",
+        "additionalProperties": false,
+        "properties": {
+          "preview_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Present if the preview is persisted (process-local record, mirroring MVP6.3/6.7 list+GET-by-id); null when computed on demand. OPEN QUESTION: persist-vs-compute finalized in Wave50 (either way read-only + all-false guard)."
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "connector_kind": {
+            "$ref": "#/components/schemas/ConnectorKind"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "preview_only": {
+            "type": "boolean",
+            "const": true,
+            "default": true,
+            "description": "Always true: nothing imported."
+          },
+          "status": {
+            "$ref": "#/components/schemas/ConnectorPreviewStatus"
+          },
+          "compatibility": {
+            "$ref": "#/components/schemas/ConnectorPreviewCompatibility"
+          },
+          "target_layer": {
+            "$ref": "#/components/schemas/ConnectorPreviewTargetLayer"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ConnectorPreviewSummary"
+          },
+          "sample_items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectorPreviewItem"
+            },
+            "description": "Capped list of would-be candidate-layer items (<= item_cap)."
+          },
+          "item_cap": {
+            "type": "integer",
+            "description": "Max items returned (P0=50)."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "True when total_item_count > item_cap."
+          },
+          "total_item_count": {
+            "type": "integer",
+            "description": "Exact total of would-be items even when truncated."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "blocked_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Non-empty when status=BLOCKED; empty otherwise."
+          },
+          "routing_note": {
+            "type": "string",
+            "description": "Boundary note, constant: 'preview only - nothing imported; a real run would route through the existing extraction -> candidate -> review -> publish gate.'"
+          },
+          "raw_secret_present": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/ConnectorMutationGuard"
+          }
+        },
+        "required": [
+          "project_id",
+          "connector_kind",
+          "generated_at",
+          "preview_only",
+          "status",
+          "compatibility",
+          "target_layer",
+          "summary",
+          "sample_items",
+          "item_cap",
+          "truncated",
+          "total_item_count",
+          "warnings",
+          "blocked_reasons",
+          "routing_note",
+          "raw_secret_present",
+          "mutation_guard"
+        ]
+      },
+      "ApiError": {
+        "type": "object",
+        "description": "Standard error envelope. P0 connector codes: PROJECT_NOT_FOUND, CONNECTOR_KIND_NOT_FOUND, PERMISSION_DENIED, INVALID_CONNECTOR_CONFIG (400). Note: an invalid config normally yields a 200 preview with status=BLOCKED; 400 INVALID_CONNECTOR_CONFIG is reserved for a malformed request body.",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    },
+    "examples": {
+      "ConnectorCatalogListExample": {
+        "value": {
+          "project_id": "demo-project",
+          "items": [
+            {
+              "connector_kind": "FILE_SOURCE",
+              "display_name": "File Source (CSV/JSON)",
+              "description": "CSV/JSON file-style source (mock).",
+              "mock": true,
+              "has_secret_fields": false,
+              "config_field_count": 3,
+              "target_layer": "CANDIDATE"
+            },
+            {
+              "connector_kind": "REST_SOURCE",
+              "display_name": "REST Source",
+              "description": "Generic REST-ish API source (mock).",
+              "mock": true,
+              "has_secret_fields": true,
+              "config_field_count": 3,
+              "target_layer": "CANDIDATE"
+            },
+            {
+              "connector_kind": "KNOWLEDGE_BASE_SOURCE",
+              "display_name": "Knowledge Base Source",
+              "description": "Knowledge-base / doc source (mock).",
+              "mock": true,
+              "has_secret_fields": true,
+              "config_field_count": 3,
+              "target_layer": "CANDIDATE"
+            }
+          ],
+          "total_count": 3,
+          "mutation_guard": {
+            "external_system_read": false,
+            "external_system_write": false,
+            "real_network_call_made": false,
+            "credential_persisted": false,
+            "connector_instance_persisted": false,
+            "source_created": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false,
+            "extraction_job_started": false
+          }
+        }
+      },
+      "ConnectorConfigSchemaExample": {
+        "value": {
+          "project_id": "demo-project",
+          "connector_kind": "REST_SOURCE",
+          "display_name": "REST Source",
+          "fields": [
+            {
+              "name": "base_url",
+              "label": "Base URL",
+              "field_kind": "URL",
+              "required": true,
+              "secret": false,
+              "placeholder": "https://example.invalid/api",
+              "help_text": "Non-secret placeholder; no real request is made.",
+              "enum_values": null
+            },
+            {
+              "name": "resource_path",
+              "label": "Resource path",
+              "field_kind": "STRING",
+              "required": true,
+              "secret": false,
+              "placeholder": "/v1/items",
+              "help_text": null,
+              "enum_values": null
+            },
+            {
+              "name": "api_key",
+              "label": "API key",
+              "field_kind": "SECRET",
+              "required": false,
+              "secret": true,
+              "placeholder": "SECRET_PLACEHOLDER_NOT_A_REAL_SECRET",
+              "help_text": "Masked; never echoed/persisted/logged; not used (no real network).",
+              "enum_values": null
+            }
+          ],
+          "raw_secret_present": false,
+          "mutation_guard": {
+            "external_system_read": false,
+            "external_system_write": false,
+            "real_network_call_made": false,
+            "credential_persisted": false,
+            "connector_instance_persisted": false,
+            "source_created": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false,
+            "extraction_job_started": false
+          }
+        }
+      },
+      "ConnectorImportPreviewRequestExample": {
+        "value": {
+          "config": {
+            "base_url": "https://example.invalid/api",
+            "resource_path": "/v1/items",
+            "api_key": "SECRET_PLACEHOLDER_NOT_A_REAL_SECRET"
+          },
+          "item_cap": 50
+        }
+      },
+      "ConnectorImportPreviewResponseExample": {
+        "value": {
+          "preview_id": null,
+          "project_id": "demo-project",
+          "connector_kind": "REST_SOURCE",
+          "generated_at": "2026-07-08T00:00:00Z",
+          "preview_only": true,
+          "status": "READY",
+          "compatibility": "WARNING",
+          "target_layer": "CANDIDATE",
+          "summary": {
+            "source_record_count": 12,
+            "would_be_candidate_entity_count": 10,
+            "would_be_candidate_relation_count": 4,
+            "unmapped_record_count": 2,
+            "warning_count": 2
+          },
+          "sample_items": [
+            {
+              "preview_ref": "prev_rest_0001",
+              "target_layer": "CANDIDATE",
+              "mapped_ontology_class_ref": {
+                "element_kind": "CLASS",
+                "element_id": "cls_person",
+                "label": "Person"
+              },
+              "label": "Ada Lovelace",
+              "source_locator": "fixture:rest/items#row=1",
+              "compatibility": "COMPATIBLE",
+              "note": null
+            },
+            {
+              "preview_ref": "prev_rest_0002",
+              "target_layer": "CANDIDATE",
+              "mapped_ontology_class_ref": null,
+              "label": "(unmapped record)",
+              "source_locator": "fixture:rest/items#row=2",
+              "compatibility": "WARNING",
+              "note": "No matching ontology class; would need review."
+            }
+          ],
+          "item_cap": 50,
+          "truncated": false,
+          "total_item_count": 10,
+          "warnings": [
+            "2 records need review before a real run."
+          ],
+          "blocked_reasons": [],
+          "routing_note": "preview only - nothing imported; a real run would route through the existing extraction -> candidate -> review -> publish gate.",
+          "raw_secret_present": false,
+          "mutation_guard": {
+            "external_system_read": false,
+            "external_system_write": false,
+            "real_network_call_made": false,
+            "credential_persisted": false,
+            "connector_instance_persisted": false,
+            "source_created": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false,
+            "extraction_job_started": false
+          }
+        }
+      }
+    }
+  }
+}
