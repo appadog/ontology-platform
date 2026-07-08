@@ -1,5 +1,6 @@
 import {
   Boxes,
+  Cable,
   Database,
   FolderKanban,
   ListChecks,
@@ -36,6 +37,7 @@ export type NavSection =
   | "admin"
   | "ontology"
   | "sources"
+  | "connectors"
   | "extraction"
   | "candidates"
   | "review"
@@ -82,6 +84,10 @@ export const projectNavGroups: NavGroup[] = [
     items: [
       { section: "ontology", label: "Ontology", icon: Boxes, to: (p) => `/projects/${p}/ontology` },
       { section: "sources", label: "Sources", icon: Database, to: (p) => `/projects/${p}/sources` },
+      // MVP6.9 (FE6-090 / ADR 0016): read-only connector catalog + dry-run import
+      // preview. An ingestion-funnel entry upstream of extraction; its natural
+      // neighbor is Sources. Single LNB item; per-kind detail is contextual.
+      { section: "connectors", label: "Connectors", icon: Cable, to: (p) => `/projects/${p}/connectors` },
       { section: "extraction", label: "Extraction", icon: Sparkles, to: (p) => `/projects/${p}/extraction-jobs` },
       // Note A: no standalone project candidate list route; point at the job monitor.
       { section: "candidates", label: "Candidates", icon: ListChecks, to: (p) => `/projects/${p}/extraction-jobs` },
@@ -132,6 +138,7 @@ export function resolveActiveSection(pathname: string): NavSection | null {
   // Candidates is more specific than Extraction — test it first.
   if (pathname.includes("/candidates") || pathname.includes("/candidate-evidence")) return "candidates";
   if (pathname.includes("/ontology")) return "ontology";
+  if (pathname.includes("/connectors")) return "connectors";
   if (pathname.includes("/sources")) return "sources";
   if (pathname.includes("/extraction-jobs") || pathname.includes("/extraction/new")) return "extraction";
   if (pathname.includes("/quality")) return "quality";

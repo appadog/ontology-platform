@@ -3642,3 +3642,159 @@ export interface CopilotSuggestionDecisionResponse {
   routing_target: CopilotRoutingTarget | null;
   mutation_guard: CopilotMutationGuard;
 }
+
+// ---- MVP6.9 Connectors (read-only catalog + deterministic DRY-RUN import preview) ----
+// Additive. Matches docs/api/openapi-mvp6-9-draft.json EXACTLY (3 paths / 17
+// schemas). The surface is READ-ONLY: it lists deterministic MOCK connector kinds,
+// exposes each kind's MASKED config schema (SECRET fields never echoed/persisted/
+// logged), and runs a DRY-RUN import preview that maps fixture records to WOULD-BE
+// candidate-layer items. A preview CONNECTS NOTHING, WRITES NOTHING, IMPORTS
+// NOTHING: no candidate/entity/relation, no source, no extraction job, and the
+// published graph is never touched; a real run would route through the existing
+// extraction -> candidate -> review -> publish gate. No real network call, no
+// credential execution (deterministic mock over fixture data; the preview is
+// independent of any secret value). Every response carries an all-false 9-flag
+// ConnectorMutationGuard; raw_secret_present is always false. The OpenAPI's local
+// OntologyElementRef schema is {element_kind, element_id, label} — structurally
+// identical to the MVP6.8 CopilotOntologyElementRef, which is reused BY REFERENCE
+// (no rename) for mapped_ontology_class_ref (the file's other OntologyElementRef
+// has a different, governance-target shape).
+
+/** NEW (MVP6.9). The 3 frozen deterministic mock connector kinds. No real connection is attempted for any kind. */
+export type ConnectorKind = "FILE_SOURCE" | "REST_SOURCE" | "KNOWLEDGE_BASE_SOURCE";
+
+/** NEW (MVP6.9). Kind of a connector config field. SECRET is always masked (never echoed/persisted/logged). */
+export type ConnectorConfigFieldKind =
+  | "STRING"
+  | "URL"
+  | "ENUM"
+  | "INTEGER"
+  | "BOOLEAN"
+  | "SECRET";
+
+/** NEW (MVP6.9). Dry-run preview status. READY: computed from fixture data. BLOCKED: config invalid / INCOMPATIBLE (no crash, no fabricated items). */
+export type ConnectorPreviewStatus = "READY" | "BLOCKED";
+
+/** NEW (MVP6.9). Dry-run compatibility rollup (MVP5 import dry-run / MVP6.4 GoldSetImportCompatibility precedent). */
+export type ConnectorPreviewCompatibility = "COMPATIBLE" | "WARNING" | "INCOMPATIBLE";
+
+/** NEW (MVP6.9). Target layer a preview item maps to. Single literal CANDIDATE: WOULD-BE candidate-layer items only, NEVER published. */
+export type ConnectorPreviewTargetLayer = "CANDIDATE";
+
+/** NEW (MVP6.9). All-false mutation guard present on EVERY connector response. Every flag is false, always; MVP6.9 turns NO flag true, ever. */
+export interface ConnectorMutationGuard {
+  external_system_read: false;
+  external_system_write: false;
+  real_network_call_made: false;
+  credential_persisted: false;
+  connector_instance_persisted: false;
+  source_created: false;
+  candidate_graph_mutated: false;
+  published_graph_mutated: false;
+  extraction_job_started: false;
+}
+
+/** NEW (MVP6.9). One masked config field descriptor. A SECRET field (field_kind=SECRET or secret=true) is masked everywhere; placeholder/help_text are non-secret only. */
+export interface ConnectorConfigField {
+  name: string;
+  label: string;
+  field_kind: ConnectorConfigFieldKind;
+  required: boolean;
+  secret: boolean;
+  placeholder?: string | null;
+  help_text?: string | null;
+  /** Allowed values when field_kind=ENUM; null otherwise. */
+  enum_values?: string[] | null;
+}
+
+/** NEW (MVP6.9). One connector-catalog entry (a deterministic mock connector kind). Read-only descriptor; NOT a persisted connector instance. */
+export interface ConnectorCatalogItem {
+  connector_kind: ConnectorKind;
+  display_name: string;
+  description: string;
+  /** Always true: deterministic mock connector on fixture data; no real connection. */
+  mock: true;
+  has_secret_fields: boolean;
+  config_field_count: number;
+  target_layer: ConnectorPreviewTargetLayer;
+}
+
+/** NEW (MVP6.9). Read-only connector catalog list. Carries an all-false guard. */
+export interface ConnectorCatalogListResponse {
+  project_id: string;
+  items: ConnectorCatalogItem[];
+  total_count: number;
+  mutation_guard: ConnectorMutationGuard;
+}
+
+/** NEW (MVP6.9). Masked config schema for one connector kind. raw_secret_present is always false. */
+export interface ConnectorConfigSchemaResponse {
+  project_id: string;
+  connector_kind: ConnectorKind;
+  display_name: string;
+  fields: ConnectorConfigField[];
+  raw_secret_present: false;
+  mutation_guard: ConnectorMutationGuard;
+}
+
+/** NEW (MVP6.9). Dry-run import preview request. config values are NON-SECRET placeholders only; the preview is secret-independent. */
+export interface ConnectorImportPreviewRequest {
+  config: Record<string, string | number | boolean | null>;
+  /** Optional client cap on returned sample_items (server hard max P0=50). Counts remain exact regardless. */
+  item_cap?: number | null;
+}
+
+/** NEW (MVP6.9). Exact rollup counts over the fixture sample (always exact, never capped). */
+export interface ConnectorPreviewSummary {
+  source_record_count: number;
+  would_be_candidate_entity_count: number;
+  would_be_candidate_relation_count: number;
+  unmapped_record_count: number;
+  warning_count: number;
+}
+
+/** NEW (MVP6.9, G6). One warning or blocked-reason element. code is a stable frozen UPPER_SNAKE token; message is a deterministic human string. */
+export interface ConnectorPreviewNotice {
+  code: string;
+  message: string;
+}
+
+/** NEW (MVP6.9). One WOULD-BE candidate-layer preview item. preview_ref is opaque and is NOT a created candidate id. target_layer is always CANDIDATE. */
+export interface ConnectorPreviewItem {
+  /** Opaque, URL-safe, deterministic. NOT a persisted candidate id. */
+  preview_ref: string;
+  target_layer: ConnectorPreviewTargetLayer;
+  /** WOULD-BE mapped candidate-layer ontology class ({element_kind, element_id, label}, reused by reference from MVP6.8). null when the record is unmapped. */
+  mapped_ontology_class_ref?: CopilotOntologyElementRef | null;
+  label: string;
+  /** Mock source locator (fixture row/segment); reuses MVP2 source_segment locator semantics. Never a real fetched resource. */
+  source_locator?: string | null;
+  compatibility: ConnectorPreviewCompatibility;
+  note?: string | null;
+}
+
+/** NEW (MVP6.9). Deterministic dry-run import preview. preview_only=true; creates nothing. mutation_guard is all-false; raw_secret_present=false. */
+export interface ConnectorImportPreviewResponse {
+  /** G1: always null in P0 (compute-on-read / ephemeral; nothing persisted). */
+  preview_id: string | null;
+  project_id: string;
+  connector_kind: ConnectorKind;
+  generated_at: string;
+  preview_only: true;
+  status: ConnectorPreviewStatus;
+  compatibility: ConnectorPreviewCompatibility;
+  target_layer: ConnectorPreviewTargetLayer;
+  summary: ConnectorPreviewSummary;
+  /** Capped list of would-be candidate-layer items (<= item_cap). */
+  sample_items: ConnectorPreviewItem[];
+  item_cap: number;
+  truncated: boolean;
+  /** Exact total of would-be items even when truncated. */
+  total_item_count: number;
+  warnings: ConnectorPreviewNotice[];
+  /** Non-empty ONLY when status=BLOCKED; empty otherwise. */
+  blocked_reasons: ConnectorPreviewNotice[];
+  routing_note: string;
+  raw_secret_present: false;
+  mutation_guard: ConnectorMutationGuard;
+}

@@ -4,6 +4,8 @@ import {
   GovernanceApplyRequest,
   GovernanceReviewDecisionRequest,
   GovernanceWithdrawRequest,
+  ConnectorImportPreviewRequest,
+  ConnectorKind,
   CopilotRiskLabel,
   CopilotSuggestionDecisionRequest,
   CopilotSuggestionKind,
@@ -1371,5 +1373,44 @@ export function useDecideCopilotSuggestion(projectId: string) {
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "copilot"] });
       void queryClient.invalidateQueries({ queryKey: ["copilot-suggestions"] });
     },
+  });
+}
+
+// ---- MVP6.9 Connectors (read-only catalog + deterministic DRY-RUN preview) ----
+
+export const connectorKeys = {
+  catalog: (projectId: string) => ["projects", projectId, "connectors", "catalog"] as const,
+  configSchema: (projectId: string, connectorKind: ConnectorKind) =>
+    ["projects", projectId, "connectors", connectorKind, "config-schema"] as const,
+};
+
+/** Read-only connector catalog (3 frozen mock kinds). Idempotent GET; all-false guard; connects to nothing. */
+export function useConnectorCatalog(projectId: string) {
+  return useQuery({
+    queryKey: connectorKeys.catalog(projectId),
+    queryFn: () => apiClient.getConnectorCatalog(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+/** Read-only masked config schema for one connector kind. SECRET fields masked; raw_secret_present=false. */
+export function useConnectorConfigSchema(projectId: string, connectorKind: ConnectorKind, enabled = true) {
+  return useQuery({
+    queryKey: connectorKeys.configSchema(projectId, connectorKind),
+    queryFn: () => apiClient.getConnectorConfigSchema(projectId, connectorKind),
+    enabled: Boolean(projectId) && Boolean(connectorKind) && enabled,
+  });
+}
+
+/**
+ * Deterministic DRY-RUN import preview. Creates NOTHING (no candidate/source/
+ * extraction; the published graph is untouched); no external call; no secret used.
+ * Modeled as a mutation because it is a POST action the user triggers ("미리보기
+ * 실행"), NOT because it mutates state — it does not.
+ */
+export function useRunConnectorImportPreview(projectId: string, connectorKind: ConnectorKind) {
+  return useMutation({
+    mutationFn: (payload: ConnectorImportPreviewRequest) =>
+      apiClient.runConnectorImportPreview(projectId, connectorKind, payload),
   });
 }

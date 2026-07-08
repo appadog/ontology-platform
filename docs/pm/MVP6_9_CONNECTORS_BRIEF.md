@@ -1,6 +1,6 @@
 # MVP6.9 Connectors / Plugin SDK — P0 Freeze Brief
 
-Status: `WAVE49 CONTRACT-FIRST PLANNING — FROZEN (PM6-031, ADR 0016)`
+Status: `WAVE50 THIN IMPLEMENTATION FREEZE — G1/G5/G6/G7/G12 FROZEN (PM6-032; §12); planning FROZEN Wave49 (PM6-031, ADR 0016)`
 Date: 2026-07-08
 
 THIN freeze for the smallest coherent, SAFE connector P0: a project-scoped
@@ -188,3 +188,78 @@ connector kind beyond the frozen 3.
 
 PM `PM6-031`; Backend `BE6-068`~`BE6-069`; Frontend `FE6-089`; QA `INT6-075`.
 (See `docs/backlog/MVP6_DRAFT_BACKLOG.md` Wave49 section.)
+
+Wave50 implementation IDs: PM `PM6-032`; Backend `BE6-070`~`BE6-073`; Frontend
+`FE6-090`~`FE6-093`; QA `INT6-076`~`INT6-079`. (See the Wave50 backlog section.)
+
+## 12. Wave50 Implementation Freeze — G1 / G5 / G6 / G7 / G12 (PM6-032)
+
+Authority for Backend/Frontend/QA. Each gate is one precise, deterministic,
+implementable rule. Scope UNCHANGED (§2/§6/ADR 0016): read-only catalog + dry-run
+preview, creates nothing, no external write/network, masked secrets only, all-false
+9-flag `ConnectorMutationGuard` on every response.
+
+- **G1 — `preview_id` persist-vs-compute → COMPUTE-ON-READ / EPHEMERAL.** The
+  preview persists NOTHING. `preview_id` is ALWAYS `null` in every response. NO
+  `GET .../import-preview/{preview_id}` and NO preview list endpoint are added; the
+  3 frozen endpoints are the entire surface. Re-running the same kind + same
+  non-secret config against the same fixture yields byte-identical output (modulo
+  `generated_at`, G7). Read-only + all-false guard. No contract shape change
+  (`preview_id` is already nullable). FE treats a preview as ephemeral view state.
+
+- **G5 — per-kind fixture + `source_locator` shape.** Each kind has a FIXED, small,
+  byte-stable in-repo fixture (NO external read; `source_record_count` is exactly
+  the fixture size): `FILE_SOURCE` = **6** records (maps cleanly → default
+  `COMPATIBLE`); `REST_SOURCE` = **5** records (≥1 record missing a mappable field
+  → default `WARNING` + `warning_count ≥ 1`); `KNOWLEDGE_BASE_SOURCE` = **4**
+  records (maps cleanly → default `COMPATIBLE`). `source_locator` is an **opaque,
+  deterministic per-record STRING** (not a structured object; matches the frozen
+  `string|null` type), canonical format
+  `fixture:<file|rest|kb>/<resource>#row=<n>` where `<resource>` derives from a
+  NON-SECRET config field (`FILE_SOURCE`←`file_path` basename, `REST_SOURCE`←
+  `resource_path`, `KNOWLEDGE_BASE_SOURCE`←`space_key`) and `<n>` is the 1-based
+  fixture row. FE renders it as opaque text and never parses it. BLOCKED via
+  invalid config (bad URL / missing required field / no-mappable-shape) — see G6.
+
+- **G6 — `warnings[]` / `blocked_reasons[]` element → `ConnectorPreviewNotice
+  {code, message}`.** `code` is a stable UPPER_SNAKE token (for D6 badges / i18n);
+  `message` is a deterministic human string (Korean primary). Frozen code
+  vocabulary — WARNING: `UNMAPPED_FIELDS`, `MISSING_EVIDENCE_LOCATOR`,
+  `PARTIAL_RECORD_MAPPING`; BLOCKED: `MISSING_REQUIRED_FIELD`,
+  `INVALID_CONFIG_VALUE`, `INCOMPATIBLE_SOURCE_SHAPE`. `blocked_reasons[]` is
+  non-empty ONLY when `status=BLOCKED`; `warnings[]` carries the `WARNING`-tone
+  notices. **Contract refined this wave:** `ConnectorPreviewNotice` added to
+  `openapi-mvp6-9-draft.json` (16→17 schemas); the two arrays now `$ref` it (was
+  `array<string>`). Backend exports must match.
+
+- **G7 — optional `generated_at` → KEEP (present + required).** The
+  source-of-truth `openapi-mvp6-9-draft.json` already declares `generated_at`
+  (`date-time`, required); it is set at response time (wall clock). RULE: it is
+  the ONLY response field allowed to vary between two otherwise-identical previews
+  and MUST be EXCLUDED (together with `preview_id`, which is constant `null`) from
+  the byte-stable determinism assertion. The substantive payload
+  (status/compatibility/summary/sample_items/counts/notices/guard) is byte-stable.
+  No contract change. (The Wave49 FE §8 G7 / acceptance-checklist "missing
+  `generated_at`" note is STALE — the field is present in the OpenAPI.)
+
+- **G12 — copy / IA (ratified + finalized).**
+  - **LNB (ratified):** ONE project-zone LNB item `Connectors` in the **BUILD**
+    group **immediately after `Sources`** (`Ontology → Sources → Connectors →
+    Extraction → Candidates`). Analyze placement rejected. Catalog route
+    `/projects/:p/connectors`; per-kind config/preview is a **contextual sub-view**
+    at `/projects/:p/connectors/:connectorKind` (frozen enum literal, not an
+    ID-bound global page, per ADR 0010).
+  - **H1 (finalized, D3):** page H1 = **`커넥터`** (Korean primary). LNB label stays
+    the intentional-English noun `Connectors`. One title per screen (no ko/en
+    subtitle mismatch).
+  - **KO glosses (finalized; D6 `TOKEN · 한국어보조라벨`).** Kinds: `FILE_SOURCE`·파일
+    소스, `REST_SOURCE`·REST API 소스, `KNOWLEDGE_BASE_SOURCE`·지식베이스 소스. Status:
+    `READY`·준비됨, `BLOCKED`·차단됨. Compatibility: `COMPATIBLE`·호환됨, `WARNING`·경고,
+    `INCOMPATIBLE`·비호환. Target layer: `CANDIDATE`·후보 레이어. Field kinds:
+    `STRING`·문자열, `URL`·URL, `ENUM`·열거형, `INTEGER`·정수, `BOOLEAN`·불리언,
+    `SECRET`·비밀값. Boundary chips: `PREVIEW_ONLY`·미리보기 전용, `NO_EXTERNAL_CALL`·외부
+    호출 없음, `NO_SECRET_STORED`·비밀값 저장 없음, `NOTHING_IMPORTED`·가져오기 없음. Notice
+    codes: `UNMAPPED_FIELDS`·미매핑 필드, `MISSING_EVIDENCE_LOCATOR`·근거 위치 누락,
+    `PARTIAL_RECORD_MAPPING`·부분 매핑, `MISSING_REQUIRED_FIELD`·필수 항목 누락,
+    `INVALID_CONFIG_VALUE`·잘못된 설정값, `INCOMPATIBLE_SOURCE_SHAPE`·비호환 소스 형태.
+    Primary preview action button label = **`미리보기 실행`** (never 가져오기/동기화/연결/실행).

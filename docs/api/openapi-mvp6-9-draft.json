@@ -562,6 +562,25 @@
           "warning_count"
         ]
       },
+      "ConnectorPreviewNotice": {
+        "type": "object",
+        "description": "One warning or blocked-reason element. code is a stable UPPER_SNAKE token (frozen vocabulary, deterministic/byte-stable); message is a deterministic human-readable string (Korean primary). Used by warnings[] and blocked_reasons[].",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable UPPER_SNAKE token. Warnings: UNMAPPED_FIELDS / MISSING_EVIDENCE_LOCATOR / PARTIAL_RECORD_MAPPING. Blocked: MISSING_REQUIRED_FIELD / INVALID_CONFIG_VALUE / INCOMPATIBLE_SOURCE_SHAPE."
+          },
+          "message": {
+            "type": "string",
+            "description": "Deterministic human-readable message (Korean primary)."
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
       "ConnectorPreviewItem": {
         "type": "object",
         "description": "One WOULD-BE candidate-layer preview item. preview_ref is opaque and is NOT a created candidate id (nothing is created). mapped_ontology_class_ref reuses OntologyElementRef by reference. target_layer is always CANDIDATE.",
@@ -674,13 +693,13 @@
           "warnings": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/ConnectorPreviewNotice"
             }
           },
           "blocked_reasons": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/ConnectorPreviewNotice"
             },
             "description": "Non-empty when status=BLOCKED; empty otherwise."
           },
@@ -894,7 +913,10 @@
           "truncated": false,
           "total_item_count": 10,
           "warnings": [
-            "2 records need review before a real run."
+            {
+              "code": "UNMAPPED_FIELDS",
+              "message": "2 records need review before a real run."
+            }
           ],
           "blocked_reasons": [],
           "routing_note": "preview only - nothing imported; a real run would route through the existing extraction -> candidate -> review -> publish gate.",

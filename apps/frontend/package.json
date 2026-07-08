@@ -30,7 +30,9 @@
     "smoke:mvp6:impact:mock": "node scripts/mvp6-impact-mock-route-smoke.mjs",
     "smoke:mvp6:impact:actual": "node scripts/mvp6-impact-actual-api-smoke.mjs",
     "smoke:mvp6:copilot:mock": "node scripts/mvp6-copilot-mock-route-smoke.mjs",
-    "smoke:mvp6:copilot:actual": "node scripts/mvp6-copilot-actual-api-smoke.mjs"
+    "smoke:mvp6:copilot:actual": "node scripts/mvp6-copilot-actual-api-smoke.mjs",
+    "smoke:mvp6:connectors:mock": "node scripts/mvp6-connectors-mock-route-smoke.mjs",
+    "smoke:mvp6:connectors:actual": "node scripts/mvp6-connectors-actual-api-smoke.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.81.5",

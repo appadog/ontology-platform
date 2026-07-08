@@ -9,6 +9,7 @@ import {
   FileQuestion,
   History,
   Info,
+  Layers,
   Lightbulb,
   Loader,
   Lock,
@@ -152,6 +153,13 @@ const tokenTable: Record<string, TokenSpec> = {
   MEDIUM: { tone: "warning", icon: AlertTriangle, ko: "중간" },
   HIGH: { tone: "warning", icon: AlertTriangle, ko: "높음" },
   BREAKING: { tone: "danger", icon: XCircle, ko: "심각(파손 가능)" },
+  // MVP6.9 Connectors (read-only catalog + dry-run preview). ConnectorPreviewStatus
+  // / ConnectorPreviewCompatibility / ConnectorPreviewTargetLayer tokens. READY and
+  // WARNING reuse the existing rows above.
+  BLOCKED: { tone: "danger", icon: Ban, ko: "차단됨" },
+  COMPATIBLE: { tone: "success", icon: CheckCircle2, ko: "호환됨" },
+  INCOMPATIBLE: { tone: "danger", icon: XCircle, ko: "비호환" },
+  CANDIDATE: { tone: "info", icon: Layers, ko: "후보 레이어" },
 };
 
 interface StatusBadgeProps {

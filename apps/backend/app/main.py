@@ -1,10 +1,32 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 from app.api.router import api_router
 from app.core.config import settings
-from app.core.errors import ApiException, api_exception_handler
+from app.core.errors import ApiError, ApiErrorResponse, ApiException, api_exception_handler
+
+
+async def connector_validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> Response:
+    # A malformed connector import-preview body maps to 400 INVALID_CONNECTOR_CONFIG
+    # (contract-specific). Every other route keeps FastAPI's default 422 behavior.
+    if request.url.path.endswith("/import-preview"):
+        return JSONResponse(
+            status_code=400,
+            content=ApiErrorResponse(
+                error=ApiError(
+                    code="INVALID_CONNECTOR_CONFIG",
+                    message="The connector import-preview request body is malformed.",
+                    details={"error_count": len(exc.errors())},
+                )
+            ).model_dump(mode="json"),
+        )
+    return await request_validation_exception_handler(request, exc)
 
 
 class HealthResponse(BaseModel):
@@ -29,6 +51,9 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
     app.add_exception_handler(ApiException, api_exception_handler)
+    app.add_exception_handler(
+        RequestValidationError, connector_validation_exception_handler
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

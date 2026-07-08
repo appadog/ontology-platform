@@ -2,7 +2,7 @@
 
 Status: Wave49 contract-first planning (`BE6-068`/`BE6-069`). Authoritative machine
 artifact: `docs/api/openapi-mvp6-9-draft.json` (OpenAPI 3.1.0, `0.6.9-draft`,
-**3 paths / 16 schemas**, PARSE_OK, disjoint-additive to MVP1-MVP6.8). This
+**3 paths / 17 schemas**, PARSE_OK, disjoint-additive to MVP1-MVP6.8). This
 markdown is the human-readable companion; the OpenAPI is the source of truth.
 No runtime/model/migration/test/seed code (Wave50 waits). Frozen by
 `docs/pm/MVP6_9_CONNECTORS_BRIEF.md` + ADR 0016.
@@ -46,14 +46,21 @@ never touches the published graph; a real run would route through the existing
 - `ConnectorPreviewSummary` — exact counts: `source_record_count`,
   `would_be_candidate_entity_count`, `would_be_candidate_relation_count`,
   `unmapped_record_count`, `warning_count`.
+- `ConnectorPreviewNotice` — `{code, message}` (G6 frozen): `code` is a stable
+  UPPER_SNAKE token, `message` a deterministic human string. Element of both
+  `warnings[]` and `blocked_reasons[]`. Frozen codes — warnings:
+  `UNMAPPED_FIELDS`/`MISSING_EVIDENCE_LOCATOR`/`PARTIAL_RECORD_MAPPING`; blocked:
+  `MISSING_REQUIRED_FIELD`/`INVALID_CONFIG_VALUE`/`INCOMPATIBLE_SOURCE_SHAPE`.
 - `ConnectorPreviewItem` — `preview_ref` (opaque, NOT a created candidate id),
   `target_layer:CANDIDATE`, `mapped_ontology_class_ref` (`OntologyElementRef` or
   null), `label`, `source_locator` (mock), `compatibility`, `note`.
 - `ConnectorImportPreviewResponse` — `preview_id` (nullable; persist-vs-compute
   open), `preview_only:true`, `status`, `compatibility`, `target_layer`, `summary`,
   capped `sample_items[]`, `item_cap`, `truncated`, exact `total_item_count`,
-  `warnings[]`, `blocked_reasons[]`, constant `routing_note`, `raw_secret_present:false`,
-  `mutation_guard`.
+  `warnings[]`/`blocked_reasons[]` (`ConnectorPreviewNotice[]`, G6), constant
+  `routing_note`, `raw_secret_present:false`, `mutation_guard`. `generated_at`
+  (required, set at response time) and `preview_id` (G1: always `null`) are
+  EXCLUDED from the byte-stable determinism assertion.
 
 ## Rules
 - **Read-only + dry-run only.** The only write-shaped verb (`POST import-preview`)
@@ -88,15 +95,26 @@ never touches the published graph; a real run would route through the existing
   same shape/names as MVP1/MVP6.5-6.8, no rename) for `mapped_ontology_class_ref`.
 - MVP5 `Role` for read authorization.
 
-## Open questions -> Wave50 gates
-1. **Persist-vs-compute** for `preview_id` (compute-on-demand `null` vs persisted
-   process-local record with list + GET-by-id, mirroring MVP6.3/6.7). Contract
-   already allows both; either way read-only + all-false. If persisted, add
-   `GET .../import-preview/{preview_id}` + a list endpoint in Wave50.
-2. **Fixture sample shape per connector kind** (how many records, field layout,
-   how many map to which ontology class) — must be deterministic and byte-stable.
-3. **`preview_ref` opacity vs `OntologyElementRef` reuse scope** — `preview_ref` is
-   opaque (not a candidate id); `mapped_ontology_class_ref` reuses `OntologyElementRef`.
-   Confirm no other MVP2 candidate field is echoed into a preview item.
-4. **`item_cap` request override** vs server hard max (P0=50) — confirm precedence
-   and that counts stay exact regardless.
+## Open questions -> Wave50 gates (FROZEN by PM6-032, Wave50)
+1. **G1 Persist-vs-compute** — FROZEN **compute-on-read / ephemeral**. `preview_id`
+   is ALWAYS `null`; nothing is persisted; NO `GET .../import-preview/{preview_id}`
+   and NO list endpoint are added. Recompute yields byte-identical results (modulo
+   `generated_at`). Read-only + all-false guard. No contract shape change.
+2. **G5 Fixture sample shape per kind** — FROZEN small + byte-stable, no external
+   read: `FILE_SOURCE` = 6 records (default COMPATIBLE), `REST_SOURCE` = 5 records
+   (≥1 unmapped → default WARNING), `KNOWLEDGE_BASE_SOURCE` = 4 records (default
+   COMPATIBLE). `source_locator` is an OPAQUE deterministic string
+   `fixture:<file|rest|kb>/<resource>#row=<n>` (derived from NON-SECRET config
+   only); FE treats it as opaque text. Contract already types it `string|null` —
+   no shape change.
+3. **G6 `warnings[]`/`blocked_reasons[]` element** — FROZEN `ConnectorPreviewNotice
+   {code, message}` (added to the OpenAPI, 16→17 schemas). Codes are a stable
+   frozen UPPER_SNAKE vocabulary (see the DTO above). Contract refined this wave.
+4. **G7 `generated_at`** — FROZEN **keep** (already present + required); it is set
+   at response time and MUST be EXCLUDED from the byte-stable determinism
+   assertion. No contract change (the "missing field" note in the Wave49
+   FE/QA docs was stale — the field is in this source-of-truth OpenAPI).
+5. `preview_ref` stays opaque (not a candidate id); `mapped_ontology_class_ref`
+   reuses `OntologyElementRef` only; no other MVP2 candidate field is echoed.
+   `item_cap` request value is clamped to the server hard max (P0=50); counts stay
+   exact regardless of the cap.

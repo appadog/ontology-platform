@@ -4,8 +4,8 @@
 
 ## Latest Wave
 
-- Current wave: `wave-048`
-- Overall status: `MVP6.8 COPILOT THIN IMPLEMENTATION CLOSED (PASS)`
+- Current wave: `wave-049`
+- Overall status: `MVP6.9 CONNECTORS CONTRACT-FIRST PLANNING PASS / WAVE50 THIN IMPLEMENTATION READY`
 - 기준일: 2026-07-08
 
 ## Latest Decisions
@@ -242,6 +242,11 @@
 - Frontend added a project-scoped Copilot LNB item (first in the Analyze group, ADR 0010) + surface: summary + suggestion list (kind/why/source grounding/target flow) -> detail -> ACCEPT (navigates via the routing-target deep-link into the existing gated flow, NO execute button) or DISMISS(reason) -> decision audit note; D6 badges; non-SUGGESTED conflict; live all-false 14-flag guard proof line; advisory/read-only copy; NO execute/apply/publish/approve affordance anywhere. 75 FE tests, build clean; `smoke:mvp6:copilot:mock` PASS; `smoke:mvp6:copilot:actual` PASS (QA-booted on SQLite).
 - QA verdict PASS (R1-R7 7/7). advisory-only/no-execution verified at the data level (QA's own script: full HTTP flow summary+list+detail+ACCEPT+DISMISS -> 0 diffs across 25 DB tables + 8 governance/application/learning stores; 14-flag guard all-false incl. `copilot_executed_action`/`real_model_invoked`; ACCEPT mutates nothing beyond its own suggestion state). Regression clean; single active LNB (now incl. Copilot) preserved; no renames.
 - MVP6.8 non-blocking P1: sync the `openapi-mvp6-8-draft.json` decision-endpoint validation code `400` -> `422` (runtime + FE use 422 `DISMISS_REASON_REQUIRED`; QA aligned the smoke harness; only the draft's declared code lags).
+- Wave49 opened the next MVP6 theme (user-directed sequence): **MVP6.9 Connectors / plugin SDK** — cut to a minimal SAFE P0: read-only connector catalog + deterministic dry-run import PREVIEW. Contract-first planning; PM/BE/FE/QA all PASS (planning). Runtime NOT RUNNABLE until Wave50.
+- MVP6.9 P0 frozen: catalog of 3 deterministic mock connector kinds (`ConnectorKind`: FILE_SOURCE/REST_SOURCE/KNOWLEDGE_BASE_SOURCE) each with a masked config schema (`ConnectorConfigFieldKind` STRING/URL/ENUM/INTEGER/BOOLEAN/SECRET); a dry-run import preview (given a kind + mock config -> deterministic fixture-derived preview of WOULD-BE candidate-layer items: exact counts + capped `sample_items[]` with opaque `preview_ref` + nullable `mapped_ontology_class_ref` + `ConnectorPreviewCompatibility` COMPATIBLE/WARNING/INCOMPATIBLE + `ConnectorPreviewStatus` READY/BLOCKED + `routing_note`). 3 endpoints: catalog / config-schema / import-preview.
+- MVP6.9 durable boundary recorded in ADR 0016: read-only catalog + dry-run preview ONLY. No external write-back, no live/scheduled sync, no real network/credential execution (mock connectors on fixtures), no plugin code execution. Preview creates NOTHING (no candidate/source/extraction, published graph untouched) and is byte-stable + independent of any secret value; a real import would route through the existing extraction -> candidate -> review -> publish gate. Masked secrets only (`raw_secret_present:false`; no raw secret shown/entered/returned). Every response carries an all-false 9-flag `ConnectorMutationGuard`.
+- MVP6.9 OpenAPI planning artifact `docs/api/openapi-mvp6-9-draft.json` parses 3.1.0 `0.6.9-draft`, 3 paths / 16 schemas, disjoint-additive; all 5 enums verbatim; 9-flag guard all const:false + required on all 3 responses. No-raw-secret scan clean (only non-secret placeholders). Reuses MVP5 masked-secret/import-dry-run + MVP6.4 compatibility + candidate + `OntologyElementRef` + `Role` by reference (no renames).
+- Wave50 gates (recorded): G1 `preview_id` persist-vs-compute; G5 per-kind fixture / `source_locator` shape; G6 `warnings`/`blocked_reasons` element shape; G7 optional `generated_at` freshness; G12 COMMANDER IA RULING = the `Connectors` LNB item goes in the BUILD group immediately after `Sources` (ingestion-funnel adjacency; Analyze placement rejected), config/preview as a contextual frozen-enum sub-view (not an ID-bound global page); PM finalizes H1 copy (`커넥터` vs `Connectors`) + KO glosses at Wave50.
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -340,6 +345,8 @@
 | MVP6.8 Copilot Contract | Closed in Wave47 (planning PASS). PM brief + ADR 0015, Backend `openapi-mvp6-8-draft.json` (4 paths/24 schemas) + companion contract, Frontend UX requirements, QA `INT6_8` checklist (C1-C11 / R1-R7); advisory-only/accept-routes-not-executes/all-false 14-flag guard/no-real-LLM; no runtime leakage; PARSE_OK. | PM6-029, BE6-060~063, FE6-081~084, INT6-067~070 |
 | MVP6.8 Copilot Thin Runtime/UI | Closed in Wave48 (PASS). copilot module (4 endpoints), deterministic source-grounded suggestions, accept=routing-target(executes_nothing)/no-execution, audit-only decisions + 409/422, all-false 14-flag guard, no real LLM; data-level no-mutation verified (25 tables + 8 stores before==after); Copilot LNB item + surface (no execute affordance); mock+actual smoke PASS; R1-R7 7/7; regression clean. | BE6-064~067, FE6-085~088, INT6-071~074 |
 | MVP6.8 Wave48 Follow-up | Non-blocking P1. Sync `openapi-mvp6-8-draft.json` decision-endpoint validation code 400->422 (runtime + FE already use 422). | BE6 P1 |
+| MVP6.9 Connectors Contract | Closed in Wave49 (planning PASS). PM brief + ADR 0016, Backend `openapi-mvp6-9-draft.json` (3 paths/16 schemas) + companion, Frontend UX requirements, QA `INT6_9` checklist (C1-C8 / R1-R8); read-only catalog + dry-run preview / no external write / no real network / masked secrets / all-false 9-flag guard; no runtime leakage; no-secret scan clean; PARSE_OK. | PM6-031, BE6-068~069, FE6-089, INT6-075 |
+| MVP6.9 Connectors Thin Runtime/UI | Open for Wave50. Implement the 3 endpoints (catalog/config-schema/import-preview), deterministic fixture-derived preview -> would-be candidate items (creates nothing), all-false 9-flag guard, masked secrets; Connectors LNB item (BUILD, after Sources) + catalog/preview UI; mock+actual smoke. PM freezes G1/G5/G6/G7 + G12 copy first. | BE6-070+, FE6-090+, INT6-076+ |
 
 ## Next Gate
 
@@ -351,7 +358,7 @@ MVP6.7 Impact Simulation is closed (Wave45 planning + Wave46 implementation both
 
 MVP6.8 Copilot is closed (Wave47 planning + Wave48 implementation both PASS). Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison, 6.4 Gold Set authoring + dataset revisioning, 6.5 Governance workflow, 6.6 Governance Change Application, 6.7 Impact Simulation, 6.8 Copilot. UI/UX review remediation + reference-driven design upgrade also closed (Wave35-38).
 
-Per the user-directed sequence, the next theme is **connectors (connector/plugin SDK)** — MVP6.9. **Wave49 = connectors contract-first planning** is the next gate. PM freezes the smallest coherent, safe P0 — likely a read-only/registered connector catalog + a dry-run/preview import boundary (NO external write, NO autonomous sync, deterministic mock, all-false guard), consistent with the candidate/published separation + no-autonomous-action invariants.
+MVP6.9 Connectors contract-first planning (Wave49) is PASS. **Wave50 = MVP6.9 Connectors thin implementation** is the next gate (proceeding without pause per user direction): PM freezes G1/G5/G6/G7 + G12 copy; Backend implements the 3 endpoints (catalog/config-schema/import-preview) with deterministic fixture-derived preview that creates nothing + all-false 9-flag guard + masked secrets, reusing MVP5/candidate shapes by reference; Frontend implements the Connectors LNB item (BUILD, after Sources) + catalog/config/preview UI + mock/actual smoke; QA independently verifies the data-level "nothing imported / no external call / no secret stored / all-false guard" proof.
 
 Remaining user-directed theme sequence after MVP6.9: multi-tenant -> ontology packs -> advanced viz (each a contract-first planning wave then a thin-implementation wave).
 1. Next MVP6 theme (PM contract-first freeze first): Gold Set authoring/dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance, impact simulation, copilot/agents, connector/plugin SDK, multi-tenant, ontology packs, advanced viz).
@@ -541,6 +548,10 @@ Remaining user-directed theme sequence after MVP6.9: multi-tenant -> ontology pa
 | Backend | wave-048 | `PASS / MVP6.8 THIN RUNTIME READY` | copilot module 4 endpoints; deterministic grounded suggestions; accept=routing/no-execution; all-false 14-flag guard; data-level no-mutation; 23+20/169 tests, ruff clean, 0 OpenAPI mismatch |
 | Frontend | wave-048 | `PASS / COPILOT SURFACE READY` | Copilot LNB item + surface; suggestions->accept-routes(no execute button)/dismiss->audit; all-false proof line; 75 tests/build; mock+actual smoke PASS; 0 overflow |
 | QA | wave-048 | `PASS / MVP6.8 CLOSEOUT` | R1-R7 7/7; data-level no-mutation (25 tables+8 stores before==after, all-false guard); actual smoke QA-booted+PASS; regression clean; P1 draft 400->422 |
+| PM | wave-049 | `PASS / MVP6.9 CONNECTORS FROZEN` | Read-only catalog + dry-run preview P0 (3 kinds, would-be candidate items, all-false 9-flag guard, masked secrets); ADR 0016; PM6-031 + BE6-068~069/FE6-089/INT6-075 |
+| Backend | wave-049 | `PASS / MVP6.9 CONTRACT DRAFT READY` | 3 paths/16 schemas `openapi-mvp6-9-draft.json` 0.6.9-draft; all-false 9-flag guard; preview creates nothing/secret-independent; PARSE_OK, no-secret clean; 4 open Qs -> Wave50 |
+| Frontend | wave-049 | `PASS / MVP6.9 UX REQUIREMENTS READY` | Connectors catalog + masked config + dry-run preview UX; no connect/import/execute affordance; "nothing imported" banner; IA -> BUILD/after-Sources (G12); DTO gaps mostly resolved |
+| QA | wave-049 | `PASS / WAVE50 RECOMMENDED` | INT6_9 checklist C1-C8 PASS / R1-R8 NOT RUNNABLE; PM/BE/FE agree; PARSE_OK+disjoint; no leakage; no-secret clean; gates G1/G5/G6/G7/G12 |
 
 ## Report Index
 
@@ -594,3 +605,4 @@ Remaining user-directed theme sequence after MVP6.9: multi-tenant -> ontology pa
 | wave-046 | `wave-046/PM_REPORT.md` | `wave-046/BACKEND_REPORT.md` | `wave-046/FRONTEND_REPORT.md` | `wave-046/QA_REPORT.md` | `wave-046/NEXT_ORDERS.md` |
 | wave-047 | `wave-047/PM_REPORT.md` | `wave-047/BACKEND_REPORT.md` | `wave-047/FRONTEND_REPORT.md` | `wave-047/QA_REPORT.md` | `wave-047/NEXT_ORDERS.md` |
 | wave-048 | `wave-048/PM_REPORT.md` | `wave-048/BACKEND_REPORT.md` | `wave-048/FRONTEND_REPORT.md` | `wave-048/QA_REPORT.md` | `wave-048/NEXT_ORDERS.md` |
+| wave-049 | `wave-049/PM_REPORT.md` | `wave-049/BACKEND_REPORT.md` | `wave-049/FRONTEND_REPORT.md` | `wave-049/QA_REPORT.md` | `wave-049/NEXT_ORDERS.md` |

@@ -1066,6 +1066,36 @@ Backend decision; either way read-only + all-false guard. Process-local
 | FE6-089 | P0 | Frontend | Connectors UX/API requirements (planning) | PM6-031, BE6-068~069 | `docs/pm/MVP6_9_FRONTEND_UX_REQUIREMENTS.md`: catalog + dry-run preview UX in Analyze/Sources area (ADR 0010, no new global ID-bound LNB page); masked-secret config UX (no raw secret shown/entered in P0); persistent "preview only — nothing imported; routes through candidate review when actually run later" boundary copy; compatibility/summary + capped-sample result layout; live all-false-guard proof line; first-class loading/empty/error/permission states; closed design language; DTO gap vs Backend draft; no route/component/type/mock/smoke code |
 | INT6-075 | P0 | QA | Connectors acceptance checklist (planning) | PM6-031, BE6-068~069, FE6-089 | `docs/backlog/INT6_9_CONNECTORS_ACCEPTANCE.md` (C planning gates + R NOT-RUNNABLE runtime gates, continuing INT6 numbering); verify PM/BE/FE agree on P0, catalog/preview model, read-only + dry-run + no-external-write + no-real-network + masked-secret boundary, all-false guard, exclusions; confirm no runtime leaked (`apps/`+`infra/`); OpenAPI parse; no-raw-secret scan of artifacts; recommend Wave50 |
 
+## Wave50 MVP6.9 Connectors THIN IMPLEMENTATION — Gate Freeze (PM6-032)
+
+PM6-032 freezes the Wave49 open gates in `docs/pm/MVP6_9_CONNECTORS_BRIEF.md` §12:
+**G1** `preview_id`=compute-on-read/ephemeral (always `null`, no persist, no
+GET-by-id/list). **G5** fixed byte-stable per-kind fixtures (FILE=6/REST=5/KB=4;
+`source_locator` = opaque string `fixture:<file|rest|kb>/<resource>#row=<n>` from
+non-secret config). **G6** `warnings[]`/`blocked_reasons[]` element =
+`ConnectorPreviewNotice {code, message}` (added to OpenAPI, 16→17 schemas; frozen
+code vocabulary). **G7** `generated_at` kept (already required) but EXCLUDED from
+the determinism assertion. **G12** LNB `Connectors` in BUILD after `Sources`; H1 =
+`커넥터`; KO glosses finalized. Scope unchanged (read-only + dry-run, creates
+nothing, masked secrets, all-false 9-flag guard). Contract impact this wave: G6
+only (`ConnectorPreviewNotice`).
+
+| ID | Priority | Role | Item | Depends on | Acceptance summary |
+|---|---|---|---|---|---|
+| PM6-032 | P0 | PM | Freeze G1/G5/G6/G7 + G12 copy; scope guard | ADR 0016, PM6-031 | brief §12 freeze; OpenAPI G6 refinement (`ConnectorPreviewNotice`, 17 schemas, parses, disjoint); contract MD + backlog updated; `git diff --check` clean; no `apps/` |
+| BE6-070 | P0 | Backend | Catalog + masked config-schema | PM6-032 | `GET .../connectors` (3 frozen kinds + `has_secret_fields`/`config_field_count`/`total_count`=3) + `GET .../connectors/{kind}/config-schema` (ordered `ConnectorConfigField[]`, SECRET masked, `raw_secret_present:false`) in new `apps/backend/app/modules/connectors/`, additive; matches OpenAPI exactly |
+| BE6-071 | P0 | Backend | Dry-run import-preview (deterministic, bounded) | PM6-032, BE6-070 | `POST .../connectors/{kind}/import-preview`: G5 fixtures, would-be candidate items (`preview_ref` opaque, `target_layer:CANDIDATE`, `mapped_ontology_class_ref` nullable), exact counts + `item_cap`(≤50)/`truncated`/`total_item_count`, `ConnectorPreviewNotice` warnings/blocked_reasons (G6), `preview_id:null` (G1), `generated_at` set at response time (G7), byte-stable (excl. generated_at) + secret-independent |
+| BE6-072 | P0 | Backend | All-false guard + no-secret + creates-nothing | PM6-032 | all-false 9-flag `ConnectorMutationGuard` on every response; no import of external-network/candidate-write/extraction-trigger/credential-store path; DATA-LEVEL before==after (all candidate/source/extraction/published tables) incl. preview; no raw secret printed/persisted/logged/returned |
+| BE6-073 | P0 | Backend | OpenAPI export/alignment + regression | BE6-070~072 | export actual OpenAPI, compare to `openapi-mvp6-9-draft.json` (3 paths/17 schemas, incl. `ConnectorPreviewNotice`); `tests/test_mvp6_9_connectors_api.py` + `tests/test_mvp6_8_copilot_api.py`; `ruff`; no-raw-secret grep; `git diff --check`; additive-only |
+| FE6-090 | P0 | Frontend | LNB/route/IA + types/client/mocks | PM6-032, BE6-070~073 | `Connectors` LNB item (BUILD, after Sources) + `/projects/:p/connectors` catalog + `/projects/:p/connectors/:connectorKind` contextual detail (frozen enum, not ID-bound); H1 `커넥터`; types/client/query/mocks match frozen OpenAPI exactly; reuse shapes by reference (no rename) |
+| FE6-091 | P0 | Frontend | Catalog + masked config form | PM6-032 | 3-kind catalog cards (no add/register/connect affordance) + masked config form (SECRET masked/placeholder, no raw secret entered, preview runnable without secret); ENUM select from `enum_values`; KO glosses (G12) |
+| FE6-092 | P0 | Frontend | Preview result + states + banner | PM6-032 | `미리보기 실행` → would-be candidate result (counts + capped sample + `mapped_ontology_class_ref` + per-item compatibility + `source_locator` opaque readout + `ConnectorPreviewNotice` code+message + truncation); persistent "PREVIEW ONLY — nothing imported" banner + live all-false 9-flag guard + `raw_secret_present:false`/`preview_only:true` proof; D6 badges; loading/empty/error/permission + INCOMPATIBLE/BLOCKED/WARNING states |
+| FE6-093 | P0 | Frontend | Mock + actual smoke | PM6-032, BE6-070~073 | `npm run smoke:mvp6:connectors:mock` (+ `:actual` if backend runnable); `npm run test`/`build`; responsive 0-overflow; `git diff --check` |
+| INT6-076 | P0 | QA | Backend runtime verification | BE6-070~073 | validate 3 endpoints, deterministic/byte-stable (excl. `generated_at`) + secret-independent preview, bounding/truncation, would-be candidate mapping, compatibility/status, `ConnectorPreviewNotice` codes, authz `403`/`404`/`400`; update `INT6_9_CONNECTORS_ACCEPTANCE.md` R1-R6 |
+| INT6-077 | P0 | QA | Frontend mock/actual | FE6-090~093 | validate FE catalog→config→preview flow mock + actual (boot backend on SQLite); no connect/import/sync/apply/execute affordance; live guard proof line; R7 |
+| INT6-078 | P0 | QA | Read-only/creates-nothing/no-secret DATA-LEVEL | BE6-071~072 | INDEPENDENTLY assert at DATA level no connector call (esp. import-preview) creates a source/candidate/extraction or mutates any table (before==after); 9-flag guard all-false; `raw_secret_present:false`, no raw secret in any response/log; R3/R4/R5 |
+| INT6-079 | P0 | QA | Wave50 closeout + regression | INT6-076~078 | MVP6.8/earlier regression + touched smokes; additive-only + candidate/published separation intact; recommend closeout/hardening; R8 |
+
 ## Scope Limits
 
 - No MVP6-wide implementation in Wave28, Wave29, or Wave30.

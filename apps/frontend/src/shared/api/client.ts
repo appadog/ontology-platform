@@ -135,6 +135,13 @@ import {
   MVP6_COPILOT_GENERATED_AT,
 } from "../mocks/mvp6CopilotFixtures";
 import {
+  allFalseConnectorGuard,
+  buildConnectorCatalog,
+  buildConnectorConfigSchema,
+  buildConnectorImportPreview,
+  isConnectorKind,
+} from "../mocks/mvp6ConnectorsFixtures";
+import {
   AuditEvent,
   AutoApprovalCandidatePreview,
   AutomaticApprovalPolicyDocument,
@@ -146,6 +153,11 @@ import {
   ConfusionMatrix,
   ConfusionMatrixAxis,
   ConfusionCellErrorCasesResponse,
+  ConnectorCatalogListResponse,
+  ConnectorConfigSchemaResponse,
+  ConnectorImportPreviewRequest,
+  ConnectorImportPreviewResponse,
+  ConnectorKind,
   CorrectionPattern,
   LearningSignalSummaryResponse,
   PromptSuggestion,
@@ -368,6 +380,23 @@ export class CopilotDecisionError extends Error {
 // creates/mutates/applies NO gated-flow object (see the all-false guard).
 let mockCopilotSuggestionStore: CopilotSuggestion[] = mockCopilotSuggestions.map((s) => ({ ...s }));
 let mockCopilotDecisionCounter = 0;
+
+// ---- MVP6.9 Connectors error ----
+// READ-ONLY catalog + DRY-RUN preview. Unknown kind -> 404 CONNECTOR_KIND_NOT_FOUND;
+// non-member -> 403 PERMISSION_DENIED; missing project -> 404 PROJECT_NOT_FOUND.
+// A well-formed-but-invalid config is NOT an error: it returns a 200 preview with
+// status=BLOCKED (a result state), never a throw.
+export class ConnectorError extends Error {
+  code: string;
+  status: number;
+
+  constructor(message: string, code: string, status: number) {
+    super(message);
+    this.name = "ConnectorError";
+    this.code = code;
+    this.status = status;
+  }
+}
 
 export class BenchmarkComparisonError extends Error {
   code: string;
@@ -4676,6 +4705,65 @@ export const apiClient = {
     }
     return jsonRequest<CopilotSuggestionDecisionResponse>(
       `/api/v1/copilot-suggestions/${suggestionId}/decisions`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  // ---- MVP6.9 Connectors (read-only catalog + deterministic DRY-RUN preview) ----
+  // Connects to NOTHING, writes NOTHING, imports NOTHING. Every response carries an
+  // all-false 9-flag ConnectorMutationGuard; raw_secret_present=false; the preview
+  // is deterministic + secret-independent and CREATES NOTHING.
+
+  async getConnectorCatalog(projectId: string): Promise<ConnectorCatalogListResponse> {
+    if (USE_MOCK_API) {
+      const items = buildConnectorCatalog();
+      return delay({
+        project_id: projectId,
+        items,
+        total_count: items.length,
+        mutation_guard: { ...allFalseConnectorGuard },
+      });
+    }
+    return request<ConnectorCatalogListResponse>(`/api/v1/projects/${projectId}/connectors`);
+  },
+
+  async getConnectorConfigSchema(
+    projectId: string,
+    connectorKind: ConnectorKind,
+  ): Promise<ConnectorConfigSchemaResponse> {
+    if (USE_MOCK_API) {
+      if (!isConnectorKind(connectorKind)) {
+        throw new ConnectorError("Unknown connector kind.", "CONNECTOR_KIND_NOT_FOUND", 404);
+      }
+      return delay(buildConnectorConfigSchema(projectId, connectorKind));
+    }
+    return request<ConnectorConfigSchemaResponse>(
+      `/api/v1/projects/${projectId}/connectors/${connectorKind}/config-schema`,
+    );
+  },
+
+  async runConnectorImportPreview(
+    projectId: string,
+    connectorKind: ConnectorKind,
+    payload: ConnectorImportPreviewRequest,
+  ): Promise<ConnectorImportPreviewResponse> {
+    if (USE_MOCK_API) {
+      if (!isConnectorKind(connectorKind)) {
+        throw new ConnectorError("Unknown connector kind.", "CONNECTOR_KIND_NOT_FOUND", 404);
+      }
+      // Deterministic dry-run computed from the fixture (secret-independent).
+      // generated_at is set here at "response time" and is EXCLUDED from the
+      // byte-stable determinism assertion (G7).
+      const computed = buildConnectorImportPreview(
+        projectId,
+        connectorKind,
+        payload.config ?? {},
+        payload.item_cap,
+      );
+      return delay({ ...computed, generated_at: new Date().toISOString() });
+    }
+    return jsonRequest<ConnectorImportPreviewResponse>(
+      `/api/v1/projects/${projectId}/connectors/${connectorKind}/import-preview`,
       { method: "POST", body: JSON.stringify(payload) },
     );
   },
