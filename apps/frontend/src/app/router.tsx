@@ -12,6 +12,7 @@ import {
   ProjectAdminRolesPage,
 } from "../pages/AdminPages";
 import { BenchmarkComparisonPage } from "../pages/BenchmarkComparisonPage";
+import { CopilotPage } from "../pages/CopilotPage";
 import { CandidateResultsPage } from "../pages/CandidateResultsPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DocumentChunkViewerPage } from "../pages/DocumentChunkViewerPage";
@@ -183,6 +184,14 @@ export const router = createBrowserRouter([
       {
         path: "/projects/:projectId/evaluation-dataset-versions/:datasetVersionId",
         element: <EvaluationDatasetsPage />,
+      },
+      {
+        path: "/projects/:projectId/copilot",
+        element: <CopilotPage />,
+      },
+      {
+        path: "/projects/:projectId/copilot/suggestions/:suggestionId",
+        element: <CopilotPage />,
       },
       {
         path: "/projects/:projectId/learning-insights",

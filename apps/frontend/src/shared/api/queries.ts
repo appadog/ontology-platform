@@ -4,6 +4,10 @@ import {
   GovernanceApplyRequest,
   GovernanceReviewDecisionRequest,
   GovernanceWithdrawRequest,
+  CopilotRiskLabel,
+  CopilotSuggestionDecisionRequest,
+  CopilotSuggestionKind,
+  CopilotSuggestionState,
   OntologyChangeItemRequest,
   OntologyChangeRequestCreateRequest,
   OntologyChangeRequestStatus,
@@ -1295,5 +1299,77 @@ export function useRecordGovernanceReviewDecision(changeRequestId: string) {
     mutationFn: (payload: GovernanceReviewDecisionRequest) =>
       apiClient.recordGovernanceReviewDecision(changeRequestId, payload),
     onSuccess: invalidate,
+  });
+}
+
+// ---- MVP6.8 Copilot (advisory-only; suggests + routes; executes nothing) ----
+
+export const copilotKeys = {
+  summary: (projectId: string) => ["projects", projectId, "copilot", "summary"] as const,
+  suggestions: (
+    projectId: string,
+    filters?: { kind?: CopilotSuggestionKind; state?: CopilotSuggestionState; riskLabel?: CopilotRiskLabel },
+  ) =>
+    [
+      "projects",
+      projectId,
+      "copilot",
+      "suggestions",
+      filters?.kind ?? "ALL",
+      filters?.state ?? "ALL",
+      filters?.riskLabel ?? "ALL",
+    ] as const,
+  suggestion: (suggestionId: string) => ["copilot-suggestions", suggestionId] as const,
+};
+
+/** Read-only project copilot summary. Idempotent GET; all-false guard; no real model. */
+export function useCopilotSummary(projectId: string) {
+  return useQuery({
+    queryKey: copilotKeys.summary(projectId),
+    queryFn: () => apiClient.getCopilotSummary(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+/** Deterministic (byte-stable) copilot suggestion list; every item is source-grounded. */
+export function useCopilotSuggestions(
+  projectId: string,
+  filters?: { kind?: CopilotSuggestionKind; state?: CopilotSuggestionState; riskLabel?: CopilotRiskLabel },
+) {
+  return useQuery({
+    queryKey: copilotKeys.suggestions(projectId, filters),
+    queryFn: () =>
+      apiClient.listCopilotSuggestions(projectId, {
+        kind: filters?.kind,
+        state: filters?.state,
+        riskLabel: filters?.riskLabel,
+      }),
+    enabled: Boolean(projectId),
+  });
+}
+
+/** Read-only single suggestion detail (full grounding + routing-target descriptor). */
+export function useCopilotSuggestion(suggestionId: string, enabled = true) {
+  return useQuery({
+    queryKey: copilotKeys.suggestion(suggestionId),
+    queryFn: () => apiClient.getCopilotSuggestion(suggestionId),
+    enabled: Boolean(suggestionId) && enabled,
+  });
+}
+
+/**
+ * Audit-only ACCEPT/DISMISS decision. ACCEPT returns a routing-target descriptor
+ * (deep-link + optional pre-fill) into an existing gated flow and executes
+ * nothing; DISMISS requires a reason code. Invalidates the copilot queries.
+ */
+export function useDecideCopilotSuggestion(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ suggestionId, payload }: { suggestionId: string; payload: CopilotSuggestionDecisionRequest }) =>
+      apiClient.createCopilotSuggestionDecision(suggestionId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "copilot"] });
+      void queryClient.invalidateQueries({ queryKey: ["copilot-suggestions"] });
+    },
   });
 }

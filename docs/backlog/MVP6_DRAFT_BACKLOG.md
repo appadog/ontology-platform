@@ -1,6 +1,6 @@
 # MVP 6 Draft Backlog
 
-Status: `MVP6.8 WAVE47 AGENTS/COPILOT — CONTRACT-FIRST PLANNING FROZEN (PM6-029, ADR 0015); planning IDs BE6-060~063, FE6-081~084, INT6-067~070 recorded`
+Status: `MVP6.8 WAVE48 AGENTS/COPILOT — THIN IMPLEMENTATION G1-G3 FROZEN (PM6-030, ADR 0015); impl IDs BE6-064~067, FE6-085~088, INT6-071~074 recorded (planning PM6-029, BE6-060~063, FE6-081~084, INT6-067~070)`
 Date: 2026-07-03
 
 MVP6 is broad. Wave28 and Wave29 closed MVP6.1 Gold Set / Benchmark Studio.
@@ -921,6 +921,60 @@ response carries an all-false `CopilotMutationGuard`; no real LLM. Boundary in
 QA ID correction (Wave39): the QA rows above were re-ranged from the PM-proposed
 `INT6-026`~`INT6-029` to `INT6-035`~`INT6-038` because `INT6-026`~`INT6-034` were
 already consumed by the closed UI/UX waves 35–38 (see `CURRENT_STATE.md`).
+
+## Wave48 MVP6.8 Copilot THIN IMPLEMENTATION — Gate Freeze (PM6-030, ADR 0015)
+
+Wave48 implements the smallest deterministic ADVISORY-ONLY copilot slice: 4
+endpoints, deterministic source-grounded suggestions, accept-returns-routing /
+dismiss (audit-only), all-false 14-flag `CopilotMutationGuard`, no real LLM.
+PM6-030 freezes G1/G2/G3 in `docs/pm/MVP6_8_COPILOT_BRIEF.md §"Wave48
+Implementation Freeze — G1 / G2 / G3"` (authority for BE/FE/QA).
+
+- **G1 (suggestion-generation source rules):** one deterministic trigger per
+  `CopilotSuggestionKind`, grouped (one SUGGESTED per natural key, never one/row),
+  ordered `(kind ordinal, group key asc)`, capped `suggestion_cap = 20`, every
+  suggestion cites ≥1 non-empty source ref. `DRAFT_GOVERNANCE_CHANGE_REQUEST` ←
+  recurring correction/validation signal (`CorrectionPattern.support_count ≥ 3`
+  OR ≥3 `REVIEW_CORRECTION` same element OR `REPEATED_VALIDATION_FAILURE`/≥3
+  `FAILED` `ValidationResult`); `REVIEW_THESE_CANDIDATES` ← `CandidateReviewStatus
+  == PENDING` candidates tied to `EVALUATION_ERROR_CASE`/low `QUALITY_DRILLDOWN`;
+  `INSPECT_QUALITY_OR_VALIDATION_SIGNAL` ← low `QualityMetric` (`rate < 0.8`) /
+  `ValidationRuleCode` cluster with ≥1 `FAILED` (or ≥3 `WARNING`);
+  `RUN_IMPACT_SIMULATION` ← `OntologyChangeRequestStatus == APPROVED` AND
+  `GovernanceApplicationState == QUEUED`.
+- **G2 (routing pre-fill per `CopilotRoutingTargetKind`):** destination
+  descriptor + optional pre-fill only, `executes_nothing = true` + `human_gate_note`.
+  `GOVERNANCE_CHANGE_REQUEST_DRAFT` → `/…/governance/change-requests/new` +
+  `GovernanceChangeRequestDraftPrefill` using real `ChangeRequestTargetKind`
+  (**`CLASS`/`PROPERTY`/`RELATION`** — NOT `ONTOLOGY_CLASS`) + `ChangeRequestChangeType`
+  (`ADD`/`MODIFY`/`DEPRECATE`) + `OntologyElementRef[]`; `CANDIDATE_REVIEW_LOCATION`
+  → `/…/review?candidate_ids=…`; `QUALITY_OR_VALIDATION_LOCATION` →
+  `/…/quality?group=…` or `/…/validation?rule_code=…`; `IMPACT_REPORT_LOCATION`
+  → `/…/governance/change-requests/{id}/impact`.
+- **G3 (summary DTO):** frozen as Wave47 `CopilotSummaryResponse` (no field
+  add/rename): `project_id`, `generated_at`, `source_artifact_scope`,
+  `total_suggestion_count`, `{suggested,accepted,dismissed,superseded}_count`,
+  `high_risk_count`, `counts_by_kind[]`, `advisory_notes[]`, all-false
+  `mutation_guard`.
+- **Only contract impact:** Wave47 OpenAPI **example** value fix `ONTOLOGY_CLASS`
+  → `CLASS` in the governance prefill example (match real `ChangeRequestTargetKind`);
+  no schema/field/enum shape change. Scope otherwise unchanged.
+
+| ID | Priority | Role | Item | Depends on | Acceptance summary |
+|---|---|---|---|---|---|
+| PM6-030 | P0 | PM | MVP6.8 Copilot G1-G3 implementation freeze + scope guard | PM6-029, ADR 0015 | freeze G1 (deterministic suggestion-generation source rules per `CopilotSuggestionKind`), G2 (routing pre-fill payload shape per `CopilotRoutingTargetKind`), G3 (summary DTO fields) as one precise deterministic rule each in `docs/pm/MVP6_8_COPILOT_BRIEF.md §"Wave48 Implementation Freeze"`; confirm scope unchanged (advisory-only, executes nothing, no real LLM, all-false 14-flag guard); record impl IDs; only contract impact is the `ONTOLOGY_CLASS`→`CLASS` example fix; no `apps/` |
+| BE6-064 | P0 | Backend | Copilot summary + suggestions (deterministic, source-grounded) | PM6-030 | implement `GET .../copilot/summary` (G3) + `GET .../copilot/suggestions` (G1) in new `apps/backend/app/modules/copilot/`, registered additively, matching `openapi-mvp6-8-draft.json` exactly; deterministic process-local store + `reset_runtime_store()`; byte-stable order `(kind ordinal, group key asc)`, `suggestion_cap=20`; every suggestion cites ≥1 non-empty source ref |
+| BE6-065 | P0 | Backend | Suggestion detail + decision (accept-routing / dismiss, audit-only, 409) | PM6-030, BE6-064 | `GET /copilot-suggestions/{id}` + `POST /copilot-suggestions/{id}/decisions`; ACCEPT → `SUGGESTED`→`ACCEPTED` returns `CopilotRoutingTarget` (G2, real `ChangeRequestTargetKind`=`CLASS`), creates/mutates NOTHING; DISMISS → `DISMISSED` requires reason code (422 otherwise); non-`SUGGESTED` → `409 COPILOT_SUGGESTION_DECISION_CONFLICT`; audit-only record |
+| BE6-066 | P0 | Backend | All-false 14-flag guard + no-execution/no-LLM guarantees | PM6-030 | all-false `CopilotMutationGuard` (14 flags incl. `copilot_executed_action`/`real_model_invoked` false) on every response incl. accept; copilot module imports NO gated-flow write path; deterministic mock only (no real model); DATA-LEVEL before==after any copilot call incl. ACCEPT |
+| BE6-067 | P0 | Backend | OpenAPI export/alignment + no-mutation regression guard | BE6-064~066 | export actual OpenAPI, compare to `openapi-mvp6-8-draft.json` (align the `ONTOLOGY_CLASS`→`CLASS` example); focused `tests/test_mvp6_8_copilot_api.py`; MVP6.7 (`test_mvp6_7_impact_simulation_api.py`) + earlier regression; `ruff`; `git diff --check`; additive-only |
+| FE6-085 | P0 | Frontend | Copilot route/IA + types/client/mocks | PM6-030, BE6-064~067 | project-scoped `/projects/:p/copilot` Analyze-group LNB destination per ADR 0010 (no ID-bound global pages); types/client/query/mocks match frozen OpenAPI exactly; reuse MVP6.2/governance types by reference (no rename) |
+| FE6-086 | P0 | Frontend | Suggestion list + detail | PM6-030 | suggestion queue + detail (kind/why/source grounding/target flow), `CopilotSuggestionState` D6 badges, confidence/risk badges, source-grounding preview; `SUGGESTED` default queue; contextual detail panel |
+| FE6-087 | P0 | Frontend | Accept-routing + dismiss + audit note + advisory copy | PM6-030 | accept → follows `CopilotRoutingTarget` deep-link into the existing gated flow (governance draft / candidate review / quality-validation / impact) WITHOUT the copilot executing anything (navigation CTA, never execute button); dismiss+reason; decision audit note; non-`SUGGESTED` conflict; persistent advisory banner + live all-false guard proof line read from response |
+| FE6-088 | P0 | Frontend | Mock + actual smoke | FE6-085~087 | `npm run smoke:mvp6:copilot:mock` (+ `:actual` if backend runnable); `npm run test`; `npm run build`; responsive 0-overflow re-check; `git diff --check` |
+| INT6-071 | P0 | QA | Backend runtime verification | BE6-064~067 | validate 4 endpoints, deterministic grounded suggestions (G1), decision transitions + `409`, authz `403`/`404`; update `INT6_8_COPILOT_ACCEPTANCE.md` R1-R4/R6/R7 |
+| INT6-072 | P0 | QA | Frontend mock/API verification | FE6-085~088 | validate FE mock + actual copilot flow (list → accept-routes/dismiss → audit note); no execute affordance; D6 badges; states; responsive; R5 |
+| INT6-073 | P0 | QA | Advisory-only / no-execution + all-false guard DATA-LEVEL | BE6-065~066 | INDEPENDENTLY assert at DATA level that NO copilot call (esp. ACCEPT) mutates any table / governance state (before==after); 14-flag guard all-false (incl. `copilot_executed_action`/`real_model_invoked`); ACCEPT returns only a routing target; R2 |
+| INT6-074 | P0 | QA | Wave48 closeout | INT6-071~073 | run MVP6.7/earlier regression + touched smokes; confirm additive-only + candidate/published separation intact; recommend closeout / hardening / redesign; exact commands; no leftover listeners on 8000/5173; `git diff --check` |
 
 ## Scope Limits
 

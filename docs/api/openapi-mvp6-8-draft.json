@@ -712,7 +712,7 @@
                 "deep_link": "/projects/project-insurance-demo/governance/change-requests/new",
                 "target_ref": { "ontology_version_id": "ontology-v7" },
                 "governance_change_request_draft_prefill": {
-                  "target_kind": "ONTOLOGY_CLASS",
+                  "target_kind": "CLASS",
                   "change_type": "MODIFY",
                   "ontology_version_id": "ontology-v7",
                   "element_refs": [
@@ -897,7 +897,7 @@
               "deep_link": "/projects/project-insurance-demo/governance/change-requests/new",
               "target_ref": { "ontology_version_id": "ontology-v7" },
               "governance_change_request_draft_prefill": {
-                "target_kind": "ONTOLOGY_CLASS",
+                "target_kind": "CLASS",
                 "change_type": "MODIFY",
                 "ontology_version_id": "ontology-v7",
                 "element_refs": [
@@ -932,7 +932,7 @@
             "deep_link": "/projects/project-insurance-demo/governance/change-requests/new",
             "target_ref": { "ontology_version_id": "ontology-v7" },
             "governance_change_request_draft_prefill": {
-              "target_kind": "ONTOLOGY_CLASS",
+              "target_kind": "CLASS",
               "change_type": "MODIFY",
               "ontology_version_id": "ontology-v7",
               "element_refs": [

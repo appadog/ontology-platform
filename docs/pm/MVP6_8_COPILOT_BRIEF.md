@@ -1,7 +1,7 @@
 # MVP6.8 Agents / Copilot Brief
 
-Status: `FROZEN / WAVE 47 CONTRACT-FIRST PLANNING ONLY`
-Date: 2026-07-03
+Status: `FROZEN / WAVE48 IMPLEMENTATION FREEZE (G1-G3, PM6-030) — advisory-only, executes nothing, no real LLM`
+Date: 2026-07-03 (Wave48 §Implementation Freeze added)
 Owner: PM / Architecture
 
 MVP6.8 opens Theme 5 (Agents / Copilot) from
@@ -312,3 +312,181 @@ MVP6.8 P0 contract is acceptable when:
 - no real LLM, no autonomous action, no auto-apply/publish/approve, no policy
   enforcement, no tool-calling/multi-step/background agent runtime, and no direct
   mutation of any graph/prompt/governance state are present in P0.
+
+## Wave48 Implementation Freeze — G1 / G2 / G3 (PM6-030, authority for BE/FE/QA)
+
+This section freezes the three open gates as ONE precise, deterministic,
+implementable rule each. No real LLM anywhere: suggestions are pure functions of
+current project artifacts (same project state → same byte-stable list/order).
+Every suggestion cites ≥1 non-empty `CopilotSourceArtifactRef`; a suggestion
+with an empty `source_artifacts` array is invalid and must not be produced.
+Grounding reads use EXISTING module shapes by reference — **no renames**. All
+generation is bounded (see G1 caps). Every response carries the all-false 14-flag
+`CopilotMutationGuard`. The copilot module imports NO write path of any gated
+flow; it reads source surfaces and writes only its own process-local store
+(suggestion state transition + decision audit record + returned routing-target
+descriptor), mirroring the MVP6.1–6.7 `reset_runtime_store()` pattern.
+
+Verified real identifiers the rules read from (grounded in
+`apps/backend/app/`, no renames):
+`LearningSourceArtifactType` (learning/schemas.py: `REVIEW_DECISION`,
+`REVIEW_CORRECTION`, `VALIDATION_RESULT`, `QUALITY_METRIC`, `QUALITY_DRILLDOWN`,
+`EVALUATION_RUN`, `EVALUATION_METRIC`, `EVALUATION_ERROR_CASE`);
+`LearningSignalType` + `CorrectionPattern` (learning) with `support_count`;
+`CandidateReviewStatus.PENDING` (core/enums.py); `CandidateKind` = `ENTITY`/
+`RELATION`/`PROPERTY_VALUE`; `ValidationResultSeverity` = `INFO`/`WARNING`/
+`FAILED` + `ValidationRuleCode`; `QualityMetricGroup` = `COMPLETENESS`/
+`CONSISTENCY`/`TRACEABILITY`/`VALIDATION`/`REVIEW`/`DUPLICATE`/`RELATION_DENSITY`
++ `QualityMetric.value/rate`; `EvaluationErrorCase.error_type` +
+`EvaluationRunStatus`; `OntologyChangeRequestStatus` = `DRAFT`/`OPEN`/`IN_REVIEW`/
+`APPROVED`/`REJECTED`/`WITHDRAWN` + `GovernanceApplicationState` = `NOT_APPLICABLE`/
+`QUEUED`/`APPLIED`/`SUPERSEDED`; `ChangeRequestTargetKind` = **`CLASS`/`PROPERTY`/
+`RELATION`** and `ChangeRequestChangeType` = **`ADD`/`MODIFY`/`DEPRECATE`**;
+impact endpoint `GET /ontology-change-requests/{change_request_id}/impact-simulation`
+returning `ImpactSimulationReport.impact_report_id`.
+
+### G1 — Deterministic suggestion-generation source rules per `CopilotSuggestionKind`
+
+One deterministic trigger per kind, each grounded in the named existing
+artifacts. For each triggered group the copilot emits exactly ONE `SUGGESTED`
+suggestion (grouped by the natural key below — never one-per-row), ordered
+deterministically by `(kind ordinal, group key ascending)`; total emitted
+suggestions per project bounded at `suggestion_cap = 20`. Every suggestion's
+`source_artifacts` are the exact rows that triggered it (non-empty).
+
+- **`DRAFT_GOVERNANCE_CHANGE_REQUEST`** — derives from a **recurring
+  correction/validation signal**: a learning `CorrectionPattern` with
+  `support_count ≥ 3` (deterministic threshold), OR ≥3 `REVIEW_CORRECTION`
+  artifacts sharing the same affected ontology class/relation, OR a
+  `REPEATED_VALIDATION_FAILURE` learning signal / ≥3 `ValidationResult` rows of
+  `severity == FAILED` on the same element. Trigger key = the affected ontology
+  element id. Cites the `CorrectionPattern`/`REVIEW_CORRECTION`/`VALIDATION_RESULT`
+  artifacts (+ `ontology_version_id`, evidence refs where present).
+  `confidence_label`/`risk_label` copied from the pattern (default `MEDIUM`).
+
+- **`REVIEW_THESE_CANDIDATES`** — derives from **pending candidates needing
+  review that also carry a quality/eval signal**: candidates with
+  `review_status == PENDING` (core `CandidateReviewStatus`) that are referenced
+  by ≥1 `EVALUATION_ERROR_CASE` OR that fall in a low quality drilldown cluster.
+  Trigger key = the candidate cluster (grouped by `candidate_kind` + shared
+  error cluster / metric group). Cites the `CANDIDATE` refs (with
+  `candidate_kind`) + the `EVALUATION_ERROR_CASE`/`QUALITY_DRILLDOWN` refs. Risk
+  `HIGH` when the cluster size ≥6 or any cited error case is high-severity.
+
+- **`INSPECT_QUALITY_OR_VALIDATION_SIGNAL`** — derives from a **low quality
+  metric / FAILED validation**: a `QualityMetric` whose `rate`/`value` is below
+  its group threshold (deterministic: `rate < 0.8` where a rate exists) within a
+  `QualityMetricGroup`, OR a `ValidationRuleCode` cluster with ≥1 `FAILED` (or
+  ≥3 `WARNING`) results. Trigger key = `(QualityMetricGroup)` or
+  `(ValidationRuleCode)`. Cites the `QUALITY_METRIC`/`QUALITY_DRILLDOWN` or
+  `VALIDATION_RESULT` refs. Read-only destination; confidence `HIGH` for FAILED.
+
+- **`RUN_IMPACT_SIMULATION`** — derives from an **APPROVED + QUEUED change
+  request**: an `OntologyChangeRequest` with `status == APPROVED` AND
+  `GovernanceApplicationState == QUEUED` (approved and queued for apply, i.e.
+  worth simulating before apply/publish). Trigger key = `change_request_id`.
+  Cites the `GOVERNANCE_CHANGE_REQUEST` ref (+ `IMPACT_REPORT` ref/dimensions
+  when an impact report already exists). Risk mirrors the change request's
+  highest change type (`DEPRECATE` → higher).
+
+If no kind triggers, the list is legitimately empty (empty-state, not an error).
+No ungrounded / speculative suggestion is ever produced.
+
+### G2 — Routing pre-fill payload shape per `CopilotRoutingTargetKind`
+
+Each routing target is a **destination descriptor + optional pre-fill only** —
+reference/deep-link with NO authority; `executes_nothing = true` and a
+`human_gate_note` on every target; it creates/mutates/applies/approves/publishes
+nothing. `deep_link` is a relative frontend path; `target_ref` carries opaque
+identifiers for the destination.
+
+- **`GOVERNANCE_CHANGE_REQUEST_DRAFT`** → deep-link
+  `/projects/{project_id}/governance/change-requests/new`; `target_ref` =
+  `{ ontology_version_id }`; **and** a `governance_change_request_draft_prefill`
+  (`GovernanceChangeRequestDraftPrefill`): `target_kind` ∈ **`CLASS`/`PROPERTY`/
+  `RELATION`** (real `ChangeRequestTargetKind`), `change_type` ∈ **`ADD`/`MODIFY`/
+  `DEPRECATE`** (real `ChangeRequestChangeType`), `ontology_version_id`,
+  `element_refs[]` (`OntologyElementRef`: `element_kind` ∈ `CLASS`/`PROPERTY`/
+  `RELATION`, `element_id`, optional `label`), optional `proposed_title` /
+  `proposed_rationale` derived from the cited correction pattern. **Contract
+  correction:** the Wave47 OpenAPI examples used `target_kind: "ONTOLOGY_CLASS"`
+  and `element_kind: "CLASS"` — the runtime pre-fill MUST use the real
+  `ChangeRequestTargetKind` literal **`CLASS`** (not `ONTOLOGY_CLASS`); Backend
+  aligns the exported example. The copilot does NOT create the change request.
+
+- **`CANDIDATE_REVIEW_LOCATION`** → deep-link
+  `/projects/{project_id}/review?candidate_ids=<comma-joined ids>`; `target_ref`
+  = `{ candidate_ids: [...] }`; `governance_change_request_draft_prefill = null`.
+  Deep-links the MVP3 review inbox scoped to the cited candidates. The copilot
+  decides/corrects nothing.
+
+- **`QUALITY_OR_VALIDATION_LOCATION`** → deep-link
+  `/projects/{project_id}/quality?group=<QualityMetricGroup>` (quality) or
+  `/projects/{project_id}/validation?rule_code=<ValidationRuleCode>` (validation);
+  `target_ref` = `{ quality_metric_group }` or `{ validation_rule_code }`;
+  prefill null. Read-only destination.
+
+- **`IMPACT_REPORT_LOCATION`** → deep-link
+  `/projects/{project_id}/governance/change-requests/{change_request_id}/impact`;
+  `target_ref` = `{ change_request_id, impact_report_id? }`; prefill null.
+  Points at the MVP6.7 impact-report panel for the cited change request.
+  Read-only analysis; the human still decides apply/publish.
+
+`routing_target` is embedded in every suggestion (intended destination) AND
+returned on `ACCEPT`. No routing target ever confers authority.
+
+### G3 — Copilot summary DTO fields (`CopilotSummaryResponse`)
+
+Minimal, deterministic, read-only. Frozen as the Wave47 OpenAPI
+`CopilotSummaryResponse` (no field add/rename); confirmed as the freeze:
+`project_id`; `generated_at` (freshness timestamp, not persisted-as-side-effect);
+`source_artifact_scope: CopilotSourceArtifactType[]` (which closed-MVP artifact
+types fed this project's suggestions); `total_suggestion_count`;
+`suggested_count` / `accepted_count` / `dismissed_count` / `superseded_count`
+(counts by `CopilotSuggestionState`); `high_risk_count` (suggestions with
+`risk_label == HIGH`); `counts_by_kind: CopilotSuggestionKindCount[]` (per
+`CopilotSuggestionKind`: `kind`, `count`, `high_risk_count`); `advisory_notes:
+string[]` (advisory-only / executes-nothing / no-real-model reassurance copy);
+and the all-false `mutation_guard`. The summary derives deterministically from
+the same suggestion set as G1 and must NOT create/refresh/persist suggestions as
+a side effect and must NOT invoke a real model.
+
+### Scope confirmation (unchanged)
+
+Advisory-only, executes nothing, no real LLM (deterministic mock), audit-only
+decisions, `ACCEPT` returns a routing-target descriptor with no authority,
+non-`SUGGESTED` decision → `409 COPILOT_SUGGESTION_DECISION_CONFLICT`, all-false
+14-flag `CopilotMutationGuard` (incl. `copilot_executed_action: false`,
+`real_model_invoked: false`) on every response. Additive-only; no MVP1–MVP6.7
+path/enum/smoke break; no rename of reused shapes; process-local store acceptable
+(durable persistence P1/P2). Boundary per ADR 0015. The four suggestion kinds and
+four routing-target kinds are unchanged. **The only contract impact** is a
+Wave47 OpenAPI **example** value fix (`ONTOLOGY_CLASS` → `CLASS` in the governance
+prefill example, to match the real `ChangeRequestTargetKind`); no schema/field/
+enum shape changes.
+
+### Acceptance gates BE/FE/QA must hit (restated)
+
+- **R1** endpoints return deterministic, byte-stable, source-grounded suggestions
+  + summary (G1); empty list is a legitimate empty-state.
+- **R2** ACCEPT returns a routing target (G2) and executes NOTHING; DATA-LEVEL:
+  no candidate/published/prompt/ontology/governance/extraction/evaluation/policy
+  table or governance state changed by any copilot call (before == after,
+  including ACCEPT); all-false 14-flag guard on every response.
+- **R3** decision transitions `SUGGESTED`→`ACCEPTED`/`DISMISSED`; non-`SUGGESTED`
+  → `409 COPILOT_SUGGESTION_DECISION_CONFLICT`; `DISMISS` requires a reason code
+  (422 otherwise); audit-only capture with actor/role/command/reason/note/
+  timestamp/snapshot/source ids/(accept)routing target.
+- **R4** authz: any project member views + records audit-only decisions (MVP5
+  `Role`, no new literal); `403 PERMISSION_DENIED`, `404 PROJECT_NOT_FOUND`,
+  `404 COPILOT_SUGGESTION_NOT_FOUND`; downstream gate RBAC untouched.
+- **R5** FE copilot flow: suggestion list (kind/why/source grounding/target flow)
+  → accept-routes-into-gate (navigation CTA, never an execute button) / dismiss
+  +reason → decision audit note; D6 state badges; persistent advisory banner +
+  live all-false guard proof line read from the response; loading/empty/error/
+  permission/non-`SUGGESTED`-conflict states; mock (+ actual if runnable) smoke;
+  responsive 0-overflow.
+- **R6** no real LLM invoked (`real_model_invoked == false`), every suggestion
+  grounded (non-empty source refs).
+- **R7** MVP1–MVP6.7 regression + touched smokes pass; additive-only; no renames;
+  candidate/published separation intact.

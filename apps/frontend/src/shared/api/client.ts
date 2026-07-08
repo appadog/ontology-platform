@@ -128,6 +128,13 @@ import {
   mockImpactReports,
 } from "../mocks/mvp6ImpactFixtures";
 import {
+  allFalseCopilotGuard,
+  mockCopilotAdvisoryNotes,
+  mockCopilotSourceArtifactScope,
+  mockCopilotSuggestions,
+  MVP6_COPILOT_GENERATED_AT,
+} from "../mocks/mvp6CopilotFixtures";
+import {
   AuditEvent,
   AutoApprovalCandidatePreview,
   AutomaticApprovalPolicyDocument,
@@ -204,6 +211,17 @@ import {
   GovernanceReviewDecisionRequest,
   GovernanceWithdrawRequest,
   ImpactSimulationReport,
+  CopilotDecisionAuditNote,
+  CopilotSuggestion,
+  CopilotSuggestionDecisionRequest,
+  CopilotSuggestionDecisionResponse,
+  CopilotSuggestionDetailResponse,
+  CopilotSuggestionKind,
+  CopilotSuggestionKindCount,
+  CopilotSuggestionListResponse,
+  CopilotSuggestionState,
+  CopilotRiskLabel,
+  CopilotSummaryResponse,
   OntologyChangeItem,
   OntologyChangeItemRequest,
   OntologyChangeRequest,
@@ -325,6 +343,31 @@ export class SuggestionDecisionError extends Error {
     this.state = state;
   }
 }
+
+// ---- MVP6.8 Copilot error + deterministic process-local store ----
+// The copilot is ADVISORY-ONLY: it SUGGESTS and (on accept) ROUTES; it EXECUTES
+// NOTHING and invokes NO real model. Decisions are audit-only. A decision command
+// against a non-SUGGESTED state -> 409 COPILOT_SUGGESTION_DECISION_CONFLICT.
+export class CopilotDecisionError extends Error {
+  code: string;
+  status: number;
+  state?: string;
+
+  constructor(message: string, code: string, status: number, state?: string) {
+    super(message);
+    this.name = "CopilotDecisionError";
+    this.code = code;
+    this.status = status;
+    this.state = state;
+  }
+}
+
+// Process-local suggestion store (mirror the learning/governance precedent: clone
+// the fixtures so audit-only decision state persists within a mock session). The
+// ACCEPT/DISMISS decision mutates ONLY the suggestion state + its audit note; it
+// creates/mutates/applies NO gated-flow object (see the all-false guard).
+let mockCopilotSuggestionStore: CopilotSuggestion[] = mockCopilotSuggestions.map((s) => ({ ...s }));
+let mockCopilotDecisionCounter = 0;
 
 export class BenchmarkComparisonError extends Error {
   code: string;
@@ -4461,6 +4504,179 @@ export const apiClient = {
     const suffix = query.toString() ? `?${query.toString()}` : "";
     return request<ImpactSimulationReport>(
       `/api/v1/ontology-change-requests/${changeRequestId}/impact-simulation${suffix}`,
+    );
+  },
+
+  // ---- MVP6.8 Copilot (advisory-only; suggests + routes; executes nothing) ----
+
+  async getCopilotSummary(projectId: string): Promise<CopilotSummaryResponse> {
+    if (USE_MOCK_API) {
+      const items = mockCopilotSuggestionStore.filter((s) => s.project_id === projectId);
+      const countBy = (state: CopilotSuggestionState) => items.filter((s) => s.state === state).length;
+      const kinds: CopilotSuggestionKind[] = [
+        "DRAFT_GOVERNANCE_CHANGE_REQUEST",
+        "REVIEW_THESE_CANDIDATES",
+        "INSPECT_QUALITY_OR_VALIDATION_SIGNAL",
+        "RUN_IMPACT_SIMULATION",
+      ];
+      const counts_by_kind: CopilotSuggestionKindCount[] = kinds.map((kind) => {
+        const forKind = items.filter((s) => s.kind === kind);
+        return {
+          kind,
+          count: forKind.length,
+          high_risk_count: forKind.filter((s) => s.risk_label === "HIGH").length,
+        };
+      });
+      return delay({
+        project_id: projectId,
+        generated_at: MVP6_COPILOT_GENERATED_AT,
+        source_artifact_scope: mockCopilotSourceArtifactScope,
+        total_suggestion_count: items.length,
+        suggested_count: countBy("SUGGESTED"),
+        accepted_count: countBy("ACCEPTED"),
+        dismissed_count: countBy("DISMISSED"),
+        superseded_count: countBy("SUPERSEDED"),
+        high_risk_count: items.filter((s) => s.risk_label === "HIGH").length,
+        counts_by_kind,
+        advisory_notes: mockCopilotAdvisoryNotes,
+        mutation_guard: { ...allFalseCopilotGuard },
+      });
+    }
+    return request<CopilotSummaryResponse>(`/api/v1/projects/${projectId}/copilot/summary`);
+  },
+
+  async listCopilotSuggestions(
+    projectId: string,
+    params?: { kind?: CopilotSuggestionKind; state?: CopilotSuggestionState; riskLabel?: CopilotRiskLabel },
+  ): Promise<CopilotSuggestionListResponse> {
+    if (USE_MOCK_API) {
+      let items = mockCopilotSuggestionStore.filter((s) => s.project_id === projectId);
+      if (params?.kind) items = items.filter((s) => s.kind === params.kind);
+      if (params?.state) items = items.filter((s) => s.state === params.state);
+      if (params?.riskLabel) items = items.filter((s) => s.risk_label === params.riskLabel);
+      return delay({
+        project_id: projectId,
+        items: items.map((s) => ({ ...s })),
+        next_cursor: null,
+        mutation_guard: { ...allFalseCopilotGuard },
+      });
+    }
+    const query = new URLSearchParams();
+    if (params?.kind) query.set("kind", params.kind);
+    if (params?.state) query.set("state", params.state);
+    if (params?.riskLabel) query.set("risk_label", params.riskLabel);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<CopilotSuggestionListResponse>(
+      `/api/v1/projects/${projectId}/copilot/suggestions${suffix}`,
+    );
+  },
+
+  async getCopilotSuggestion(suggestionId: string): Promise<CopilotSuggestionDetailResponse> {
+    if (USE_MOCK_API) {
+      const suggestion = mockCopilotSuggestionStore.find((s) => s.id === suggestionId);
+      if (!suggestion) {
+        throw new CopilotDecisionError(
+          "Copilot suggestion was not found.",
+          "COPILOT_SUGGESTION_NOT_FOUND",
+          404,
+        );
+      }
+      return delay({ suggestion: { ...suggestion }, mutation_guard: { ...allFalseCopilotGuard } });
+    }
+    return request<CopilotSuggestionDetailResponse>(`/api/v1/copilot-suggestions/${suggestionId}`);
+  },
+
+  async createCopilotSuggestionDecision(
+    suggestionId: string,
+    payload: CopilotSuggestionDecisionRequest,
+  ): Promise<CopilotSuggestionDecisionResponse> {
+    if (USE_MOCK_API) {
+      const suggestion = mockCopilotSuggestionStore.find((s) => s.id === suggestionId);
+      if (!suggestion) {
+        throw new CopilotDecisionError(
+          "Copilot suggestion was not found.",
+          "COPILOT_SUGGESTION_NOT_FOUND",
+          404,
+        );
+      }
+      // Audit-only: only SUGGESTED can receive a decision. Non-SUGGESTED -> 409.
+      if (suggestion.state !== "SUGGESTED") {
+        throw new CopilotDecisionError(
+          "Only SUGGESTED copilot suggestions can receive a decision command.",
+          "COPILOT_SUGGESTION_DECISION_CONFLICT",
+          409,
+          suggestion.state,
+        );
+      }
+      if (payload.decision === "DISMISS" && !payload.dismiss_reason_code) {
+        throw new CopilotDecisionError(
+          "dismiss_reason_code is required when decision is DISMISS.",
+          "DISMISS_REASON_REQUIRED",
+          400,
+        );
+      }
+      if (payload.decision === "ACCEPT" && payload.dismiss_reason_code) {
+        throw new CopilotDecisionError(
+          "dismiss_reason_code is only allowed when decision is DISMISS.",
+          "DISMISS_REASON_NOT_ALLOWED",
+          400,
+        );
+      }
+      if (payload.decision === "DISMISS" && payload.dismiss_reason_code === "OTHER" && !payload.note?.trim()) {
+        throw new CopilotDecisionError(
+          "note is required when dismiss_reason_code is OTHER.",
+          "DECISION_NOTE_REQUIRED",
+          400,
+        );
+      }
+
+      const previousState = suggestion.state;
+      const newState: CopilotSuggestionState = payload.decision === "ACCEPT" ? "ACCEPTED" : "DISMISSED";
+      const decidedAt = new Date().toISOString();
+      mockCopilotDecisionCounter += 1;
+      // ACCEPT returns the suggestion's routing target (a destination descriptor
+      // with NO authority). The copilot creates/mutates/applies NOTHING.
+      const routingTarget = payload.decision === "ACCEPT" ? { ...suggestion.routing_target } : null;
+      const auditNote: CopilotDecisionAuditNote = {
+        id: `copilot-decision-mock-${mockCopilotDecisionCounter}`,
+        suggestion_id: suggestionId,
+        project_id: suggestion.project_id,
+        actor_id: "dev-user",
+        actor_role: "PROJECT_MEMBER",
+        decision: payload.decision,
+        dismiss_reason_code: payload.dismiss_reason_code ?? null,
+        note: payload.note ?? null,
+        decided_at: decidedAt,
+        suggestion_snapshot: {
+          kind: suggestion.kind,
+          title: suggestion.title,
+          rationale: suggestion.rationale,
+          confidence_label: suggestion.confidence_label,
+          risk_label: suggestion.risk_label,
+        },
+        source_artifact_ids: suggestion.source_artifacts.map((a) => a.artifact_id),
+        routing_target: routingTarget,
+        mutation_guard: { ...allFalseCopilotGuard },
+      };
+      // Persist the audit-only state transition (no gated-flow object touched).
+      mockCopilotSuggestionStore = mockCopilotSuggestionStore.map((s) =>
+        s.id === suggestionId
+          ? { ...s, state: newState, updated_at: decidedAt, decision_audit_note: auditNote }
+          : s,
+      );
+      return delay({
+        suggestion_id: suggestionId,
+        project_id: suggestion.project_id,
+        previous_state: previousState,
+        new_state: newState,
+        decision_audit_note: auditNote,
+        routing_target: routingTarget,
+        mutation_guard: { ...allFalseCopilotGuard },
+      });
+    }
+    return jsonRequest<CopilotSuggestionDecisionResponse>(
+      `/api/v1/copilot-suggestions/${suggestionId}/decisions`,
+      { method: "POST", body: JSON.stringify(payload) },
     );
   },
 };

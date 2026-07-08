@@ -16,6 +16,7 @@ import {
   ClipboardList,
   Lightbulb,
   BarChart3,
+  Bot,
   PlugZap,
   type LucideIcon,
 } from "lucide-react";
@@ -45,6 +46,7 @@ export type NavSection =
   | "search"
   | "rag"
   | "evaluation"
+  | "copilot"
   | "learning-insights"
   | "benchmark"
   | "external-api";
@@ -105,6 +107,9 @@ export const projectNavGroups: NavGroup[] = [
   {
     label: "Analyze",
     items: [
+      // MVP6.8 (FE6-085 / ADR 0015): the advisory-only Copilot is a cross-cutting
+      // "what should I do next?" destination. First in Analyze (recommended entry).
+      { section: "copilot", label: "Copilot", icon: Bot, to: (p) => `/projects/${p}/copilot` },
       { section: "search", label: "Search", icon: Search, to: (p) => `/projects/${p}/search` },
       { section: "rag", label: "RAG", icon: MessageSquareText, to: (p) => `/projects/${p}/rag` },
       { section: "evaluation", label: "Evaluation", icon: ClipboardList, to: (p) => `/projects/${p}/evaluation-datasets` },
@@ -138,6 +143,7 @@ export function resolveActiveSection(pathname: string): NavSection | null {
   if (pathname.includes("/search")) return "search";
   if (pathname.includes("/rag")) return "rag";
   if (pathname.includes("/evaluation-dataset")) return "evaluation";
+  if (pathname.includes("/copilot")) return "copilot";
   if (pathname.includes("/learning-insights")) return "learning-insights";
   if (pathname.includes("/benchmark-comparison")) return "benchmark";
   if (pathname.includes("/external-api")) return "external-api";

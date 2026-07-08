@@ -3395,3 +3395,250 @@ export interface ImpactSimulationReport {
   mutation_guard: ImpactSimulationMutationGuard;
   computed_at?: string;
 }
+
+// ---- MVP6.8 Copilot (advisory-only, non-autonomous, audit-only, no real LLM) ----
+// Additive. Matches docs/api/openapi-mvp6-8-draft.json EXACTLY. Every response
+// carries an ALL-FALSE 14-flag CopilotMutationGuard (no flag ever true, incl.
+// copilot_executed_action / real_model_invoked). The copilot SUGGESTS and (on
+// accept) ROUTES the human into an existing gated flow — it EXECUTES NOTHING and
+// invokes NO real model. ACCEPT returns a CopilotRoutingTarget (deep-link +
+// optional pre-fill, executes_nothing=true). Decisions are audit-only; a decision
+// command against a non-SUGGESTED state returns 409. Reuses OntologyElementRef,
+// ChangeRequestTargetKind/ChangeRequestChangeType, SuggestionDismissReasonCode,
+// GovernanceRole by reference (no rename).
+
+/** NEW (MVP6.8). The four frozen P0 suggestion kinds. Each names the existing gated flow it routes into on accept and the source artifacts it must cite. */
+export type CopilotSuggestionKind =
+  | "DRAFT_GOVERNANCE_CHANGE_REQUEST"
+  | "REVIEW_THESE_CANDIDATES"
+  | "INSPECT_QUALITY_OR_VALIDATION_SIGNAL"
+  | "RUN_IMPACT_SIMULATION";
+
+/** NEW (MVP6.8). Mirrors the MVP6.2 suggestion state vocabulary. SUGGESTED -> {ACCEPTED | DISMISSED | SUPERSEDED}. SUPERSEDED is read-side only (never set by the human decision endpoint). */
+export type CopilotSuggestionState = "SUGGESTED" | "ACCEPTED" | "DISMISSED" | "SUPERSEDED";
+
+/** NEW (MVP6.8). Human decision request COMMAND (not the resulting state). ACCEPT returns a routing-target descriptor and executes nothing; DISMISS requires a reason code. */
+export type CopilotDecisionCommand = "ACCEPT" | "DISMISS";
+
+/** NEW (MVP6.8). Reason code required when the command is DISMISS. Reuses the MVP6.2 SuggestionDismissReasonCode set verbatim. */
+export type CopilotDismissReasonCode = SuggestionDismissReasonCode;
+
+/** NEW (MVP6.8). The four frozen routing-target destinations (deep-link + optional pre-fill into an EXISTING gated flow). Carries NO authority. */
+export type CopilotRoutingTargetKind =
+  | "GOVERNANCE_CHANGE_REQUEST_DRAFT"
+  | "CANDIDATE_REVIEW_LOCATION"
+  | "QUALITY_OR_VALIDATION_LOCATION"
+  | "IMPACT_REPORT_LOCATION";
+
+/** NEW (MVP6.8). Advisory confidence label. Mirrors MVP6.2 LearningConfidenceLabel values. */
+export type CopilotConfidenceLabel = "LOW" | "MEDIUM" | "HIGH";
+
+/** NEW (MVP6.8). Advisory risk label. Mirrors MVP6.2 LearningRiskLabel values. */
+export type CopilotRiskLabel = "LOW" | "MEDIUM" | "HIGH";
+
+/** NEW (MVP6.8). Source-grounding artifact types the copilot may cite. Reuses MVP6.2 LearningSourceArtifactType + governance/candidate/impact refs. Every suggestion must cite at least one. */
+export type CopilotSourceArtifactType =
+  | "REVIEW_DECISION"
+  | "REVIEW_CORRECTION"
+  | "VALIDATION_RESULT"
+  | "QUALITY_METRIC"
+  | "QUALITY_DRILLDOWN"
+  | "EVALUATION_RUN"
+  | "EVALUATION_METRIC"
+  | "EVALUATION_ERROR_CASE"
+  | "LEARNING_SIGNAL"
+  | "CANDIDATE"
+  | "GOVERNANCE_CHANGE_REQUEST"
+  | "IMPACT_REPORT";
+
+/**
+ * NEW (MVP6.8). ALL 14 FLAGS FALSE on EVERY response, no exceptions. MVP6.8 turns
+ * NO flag true, ever. copilot_executed_action and real_model_invoked are the
+ * copilot-specific assertions. The UI reads these from the response (never
+ * hardcoded); any true flag switches the UI to a guard-violation state.
+ */
+export interface CopilotMutationGuard {
+  ontology_draft_mutated: false;
+  ontology_published_mutated: false;
+  candidate_graph_mutated: false;
+  published_graph_mutated: false;
+  prompt_version_mutated: false;
+  governance_state_mutated: false;
+  change_request_created: false;
+  change_request_applied: false;
+  candidate_approved_or_published: false;
+  extraction_job_started: false;
+  evaluation_run_started: false;
+  auto_approval_policy_mutated: false;
+  copilot_executed_action: false;
+  real_model_invoked: false;
+}
+
+/** NEW (MVP6.8). Evidence pointer reused by reference from MVP2/MVP3 evidence shapes. */
+export interface CopilotEvidenceRef {
+  source_id: string;
+  source_segment_id?: string | null;
+  locator?: string | null;
+  quote?: string | null;
+}
+
+/** NEW (MVP6.8). A single source-artifact grounding reference. At least one is required per suggestion (no ungrounded generation). */
+export interface CopilotSourceArtifactRef {
+  artifact_type: CopilotSourceArtifactType;
+  artifact_id: string;
+  project_id: string;
+  candidate_id?: string | null;
+  candidate_kind?: string | null;
+  review_task_id?: string | null;
+  review_decision_id?: string | null;
+  validation_result_id?: string | null;
+  quality_metric_id?: string | null;
+  evaluation_run_id?: string | null;
+  evaluation_error_case_id?: string | null;
+  learning_signal_id?: string | null;
+  governance_change_request_id?: string | null;
+  impact_report_id?: string | null;
+  ontology_version_id?: string | null;
+  prompt_version_id?: string | null;
+  model_run_id?: string | null;
+  evidence_refs?: CopilotEvidenceRef[];
+  observed_at?: string | null;
+}
+
+/**
+ * NEW (MVP6.8). Pre-fill payload for GOVERNANCE_CHANGE_REQUEST_DRAFT. A draft the
+ * human takes INTO the MVP6.5 create/propose screen; the copilot does NOT create
+ * the change request. target_kind reuses the real ChangeRequestTargetKind literal
+ * (CLASS/PROPERTY/RELATION — NOT ONTOLOGY_CLASS, per PM6-030 example correction).
+ */
+export interface CopilotGovernanceChangeRequestDraftPrefill {
+  target_kind: ChangeRequestTargetKind;
+  change_type: ChangeRequestChangeType;
+  ontology_version_id?: string | null;
+  element_refs: CopilotOntologyElementRef[];
+  proposed_title?: string | null;
+  proposed_rationale?: string | null;
+}
+
+/** NEW (MVP6.8). Ontology element reference inside a governance draft pre-fill (element_kind: CLASS/PROPERTY/RELATION). */
+export interface CopilotOntologyElementRef {
+  element_kind: string;
+  element_id: string;
+  label?: string | null;
+}
+
+/**
+ * NEW (MVP6.8). Routing-target descriptor: a destination (deep-link) + optional
+ * pre-fill into an EXISTING gated flow. NO authority; executes_nothing is always
+ * true. Returned on ACCEPT and embedded in each suggestion as the intended
+ * destination. The human still passes every gate of the target flow.
+ */
+export interface CopilotRoutingTarget {
+  kind: CopilotRoutingTargetKind;
+  deep_link: string;
+  target_ref: Record<string, unknown>;
+  governance_change_request_draft_prefill?: CopilotGovernanceChangeRequestDraftPrefill | null;
+  executes_nothing: true;
+  human_gate_note: string;
+}
+
+/** NEW (MVP6.8). Immutable snapshot of the decided suggestion captured in the audit note. */
+export interface CopilotSuggestionSnapshot {
+  kind: CopilotSuggestionKind;
+  title: string;
+  rationale: string;
+  confidence_label: CopilotConfidenceLabel;
+  risk_label: CopilotRiskLabel;
+}
+
+/** NEW (MVP6.8). Audit-only decision record. For ACCEPT it includes routing_target (where the human was routed) and always an all-false guard. */
+export interface CopilotDecisionAuditNote {
+  id: string;
+  suggestion_id: string;
+  project_id: string;
+  actor_id: string;
+  actor_role: string;
+  decision: CopilotDecisionCommand;
+  dismiss_reason_code: CopilotDismissReasonCode | null;
+  note: string | null;
+  decided_at: string;
+  suggestion_snapshot: CopilotSuggestionSnapshot;
+  source_artifact_ids: string[];
+  routing_target: CopilotRoutingTarget | null;
+  mutation_guard: CopilotMutationGuard;
+}
+
+/** NEW (MVP6.8). A single deterministic, source-grounded suggestion. source_artifacts is required + non-empty. routing_target is a descriptor with no authority. */
+export interface CopilotSuggestion {
+  id: string;
+  project_id: string;
+  kind: CopilotSuggestionKind;
+  state: CopilotSuggestionState;
+  title: string;
+  rationale: string;
+  expected_next_step: string;
+  routing_target: CopilotRoutingTarget;
+  source_artifacts: CopilotSourceArtifactRef[];
+  confidence_label: CopilotConfidenceLabel;
+  risk_label: CopilotRiskLabel;
+  created_at: string;
+  updated_at: string;
+  decision_audit_note: CopilotDecisionAuditNote | null;
+  safety_note: string;
+}
+
+/** NEW (MVP6.8). Per-kind summary count with high-risk sub-count. */
+export interface CopilotSuggestionKindCount {
+  kind: CopilotSuggestionKind;
+  count: number;
+  high_risk_count: number;
+}
+
+/** NEW (MVP6.8). Read-only project copilot summary. Deterministically derived; carries an all-false guard. */
+export interface CopilotSummaryResponse {
+  project_id: string;
+  generated_at: string;
+  source_artifact_scope: CopilotSourceArtifactType[];
+  total_suggestion_count: number;
+  suggested_count: number;
+  accepted_count: number;
+  dismissed_count: number;
+  superseded_count: number;
+  high_risk_count: number;
+  counts_by_kind: CopilotSuggestionKindCount[];
+  advisory_notes: string[];
+  mutation_guard: CopilotMutationGuard;
+}
+
+/** NEW (MVP6.8). Deterministic (byte-stable) suggestion list. Carries an all-false guard. */
+export interface CopilotSuggestionListResponse {
+  project_id: string;
+  items: CopilotSuggestion[];
+  next_cursor: string | null;
+  mutation_guard: CopilotMutationGuard;
+}
+
+/** NEW (MVP6.8). Single suggestion detail. Carries an all-false guard. */
+export interface CopilotSuggestionDetailResponse {
+  suggestion: CopilotSuggestion;
+  mutation_guard: CopilotMutationGuard;
+}
+
+/** NEW (MVP6.8). Human decision request. decision is a COMMAND (ACCEPT/DISMISS). dismiss_reason_code required when DISMISS; note required when reason is OTHER. */
+export interface CopilotSuggestionDecisionRequest {
+  decision: CopilotDecisionCommand;
+  dismiss_reason_code?: CopilotDismissReasonCode | null;
+  note?: string | null;
+  client_request_id?: string | null;
+}
+
+/** NEW (MVP6.8). Decision result. routing_target is non-null only for ACCEPT (a destination descriptor with no authority). Carries an all-false guard. */
+export interface CopilotSuggestionDecisionResponse {
+  suggestion_id: string;
+  project_id: string;
+  previous_state: CopilotSuggestionState;
+  new_state: CopilotSuggestionState;
+  decision_audit_note: CopilotDecisionAuditNote;
+  routing_target: CopilotRoutingTarget | null;
+  mutation_guard: CopilotMutationGuard;
+}

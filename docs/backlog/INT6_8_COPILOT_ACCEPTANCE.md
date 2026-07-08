@@ -1,7 +1,7 @@
 # INT6.8 MVP6.8 Copilot Acceptance Checklist
 
-Status: `WAVE47 QA PLANNING ACCEPTANCE — PASS (C-series PASS; R-series NOT RUNNABLE by design)`
-Date: 2026-07-03
+Status: `WAVE48 QA RUNTIME ACCEPTANCE — PASS (C-series PASS; R1-R7 all PASS, independently verified)`
+Date: 2026-07-08
 Owner: QA / Integration (Wave47 authored by commander due to repeated agent session-limit / connection-drop interruptions; independent runtime verification deferred to the Wave48 implementation QA)
 Backlog: `INT6-067`..`INT6-070` (Wave47 planning)
 
@@ -45,16 +45,22 @@ LLM (deterministic mock), and source grounding. OpenAPI parses (3.1.0,
 | C10 | FE advisory-only surface (suggestion list + accept-routes/dismiss + audit note + "executes nothing" proof), no auto-apply/publish/execute affordance; design language applied | PASS |
 | C11 | Durable invariants: no autonomous action, candidate/published separation, evidence grounding, additive-only | PASS |
 
-## R-Series — Runtime Gates (Wave48, NOT RUNNABLE now)
+## R-Series — Runtime Gates (Wave48 QA — INDEPENDENTLY VERIFIED)
 | ID | Runtime gate | Status |
 |---|---|---|
-| R1 | endpoints return deterministic, source-grounded suggestions + summary | NOT RUNNABLE |
-| R2 | ACCEPT returns a routing target and executes NOTHING; DATA-LEVEL: no table mutated by any copilot call; all-false 14-flag guard | NOT RUNNABLE |
-| R3 | decision transitions + non-SUGGESTED 409 conflict; audit-only capture | NOT RUNNABLE |
-| R4 | authz (viewer decides audit-only); downstream gate RBAC untouched | NOT RUNNABLE |
-| R5 | frontend copilot flow (suggestions -> accept-routes/dismiss -> audit note), mock + actual smoke; no execute affordance | NOT RUNNABLE |
-| R6 | no real LLM invoked (`real_model_invoked=false`), suggestions grounded | NOT RUNNABLE |
-| R7 | MVP1-MVP6.7 regression, additive-only, no renames | NOT RUNNABLE |
+| R1 | endpoints return deterministic, source-grounded suggestions + summary | PASS — 4 endpoints live; suggestions byte-stable across repeat fetches; every item cites >=1 non-empty source ref; capped 20 |
+| R2 | ACCEPT returns a routing target and executes NOTHING; DATA-LEVEL: no table mutated by any copilot call; all-false 14-flag guard | PASS — independent script: 25 DB tables + 8 governance/application/learning surface stores before==after full flow (summary+list+detail+ACCEPT+DISMISS); 14-flag guard all-false on every response; ACCEPT returns routing target `executes_nothing=true` |
+| R3 | decision transitions + non-SUGGESTED 409 conflict; audit-only capture | PASS — SUGGESTED->ACCEPTED/DISMISSED live; re-decide -> 409 COPILOT_SUGGESTION_DECISION_CONFLICT; DISMISS-no-reason -> 422 DISMISS_REASON_REQUIRED; ACCEPT-with-reason -> 422 DISMISS_REASON_NOT_ALLOWED |
+| R4 | authz (viewer decides audit-only); downstream gate RBAC untouched | PASS — unknown project -> 404 PROJECT_NOT_FOUND; unknown suggestion -> 404 COPILOT_SUGGESTION_NOT_FOUND; any project member records audit-only decision; no downstream RBAC touched |
+| R5 | frontend copilot flow (suggestions -> accept-routes/dismiss -> audit note), mock + actual smoke; no execute affordance | PASS — 75 FE tests, build clean, `smoke:mvp6:copilot:mock` PASS (no execute/apply/publish/approve affordance asserted), `smoke:mvp6:copilot:actual` PASS against live SQLite-backed backend (6 checks) after a QA harness fix (expected-status 400->422) |
+| R6 | no real LLM invoked (`real_model_invoked=false`), suggestions grounded | PASS — `real_model_invoked:false` + `copilot_executed_action:false` on every response; deterministic mock; all suggestions grounded |
+| R7 | MVP1-MVP6.7 regression, additive-only, no renames | PASS — 169 backend tests pass (incl. MVP6.7 impact 20); prior MVP6 mock smokes (governance/governance-apply/benchmark) PASS; additive module + additive router registration; no renames; candidate/published separation intact |
+
+### CopilotOntologyElementRef judgment
+Runtime exports `CopilotOntologyElementRef` (draft names it `OntologyElementRef`). Verified: (a) the governance module already owns an UNRELATED `OntologyElementRef` with a completely different shape (`target_kind/ontology_class_id/...`), so the collision is real; (b) `CopilotOntologyElementRef` has fields `element_kind/element_id/label` — IDENTICAL to the draft's `OntologyElementRef`. Only the `$ref` component NAME differs; the JSON payload is unchanged. **Acceptable** as an additive-P0 namespacing accommodation.
+
+### Draft-vs-runtime discrepancy (non-blocking)
+The `openapi-mvp6-8-draft.json` decision endpoint declares `400` for validation errors, but the runtime (and FE client + FE unit tests) use `422` with a business `code` (`DISMISS_REASON_REQUIRED` etc.). The runtime 422 is the correct/consistent behavior; the FE actual-smoke script carried the stale `400` and was fixed by QA to `422`. P1: sync the draft's declared code to `422` for strict alignment.
 
 ## Wave48 Gates (freeze at implementation)
 - G1 deterministic suggestion-generation source rules per `CopilotSuggestionKind`.
