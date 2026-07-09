@@ -1414,3 +1414,43 @@ export function useRunConnectorImportPreview(projectId: string, connectorKind: C
       apiClient.runConnectorImportPreview(projectId, connectorKind, payload),
   });
 }
+
+// ---- MVP6.10 Multi-tenant (read-only tenant context + strict isolation) ----
+// Read-only GETs. `actorId` is a dev-only QA lever (default "dev-user") folded
+// into the query key so switching actor re-fetches. A denied read rejects with a
+// TenantAccessError (retry disabled so the isolation state renders immediately).
+
+export const tenantKeys = {
+  myTenants: (actorId: string) => ["tenants", "mine", actorId] as const,
+  summary: (actorId: string, tenantId: string) => ["tenants", actorId, tenantId, "summary"] as const,
+  projects: (actorId: string, tenantId: string) => ["tenants", actorId, tenantId, "projects"] as const,
+};
+
+/** The actor's visibility set (my tenants). Idempotent GET; all-false guard; never lists another tenant. */
+export function useMyTenants(actorId: string) {
+  return useQuery({
+    queryKey: tenantKeys.myTenants(actorId),
+    queryFn: () => apiClient.getMyTenants(actorId),
+    enabled: Boolean(actorId),
+  });
+}
+
+/** A single tenant summary (member-only). Denied -> TenantAccessError (404-not-leak / 403-suspended). */
+export function useTenantSummary(actorId: string, tenantId: string, enabled = true) {
+  return useQuery({
+    queryKey: tenantKeys.summary(actorId, tenantId),
+    queryFn: () => apiClient.getTenantSummary(tenantId, actorId),
+    enabled: Boolean(actorId) && Boolean(tenantId) && enabled,
+    retry: false,
+  });
+}
+
+/** Tenant-scoped project list (this tenant only; never another tenant's projects). */
+export function useTenantProjects(actorId: string, tenantId: string, enabled = true) {
+  return useQuery({
+    queryKey: tenantKeys.projects(actorId, tenantId),
+    queryFn: () => apiClient.getTenantProjects(tenantId, actorId),
+    enabled: Boolean(actorId) && Boolean(tenantId) && enabled,
+    retry: false,
+  });
+}

@@ -20,6 +20,7 @@ from app.modules.project.router import router as project_router
 from app.modules.quality.router import router as quality_router
 from app.modules.review.router import router as review_router
 from app.modules.source.router import router as source_router
+from app.modules.tenancy.router import router as tenancy_router
 from app.modules.validation.router import router as validation_router
 
 api_router = APIRouter()
@@ -44,3 +45,4 @@ api_router.include_router(mvp4_router)
 api_router.include_router(mvp5_router)
 api_router.include_router(copilot_router)
 api_router.include_router(connectors_router)
+api_router.include_router(tenancy_router)

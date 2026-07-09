@@ -142,6 +142,14 @@ import {
   isConnectorKind,
 } from "../mocks/mvp6ConnectorsFixtures";
 import {
+  allFalseTenantGuard,
+  buildMyTenants,
+  projectOwningTenant,
+  resolveTenantSummary,
+  TENANCY_DEFAULT_ACTOR_ID,
+  tenantProjects,
+} from "../mocks/mvp6TenancyFixtures";
+import {
   AuditEvent,
   AutoApprovalCandidatePreview,
   AutomaticApprovalPolicyDocument,
@@ -158,6 +166,12 @@ import {
   ConnectorImportPreviewRequest,
   ConnectorImportPreviewResponse,
   ConnectorKind,
+  ProjectTenantResponse,
+  TenantAccessDenialReason,
+  TenantApiErrorCode,
+  TenantListResponse,
+  TenantProjectListResponse,
+  TenantSummaryResponse,
   CorrectionPattern,
   LearningSignalSummaryResponse,
   PromptSuggestion,
@@ -398,6 +412,30 @@ export class ConnectorError extends Error {
   }
 }
 
+// ---- MVP6.10 Multi-tenant isolation error ----
+// A tenant read that is NOT permitted throws a TenantAccessError carrying the
+// frozen isolation code + (when present) the TenantAccessDenialReason from
+// ApiError.details.denial_reason. The FE drives the 404-not-leak / 403-suspended
+// states from `denial_reason` (never leaking existence). Errors carry NO guard.
+export class TenantAccessError extends Error {
+  code: TenantApiErrorCode;
+  status: number;
+  denialReason: TenantAccessDenialReason | null;
+
+  constructor(
+    message: string,
+    code: TenantApiErrorCode,
+    status: number,
+    denialReason: TenantAccessDenialReason | null,
+  ) {
+    super(message);
+    this.name = "TenantAccessError";
+    this.code = code;
+    this.status = status;
+    this.denialReason = denialReason;
+  }
+}
+
 export class BenchmarkComparisonError extends Error {
   code: string;
   status: number;
@@ -565,6 +603,70 @@ async function uploadRequest<T>(path: string, formData: FormData): Promise<T> {
 
 function unwrapItems<T>(payload: T[] | { items?: T[] }): T[] {
   return Array.isArray(payload) ? payload : payload.items ?? [];
+}
+
+// ---- MVP6.10 tenant read helpers (isolation-aware) ----
+
+/** Map a mock isolation decision to the frozen error envelope. */
+function tenantDenial(decision: {
+  outcome: "VISIBLE" | "SUSPENDED" | "NOT_FOUND";
+  reason: TenantAccessDenialReason | null;
+}): TenantAccessError {
+  if (decision.outcome === "SUSPENDED") {
+    return new TenantAccessError(
+      "해당 테넌트에 대한 접근이 일시 중지되었습니다.",
+      "TENANT_ACCESS_SUSPENDED",
+      403,
+      decision.reason,
+    );
+  }
+  // 404 exists precisely so existence is never leaked.
+  return new TenantAccessError(
+    "요청한 테넌트를 찾을 수 없습니다.",
+    "TENANT_NOT_FOUND",
+    404,
+    decision.reason,
+  );
+}
+
+/**
+ * Actual-API tenant GET. Appends the dev-only `actor_id` query param and, on a
+ * non-2xx, parses the frozen ApiError envelope into a TenantAccessError carrying
+ * `code` + `details.denial_reason` — so the FE drives the 404-not-leak / 403-
+ * suspended states from the response, never leaking existence. Errors carry no
+ * guard (proof line is 200-only).
+ */
+async function tenantActualGet<T>(path: string, actorId: string): Promise<T> {
+  if (USE_MOCK_API) {
+    throw new Error(`No mock handler registered for ${path}`);
+  }
+  const sep = path.includes("?") ? "&" : "?";
+  const response = await fetch(`${API_BASE_URL}${path}${sep}actor_id=${encodeURIComponent(actorId)}`, {
+    headers: { "X-Dev-Auth": "mvp6-dev" },
+  });
+  if (!response.ok) {
+    let code: TenantApiErrorCode = response.status === 403 ? "TENANT_ACCESS_SUSPENDED" : "TENANT_NOT_FOUND";
+    let denialReason: TenantAccessDenialReason | null = null;
+    let message = `테넌트 요청 실패: ${response.status}`;
+    try {
+      const raw = (await response.json()) as {
+        error?: { code?: TenantApiErrorCode; message?: string; details?: { denial_reason?: TenantAccessDenialReason } | null };
+        code?: TenantApiErrorCode;
+        message?: string;
+        details?: { denial_reason?: TenantAccessDenialReason } | null;
+      };
+      // Backend returns the canonical wrapped envelope `{ "error": { code, message, details } }`
+      // (ApiErrorResponse / TenantApiErrorResponse). Unwrap it; tolerate a flat shape too.
+      const body = raw?.error ?? raw;
+      if (body?.code) code = body.code;
+      if (body?.message) message = body.message;
+      denialReason = body?.details?.denial_reason ?? null;
+    } catch {
+      /* keep status-derived defaults */
+    }
+    throw new TenantAccessError(message, code, response.status, denialReason);
+  }
+  return response.json() as Promise<T>;
 }
 
 function normalizeAdminSummary(payload: Record<string, unknown>): OrganizationAdminSummary {
@@ -4766,6 +4868,87 @@ export const apiClient = {
       `/api/v1/projects/${projectId}/connectors/${connectorKind}/import-preview`,
       { method: "POST", body: JSON.stringify(payload) },
     );
+  },
+
+  // ---- MVP6.10 Multi-tenant (read-only tenant context + strict isolation) ----
+  // 4 GET reads. Every 200 carries an all-false 8-flag TenantMutationGuard; a
+  // denied read throws a TenantAccessError (404 TENANT_NOT_FOUND — existence never
+  // leaked / 403 TENANT_ACCESS_SUSPENDED) driven by details.denial_reason. Reads
+  // NOTHING cross-tenant; creates/mutates/re-homes nothing. `actorId` is a dev-only
+  // QA lever (default "dev-user"), never a real auth/JWT claim or a production UI
+  // control.
+
+  async getMyTenants(actorId: string = TENANCY_DEFAULT_ACTOR_ID): Promise<TenantListResponse> {
+    if (USE_MOCK_API) {
+      const items = buildMyTenants(actorId);
+      return delay({
+        actor_id: actorId,
+        items,
+        total_count: items.length,
+        mutation_guard: { ...allFalseTenantGuard },
+      });
+    }
+    return tenantActualGet<TenantListResponse>(`/api/v1/tenants`, actorId);
+  },
+
+  async getTenantSummary(
+    tenantId: string,
+    actorId: string = TENANCY_DEFAULT_ACTOR_ID,
+  ): Promise<TenantSummaryResponse> {
+    if (USE_MOCK_API) {
+      const { summary, decision } = resolveTenantSummary(actorId, tenantId);
+      if (!summary) throw tenantDenial(decision);
+      return delay({ actor_id: actorId, tenant: summary, mutation_guard: { ...allFalseTenantGuard } });
+    }
+    return tenantActualGet<TenantSummaryResponse>(`/api/v1/tenants/${tenantId}`, actorId);
+  },
+
+  async getTenantProjects(
+    tenantId: string,
+    actorId: string = TENANCY_DEFAULT_ACTOR_ID,
+  ): Promise<TenantProjectListResponse> {
+    if (USE_MOCK_API) {
+      // Same isolation decision as the summary; only then return THIS tenant's
+      // projects (never another tenant's; cross_tenant_access_granted stays false).
+      const { summary, decision } = resolveTenantSummary(actorId, tenantId);
+      if (!summary) throw tenantDenial(decision);
+      const items = tenantProjects(tenantId);
+      return delay({
+        actor_id: actorId,
+        tenant_id: tenantId,
+        items,
+        total_count: items.length,
+        mutation_guard: { ...allFalseTenantGuard },
+      });
+    }
+    return tenantActualGet<TenantProjectListResponse>(`/api/v1/tenants/${tenantId}/projects`, actorId);
+  },
+
+  async getProjectTenant(
+    projectId: string,
+    actorId: string = TENANCY_DEFAULT_ACTOR_ID,
+  ): Promise<ProjectTenantResponse> {
+    if (USE_MOCK_API) {
+      const owningTenantId = projectOwningTenant(projectId);
+      // Unknown project -> 404 PROJECT_NOT_FOUND (no leak, no denial_reason).
+      if (!owningTenantId) {
+        throw new TenantAccessError("요청한 프로젝트를 찾을 수 없습니다.", "PROJECT_NOT_FOUND", 404, null);
+      }
+      const { summary, decision } = resolveTenantSummary(actorId, owningTenantId);
+      if (summary) {
+        return delay({
+          actor_id: actorId,
+          project_id: projectId,
+          tenant: summary,
+          mutation_guard: { ...allFalseTenantGuard },
+        });
+      }
+      // Known-but-inactive owning tenant -> 403; otherwise 404 PROJECT_NOT_FOUND
+      // (cross-tenant project existence is NEVER leaked).
+      if (decision.outcome === "SUSPENDED") throw tenantDenial(decision);
+      throw new TenantAccessError("요청한 프로젝트를 찾을 수 없습니다.", "PROJECT_NOT_FOUND", 404, null);
+    }
+    return tenantActualGet<ProjectTenantResponse>(`/api/v1/projects/${projectId}/tenant`, actorId);
   },
 };
 

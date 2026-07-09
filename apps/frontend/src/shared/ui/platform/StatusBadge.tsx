@@ -1,7 +1,9 @@
 import {
   AlertTriangle,
+  Archive,
   Ban,
   CheckCircle2,
+  PauseCircle,
   CircleDashed,
   CircleSlash,
   Clock,
@@ -160,6 +162,16 @@ const tokenTable: Record<string, TokenSpec> = {
   COMPATIBLE: { tone: "success", icon: CheckCircle2, ko: "호환됨" },
   INCOMPATIBLE: { tone: "danger", icon: XCircle, ko: "비호환" },
   CANDIDATE: { tone: "info", icon: Layers, ko: "후보 레이어" },
+  // MVP6.10 Multi-tenant (read-only context + strict isolation). TenantStatus /
+  // TenantMembershipStatus share ACTIVE (above); SUSPENDED is the membership/tenant
+  // inactive token. TenantAccessDenialReason tokens appear only in denial states.
+  // ARCHIVED is reused above (History/보관됨); the denial-specific TENANT_ARCHIVED
+  // is a distinct token so the reason taxonomy is explicit.
+  SUSPENDED: { tone: "warning", icon: PauseCircle, ko: "일시 중단" },
+  NOT_A_MEMBER: { tone: "neutral", icon: MinusCircle, ko: "멤버 아님" },
+  TENANT_ARCHIVED: { tone: "neutral", icon: Archive, ko: "테넌트 보관됨" },
+  MEMBERSHIP_SUSPENDED: { tone: "warning", icon: PauseCircle, ko: "멤버십 중단" },
+  TENANT_SUSPENDED: { tone: "warning", icon: PauseCircle, ko: "테넌트 중단" },
 };
 
 interface StatusBadgeProps {

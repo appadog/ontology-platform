@@ -3798,3 +3798,130 @@ export interface ConnectorImportPreviewResponse {
   raw_secret_present: false;
   mutation_guard: ConnectorMutationGuard;
 }
+
+// ---- MVP6.10 Multi-tenant (read-only tenant context + strict isolation) ----
+//
+// Field/enum names match docs/api/openapi-mvp6-10-draft.json EXACTLY (4 GET paths
+// / 13 schemas). READ-ONLY context: the surface provisions nothing, mutates
+// nothing, re-homes nothing. STRICT ISOLATION is the headline invariant
+// (default-deny, 404-not-leak): a not-a-member/archived/unknown tenant -> 404
+// TENANT_NOT_FOUND (existence never leaked); a suspended relationship -> 403
+// TENANT_ACCESS_SUSPENDED; another tenant's data is NEVER returned. Every 200
+// carries an ALL-FALSE 8-flag TenantMutationGuard (errors carry no guard; the
+// proof line is 200-only, denial states driven by ApiError.details.denial_reason).
+// MVP1 Project + all per-project endpoints are unchanged and tenant-unaware (no
+// tenant_id column). MVP5 Role is reused by reference (GovernanceRole, no rename).
+
+/** NEW (MVP6.10). Lifecycle status of a tenant. ACTIVE readable by ACTIVE members; SUSPENDED -> 403; ARCHIVED -> 404 (existence not leaked). */
+export type TenantStatus = "ACTIVE" | "SUSPENDED" | "ARCHIVED";
+
+/** NEW (MVP6.10). Status of an (actor, tenant) membership. ACTIVE contributes the tenant to the visibility set; SUSPENDED -> 403 TENANT_ACCESS_SUSPENDED. */
+export type TenantMembershipStatus = "ACTIVE" | "SUSPENDED";
+
+/** NEW (MVP6.10). Response-side isolation taxonomy. NOT_A_MEMBER/TENANT_ARCHIVED -> 404; MEMBERSHIP_SUSPENDED/TENANT_SUSPENDED -> 403. Carried in ApiError.details.denial_reason. */
+export type TenantAccessDenialReason =
+  | "NOT_A_MEMBER"
+  | "TENANT_ARCHIVED"
+  | "MEMBERSHIP_SUSPENDED"
+  | "TENANT_SUSPENDED";
+
+/**
+ * NEW (MVP6.10). All-false mutation guard present on EVERY tenant 200 response.
+ * Every flag is false, always; MVP6.10 turns NO flag true, ever.
+ * cross_tenant_access_granted + project_rehomed are the isolation-specific proofs.
+ */
+export interface TenantMutationGuard {
+  tenant_created: false;
+  tenant_updated: false;
+  tenant_deleted: false;
+  membership_mutated: false;
+  project_rehomed: false;
+  cross_tenant_access_granted: false;
+  candidate_graph_mutated: false;
+  published_graph_mutated: false;
+}
+
+/** NEW (MVP6.10). An (actor_id, tenant_id, role, status) relationship. role reuses MVP5 Role verbatim (GovernanceRole). Read-only; never mutated in P0. */
+export interface TenantMembership {
+  actor_id: string;
+  tenant_id: string;
+  role: GovernanceRole;
+  status: TenantMembershipStatus;
+}
+
+/**
+ * NEW (MVP6.10). Read-only summary of one tenant in the caller's visibility set.
+ * Shared item shape for the my-tenants list, the single-tenant summary, and the
+ * project->tenant resolution. Carries the caller's OWN membership only; never
+ * another actor's membership or another tenant's data.
+ */
+export interface TenantSummary {
+  id: string;
+  display_name: string;
+  description: string | null;
+  status: TenantStatus;
+  my_membership: TenantMembership;
+  /** Exact count of projects owned by this tenant via the fixture mapping (this tenant only). */
+  project_count: number;
+  created_at: string;
+}
+
+/**
+ * NEW (MVP6.10). Project summary reused BY REFERENCE from the MVP1 ProjectSummary
+ * (same field names; NO rename, NO tenant_id field added). The MVP1 Project model
+ * is unchanged and tenant-unaware; this is a read overlay.
+ */
+export interface ProjectSummaryRef {
+  id: string;
+  name: string;
+  description: string | null;
+  /** MVP1 ProjectStatus reused by reference (DRAFT/ACTIVE/ARCHIVED/DELETED). */
+  status: ProjectStatus;
+  created_at: string;
+  updated_at: string;
+  source_count: number;
+  ontology_version_count: number;
+}
+
+/** NEW (MVP6.10). GET /tenants — the actor's visibility set (my tenants). items contains ONLY tenants the actor is an ACTIVE member of on a non-ARCHIVED tenant; may be empty. */
+export interface TenantListResponse {
+  actor_id: string;
+  items: TenantSummary[];
+  /** Exact size of the visibility set (== items length; never truncated in P0). */
+  total_count: number;
+  mutation_guard: TenantMutationGuard;
+}
+
+/** NEW (MVP6.10). GET /tenants/{id} — a single tenant summary (member-only). */
+export interface TenantSummaryResponse {
+  actor_id: string;
+  tenant: TenantSummary;
+  mutation_guard: TenantMutationGuard;
+}
+
+/** NEW (MVP6.10). GET /tenants/{id}/projects — tenant-scoped project list. items contains ONLY projects owned by tenant_id; another tenant's project is never returned. */
+export interface TenantProjectListResponse {
+  actor_id: string;
+  tenant_id: string;
+  items: ProjectSummaryRef[];
+  total_count: number;
+  mutation_guard: TenantMutationGuard;
+}
+
+/** NEW (MVP6.10). GET /projects/{id}/tenant — resolve a project's owning tenant. Only succeeds when the owning tenant is visible; otherwise 404 PROJECT_NOT_FOUND. */
+export interface ProjectTenantResponse {
+  actor_id: string;
+  project_id: string;
+  tenant: TenantSummary;
+  mutation_guard: TenantMutationGuard;
+}
+
+/** NEW (MVP6.10). Isolation error envelope codes. */
+export type TenantApiErrorCode = "TENANT_NOT_FOUND" | "TENANT_ACCESS_SUSPENDED" | "PROJECT_NOT_FOUND";
+
+/** NEW (MVP6.10). Standard tenant error envelope. details.denial_reason (when present) is a TenantAccessDenialReason. */
+export interface TenantApiError {
+  code: TenantApiErrorCode;
+  message: string;
+  details?: { denial_reason?: TenantAccessDenialReason } | null;
+}

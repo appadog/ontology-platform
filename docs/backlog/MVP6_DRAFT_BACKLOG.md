@@ -1,7 +1,7 @@
 # MVP 6 Draft Backlog
 
-Status: `MVP6.9 WAVE49 CONNECTORS/PLUGIN SDK — CONTRACT-FIRST PLANNING FROZEN (PM6-031, ADR 0016); planning IDs BE6-068~069, FE6-089, INT6-075 (prev: MVP6.8 PM6-030, ADR 0015, BE6-064~067, FE6-085~088, INT6-071~074)`
-Date: 2026-07-08
+Status: `MVP6.10 WAVE51 MULTI-TENANT RUNTIME — CONTRACT-FIRST PLANNING FROZEN (PM6-033, ADR 0017); planning IDs BE6-074~075, FE6-094, INT6-080 (prev: MVP6.9 impl Wave50 PM6-032, BE6-070~073, FE6-090~093, INT6-076~079; MVP6.9 plan PM6-031, ADR 0016, BE6-068~069, FE6-089, INT6-075)`
+Date: 2026-07-09
 
 MVP6 is broad. Wave28 and Wave29 closed MVP6.1 Gold Set / Benchmark Studio.
 Wave30 freezes MVP6.2 Active Learning / Continuous Improvement as a
@@ -1095,6 +1095,136 @@ only (`ConnectorPreviewNotice`).
 | INT6-077 | P0 | QA | Frontend mock/actual | FE6-090~093 | validate FE catalog→config→preview flow mock + actual (boot backend on SQLite); no connect/import/sync/apply/execute affordance; live guard proof line; R7 |
 | INT6-078 | P0 | QA | Read-only/creates-nothing/no-secret DATA-LEVEL | BE6-071~072 | INDEPENDENTLY assert at DATA level no connector call (esp. import-preview) creates a source/candidate/extraction or mutates any table (before==after); 9-flag guard all-false; `raw_secret_present:false`, no raw secret in any response/log; R3/R4/R5 |
 | INT6-079 | P0 | QA | Wave50 closeout + regression | INT6-076~078 | MVP6.8/earlier regression + touched smokes; additive-only + candidate/published separation intact; recommend closeout/hardening; R8 |
+
+## Wave51 MVP6.10 Multi-tenant Runtime — CONTRACT-FIRST PLANNING FREEZE (PM6-033)
+
+Wave51 opens the next MVP6 theme (roadmap §9 Theme 6) as contract-first planning
+only. The chosen P0 is a **read-only tenant CONTEXT with STRICT ISOLATION**: list
+the tenants the current actor belongs to, get a tenant summary, list a tenant's
+projects (tenant-scoped), and resolve a project's tenant — with cross-tenant
+access strictly denied and no leak. It is additive over the existing MVP1 project
+scoping; nothing is provisioned, mutated, or re-homed. Runtime implementation
+waits for Wave52 after Backend contract draft, Frontend field/state/IA review,
+and a QA executable checklist. Full freeze: `docs/pm/MVP6_10_MULTI_TENANT_BRIEF.md`;
+durable boundary: `docs/adr/0017-mvp6-10-multi-tenant-read-only-context-strict-isolation-no-provisioning-additive-over-project-scoping-boundary.md`.
+
+Headline invariant — **strict isolation (default-deny, 404-not-leak)**: a caller
+scoped to tenant A can never read tenant B's tenant/projects/data.
+
+Frozen P0 demo flow:
+
+```text
+authenticate as the dev actor
+-> open Tenant Context (top-level indicator / switcher over "my tenants")
+-> see ONLY the tenants I am an ACTIVE member of
+-> open a tenant summary (mine) -> list that tenant's projects (tenant-scoped)
+-> resolve which tenant a project lives in
+-> attempt a tenant I do NOT belong to  -> 404 (no name/count/data leaked)
+-> attempt a tenant with a suspended relationship -> 403
+```
+
+Frozen tenant/membership model: single-level **Tenant** (org/workspace collapsed
+in P0) as a few deterministic mock tenants; `TenantMembership =
+(actor_id, tenant_id, role, status)` with `role` = MVP5 `Role` verbatim (no new
+literal); `Project → Tenant` via a deterministic fixture mapping (no DB FK, no
+`tenant_id` column). Fixture MUST cover all three isolation outcomes (member /
+not-a-member / inactive relationship).
+
+New P0 enums (MVP5 `Role` reused verbatim; no renames):
+
+- `TenantStatus`: `ACTIVE`, `SUSPENDED`, `ARCHIVED`.
+- `TenantMembershipStatus`: `ACTIVE`, `SUSPENDED`.
+- `TenantAccessDenialReason`: `NOT_A_MEMBER`, `TENANT_ARCHIVED`,
+  `MEMBERSHIP_SUSPENDED`, `TENANT_SUSPENDED`.
+
+Frozen isolation rule + error codes: visibility set = tenants with an `ACTIVE`
+membership on a non-`ARCHIVED` tenant; `GET /tenants` returns exactly that set;
+not-in-set (unknown/archived/not-a-member) → `404 TENANT_NOT_FOUND` (existence
+never leaked); inactive relationship (membership/tenant `SUSPENDED`) →
+`403 TENANT_ACCESS_SUSPENDED`; `.../tenants/{A}/projects` returns only tenant A's
+projects; `/projects/{id}/tenant` out-of-visibility → `404 PROJECT_NOT_FOUND`;
+`403 PERMISSION_DENIED` reserved for future role-gated writes.
+
+All-false 8-flag `TenantMutationGuard` on every response: `tenant_created`,
+`tenant_updated`, `tenant_deleted`, `membership_mutated`, `project_rehomed`,
+`cross_tenant_access_granted`, `candidate_graph_mutated`,
+`published_graph_mutated` — all false.
+
+Authorization: read gated by an `ACTIVE` membership on a non-inactive tenant; any
+ACTIVE member (even `VIEWER`) may read summary + project list in P0; `Role`
+carried/surfaced for future writes; reuse MVP5 `Role`, no new literal.
+
+Additive-over-project-scoping: existing MVP1 `Project` + all MVP1–MVP6.9
+per-project endpoints unchanged and tenant-unaware; no `tenant_id` column, no
+migration/backfill, no re-homing/renaming.
+
+Frozen exclusions: tenant create/update/delete; membership mutation
+(invite/add/remove/role-change); cross-tenant access; tenant-level billing/quota/
+usage enforcement (`UsageQuota`/`BillingUsageEvent`); data re-homing/migration/
+`tenant_id` backfill; real auth/SSO/OIDC multi-tenancy + JWT tenant claims;
+per-tenant object-storage/search/vector partitioning; two-level
+Organization↔Workspace hierarchy (`Organization`/`Workspace`/`TenantSetting`);
+cross-domain alignment/mapping (`Domain`/`OntologyAlignment`/`CrossDomainMapping`);
+domain/usage dashboards; server-side/session-scoped tenant switching; any
+candidate/published-graph mutation.
+
+Suggested endpoint families (Backend finalizes in `BE6-074`):
+
+- `GET /api/v1/tenants` (my tenants — visibility set only)
+- `GET /api/v1/tenants/{tenant_id}` (tenant summary, member-only)
+- `GET /api/v1/tenants/{tenant_id}/projects` (tenant-scoped projects)
+- `GET /api/v1/projects/{project_id}/tenant` (resolve project's tenant; trimmable — gate G4)
+
+Open gates for Wave52 (PM freezes before implementation): G1 dev actor
+resolution for negative/cross-tenant tests (reuse dev-auth actor; e.g. `actor_id`
+query param à la MVP6.5); G2 404-vs-403 split (frozen: not-a-member/archived→404,
+suspended→403; BE confirms singular); G3 persist-vs-compute (process-local
+`reset_runtime_store()` acceptable; durable DB/Alembic P1/P2); G4 endpoint #4
+in/out (default keep); G5 client-side-only tenant switcher + ADR 0010 placement.
+
+| ID | Priority | Role | Item | Depends on | Acceptance summary |
+|---|---|---|---|---|---|
+| PM6-033 | P0 | PM | MVP6.10 Multi-tenant P0 freeze (contract-first planning) | ADR 0017 | freeze read-only tenant context (my-tenants / tenant summary / tenant-scoped projects / project→tenant), strict isolation rule + error codes (`404 TENANT_NOT_FOUND` / `403 TENANT_ACCESS_SUSPENDED` / `404 PROJECT_NOT_FOUND`), tenant/membership model (deterministic mock tenants + `TenantMembership` reusing MVP5 `Role`), enums (`TenantStatus`/`TenantMembershipStatus`/`TenantAccessDenialReason`), all-false 8-flag `TenantMutationGuard`, authz, additive-over-project-scoping; explicit exclusions; `docs/pm/MVP6_10_MULTI_TENANT_BRIEF.md` + ADR 0017; no `apps/`/`infra/` |
+| BE6-074 | P0 | Backend | Multi-tenant API contract draft (additive, planning) | PM6-033 | draft `docs/api/MVP6_10_MULTI_TENANT_API_CONTRACT_DRAFT.md`: additive read-only endpoints (my tenants / tenant summary / tenant-scoped projects / project→tenant) + DTO/enum names + all-false 8-flag `TenantMutationGuard`; model isolation error codes explicitly (`404 TENANT_NOT_FOUND` not-leak, `403 TENANT_ACCESS_SUSPENDED`, `404 PROJECT_NOT_FOUND`); reuse MVP5 `Role` + dev-auth actor + MVP1 `Project` shapes by `$ref` (no rename); no provisioning/mutation/re-homing path imported; capture G1/G3/G4 open questions; no runtime code |
+| BE6-075 | P0 | Backend | OpenAPI planning artifact | BE6-074 | produce `docs/api/openapi-mvp6-10-draft.json` (OpenAPI 3.1.0, `0.6.10-draft`, disjoint-additive to MVP1–MVP6.9; redefines no prior path); JSON parse; `git diff --check`; no `apps/` |
+| FE6-094 | P0 | Frontend | Multi-tenant UX/API requirements (planning) | PM6-033, BE6-074~075 | `docs/pm/MVP6_10_FRONTEND_UX_REQUIREMENTS.md`: tenant context indicator / client-side switcher over my-tenants + read-only tenant/workspace view (ADR 0010 placement; tenant detail contextual, no new ID-bound global LNB page); tenant-scoped project list; isolation-limited states (cross-tenant denied — clear, no data leak); persistent "read-only context; no provisioning; existing project scoping unchanged" boundary copy; live all-false-guard proof line; first-class loading/empty/error/permission states; closed design language; DTO gap vs Backend draft; no route/component/type/mock/smoke code |
+| INT6-080 | P0 | QA | Multi-tenant acceptance checklist (planning) | PM6-033, BE6-074~075, FE6-094 | `docs/backlog/INT6_10_MULTI_TENANT_ACCEPTANCE.md` (C planning gates + R NOT-RUNNABLE runtime gates, continuing INT6 numbering from INT6-080); make ISOLATION the headline runtime gate (my-tenants returns only my set; not-a-member → `404` no leak; suspended → `403`; `.../tenants/{A}/projects` never returns B; project→tenant out-of-visibility → `404`; `TenantMutationGuard` all-false; data-level no tenant/membership/project row created/updated/deleted, no re-homing, before==after); verify PM/BE/FE agree on P0, tenant model, read-only + strict-isolation + no-provisioning + additive-over-project-scoping boundary, all-false guard, exclusions; confirm no runtime leaked (`apps/`+`infra/`); OpenAPI parse; recommend Wave52 |
+
+## Wave52 MVP6.10 Multi-tenant Runtime — THIN IMPLEMENTATION (PM6-034)
+
+Wave52 implements the frozen read-only tenant context + strict-isolation slice.
+PM (PM6-034) froze G1/G3/G5 + ratified the error-envelope-guard ruling FIRST,
+BLOCKING Backend/Frontend. Gate freeze + fixture isolation matrix:
+`docs/handoffs/wave-052/PM_REPORT.md`. Contract unchanged from
+`docs/api/openapi-mvp6-10-draft.json` (4 GET / 13 schemas / 3 enums + `Role`
+verbatim / all-false 8-flag `TenantMutationGuard`).
+
+Frozen gates: **G1** = optional dev-only `actor_id` query param, default
+`"dev-user"`, membership by `(actor_id, tenant_id)` fixture lookup, no
+`actor_role` for reads. **G3** = process-local fixtures + `reset_runtime_store()`,
+no DB / no `tenant_id` column / no migration. **G5** = 6 tenants / 2 actors /
+6 memberships / 7 projects; default visibility set `{tenant-acme, tenant-globex}`;
+`tenant-initech`→404 NOT_A_MEMBER, `tenant-umbrella`→403 MEMBERSHIP_SUSPENDED,
+`tenant-soylent`→403 TENANT_SUSPENDED, `tenant-hooli`→404 TENANT_ARCHIVED.
+Error-envelope-guard: errors carry NO `mutation_guard`; guard is 200-only; denial
+via `ApiError.details.denial_reason`. `/projects/{id}/tenant` mirrors the owning
+tenant's access decision (200/403/404).
+
+| ID | Priority | Role | Item | Depends on | Acceptance summary |
+|---|---|---|---|---|---|
+| PM6-034 | P0 | PM | MVP6.10 Wave52 gate freeze + scope guard | PM6-033, ADR 0017 | freeze G1 (`actor_id` default `dev-user`), G3 (process-local fixtures + `reset_runtime_store()`, no `tenant_id` column/migration), G5 (6-tenant/2-actor/7-project fixture matrix covering member→200 / not-a-member→404 / suspended→403 / archived→404); ratify error-envelope-guard (no guard on errors, 200-only, denial via `denial_reason`); confirm scope unchanged (read-only, strict isolation, additive-over-project-scoping); `docs/handoffs/wave-052/PM_REPORT.md` + brief §5/§11 refine; no `apps/` |
+| BE6-076 | P0 | Backend | Tenant list/summary/projects endpoints + fixtures | PM6-034 | `GET /tenants` (visibility set only), `GET /tenants/{id}` (member-only summary), `GET /tenants/{id}/projects` (tenant-scoped) in new `apps/backend/app/modules/tenancy/`, additive; G5 fixtures VERBATIM; matches `openapi-mvp6-10-draft.json` exactly |
+| BE6-077 | P0 | Backend | project→tenant resolve + isolation enforcement | PM6-034, BE6-076 | `GET /projects/{id}/tenant` mirroring owning-tenant access decision; strict isolation (404-not-leak NOT_A_MEMBER/TENANT_ARCHIVED; 403 MEMBERSHIP_SUSPENDED/TENANT_SUSPENDED); `/tenants/{A}/projects` never returns B; `denial_reason` on every error |
+| BE6-078 | P0 | Backend | all-false 8-flag guard + no-mutation | PM6-034 | all-false 8-flag `TenantMutationGuard` on every 200 (`cross_tenant_access_granted`/`project_rehomed` hardest); DATA-LEVEL before==after all tables; no provisioning/membership-mutation/re-homing/`tenant_id`-backfill path imported; errors carry no guard |
+| BE6-079 | P0 | Backend | OpenAPI export/alignment + isolation regression | BE6-076~078 | export actual OpenAPI, compare to `openapi-mvp6-10-draft.json` (4 paths/13 schemas, 0 mismatch); `tests/test_mvp6_10_tenancy_api.py` (4 endpoints + isolation matrix + guard + no-mutation) + `tests/test_mvp6_9_connectors_api.py`; `ruff`; `git diff --check`; additive-only |
+| FE6-095 | P0 | Frontend | app-shell tenant switcher + types/client/mocks | PM6-034, BE6-076~079 | header tenant-context indicator + client-side switcher over ACTIVE visibility set only (cross-tenant unreachable by construction); types/client/query/mocks match frozen OpenAPI exactly; reuse MVP5 `Role`/MVP1 `ProjectSummary` by reference (no rename); `actor_id` dev-only, not a production control |
+| FE6-096 | P0 | Frontend | read-only tenant view (summary + tenant-scoped projects) | PM6-034 | contextual read-only tenant view (summary + tenant-scoped project list per ADR 0010; no new ID-bound global LNB page); `TenantStatus`/`TenantMembershipStatus` D6 badges; KO glosses; loading/empty/error/permission states |
+| FE6-097 | P0 | Frontend | isolation-limited states + boundary + guard proof | PM6-034 | 404 TENANT_NOT_FOUND (no existence/data leak) / 403 TENANT_ACCESS_SUSPENDED / 404 PROJECT_NOT_FOUND driven by `denial_reason`; clear stale tenant-A data before resolving tenant-B; persistent "read-only; no provisioning; project scoping unchanged; client-side switch only" banner + live all-false 8-flag guard proof (200 only); NO create/edit/invite/provision affordance; existing global Projects list NOT re-scoped |
+| FE6-098 | P0 | Frontend | mock + actual smoke | PM6-034, BE6-076~079 | `npm run smoke:mvp6:tenancy:mock` (+ `:actual` incl. an isolation negative check if backend runnable); `npm run test`/`build`; responsive 0-overflow; `git diff --check` |
+| INT6-090 | P0 | QA | Backend runtime verification | BE6-076~079 | validate 4 endpoints, 3 enums + `Role`, all-false 8-flag guard, additive-over-project-scoping; update `INT6_10_MULTI_TENANT_ACCEPTANCE.md` R1/R6/R7 |
+| INT6-091 | P0 | QA | Frontend mock/actual flow | FE6-095~098 | validate header switcher + read-only view mock + actual incl. an isolation negative case; no create/edit/invite/switch-write affordance; live guard proof line (200 only); R8 |
+| INT6-092 | P0 | QA | ISOLATION + no-mutation DATA-LEVEL guard | BE6-077~078 | INDEPENDENTLY (own script) assert not-a-member → 404 with NO name/count/project/data leak; suspended → 403; `/tenants/{B}/projects` + `/projects/{B}/tenant` never leak B; disjoint actor visibility sets (`dev-user` vs `dev-user-2`); NO tenant call mutates any table (before==after); no `tenant_id` column created; R2/R3/R4/R5 |
+| INT6-093 | P0 | QA | Wave52 closeout + regression | INT6-090~092 | MVP6.9/earlier regression + touched smokes green; additive-only + candidate/published separation intact; no leftover listeners on 8000/5173; `git diff --check`; update R9; recommend closeout/hardening |
 
 ## Scope Limits
 

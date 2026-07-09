@@ -1,10 +1,18 @@
 import { PropsWithChildren, useEffect, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronDown, CircleUserRound } from "lucide-react";
+import { Building2, ChevronDown, CircleUserRound } from "lucide-react";
 import styled from "styled-components";
 import { globalNavItems, projectNavGroups, resolveActiveSection, type NavItem } from "./navigation";
-import { useProjects } from "../api/queries";
+import { useMyTenants, useProjects } from "../api/queries";
+import { useActiveTenantId } from "../lib/activeTenant";
 import { HanaBadge, HanaSelect, statusToTone } from "../ui/hana";
+import { StatusBadge } from "../ui/platform/StatusBadge";
+
+// MVP6.10 (FE6-095): the acting actor is a dev-only default in the header switcher
+// (never a real auth/JWT claim, never a production control). The dropdown lists
+// ONLY this actor's ACTIVE visibility set (GET /tenants) — cross-tenant selection
+// is unreachable by construction (isolation-by-construction; ADR 0017 §2.1).
+const TENANT_SWITCHER_ACTOR_ID = "dev-user";
 
 const recentProjectStorageKey = "ontology-platform:recent-project-id";
 
@@ -81,7 +89,9 @@ export function AppShell({ children }: PropsWithChildren) {
       </Sidebar>
       <MainArea>
         <Topbar>
-          <ProjectSelector>
+          <TopbarLeft>
+            <TenantSwitcher />
+            <ProjectSelector>
             <label htmlFor="project-selector">Current project</label>
             <SelectWrap>
               <HanaSelect
@@ -106,7 +116,8 @@ export function AppShell({ children }: PropsWithChildren) {
               </HanaSelect>
               <ChevronDown aria-hidden="true" />
             </SelectWrap>
-          </ProjectSelector>
+            </ProjectSelector>
+          </TopbarLeft>
           <TopbarRight>
             {selectedProject ? <HanaBadge tone={statusToTone(selectedProject.status)}>{selectedProject.status}</HanaBadge> : <HanaBadge tone="neutral">NO_PROJECT</HanaBadge>}
             <UserChip>
@@ -118,6 +129,66 @@ export function AppShell({ children }: PropsWithChildren) {
         <Content>{children}</Content>
       </MainArea>
     </Shell>
+  );
+}
+
+/**
+ * MVP6.10 client-side Tenant Context indicator + switcher (FE6-095). Lives in the
+ * app-shell header as the OUTER scoping context (not an LNB item; ADR 0010). The
+ * dropdown lists ONLY the actor's ACTIVE visibility set (GET /tenants) so
+ * cross-tenant selection is unreachable by construction. Switching writes only the
+ * CLIENT-SIDE active-tenant key (no server session/state; gate G5) and opens the
+ * read-only Tenant Context view. There is NO create / join / provision affordance.
+ */
+function TenantSwitcher() {
+  const navigate = useNavigate();
+  const { data, isLoading } = useMyTenants(TENANT_SWITCHER_ACTOR_ID);
+  const [activeTenantId, setActiveTenantId] = useActiveTenantId();
+  const tenants = data?.items ?? [];
+  const activeTenant = tenants.find((t) => t.id === activeTenantId) ?? tenants[0];
+
+  const openTenantContext = () => navigate("/tenant");
+
+  return (
+    <TenantContextBox>
+      <TenantLabel htmlFor="tenant-switcher">
+        <Building2 aria-hidden="true" />
+        <span>테넌트 컨텍스트</span>
+      </TenantLabel>
+      {isLoading ? (
+        <TenantHint role="status">테넌트 불러오는 중…</TenantHint>
+      ) : tenants.length === 0 ? (
+        <TenantHint role="note">소속된 테넌트 없음</TenantHint>
+      ) : (
+        <TenantRow>
+          <SelectWrap>
+            <HanaSelect
+              id="tenant-switcher"
+              value={activeTenant?.id ?? ""}
+              aria-label="활성 테넌트 전환 (화면 상태만 변경)"
+              onChange={(event) => {
+                const nextTenantId = event.target.value;
+                if (!nextTenantId) return;
+                // Client-side only: persist the view-state key + open the read-only view.
+                setActiveTenantId(nextTenantId);
+                navigate("/tenant");
+              }}
+            >
+              {tenants.map((tenant) => (
+                <option key={tenant.id} value={tenant.id}>
+                  {tenant.display_name}
+                </option>
+              ))}
+            </HanaSelect>
+            <ChevronDown aria-hidden="true" />
+          </SelectWrap>
+          {activeTenant ? <StatusBadge token={activeTenant.status} /> : null}
+          <TenantViewLink type="button" onClick={openTenantContext}>
+            보기
+          </TenantViewLink>
+        </TenantRow>
+      )}
+    </TenantContextBox>
   );
 }
 
@@ -298,10 +369,67 @@ const Topbar = styled.header`
   }
 `;
 
+const TopbarLeft = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 18px;
+  min-width: 0;
+
+  @media (max-width: 760px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+const TenantContextBox = styled.div`
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+`;
+
+const TenantLabel = styled.label`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: ${({ theme }) => theme.color.textMuted};
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+`;
+
+const TenantRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+`;
+
+const TenantHint = styled.span`
+  color: ${({ theme }) => theme.color.textMuted};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: 700;
+`;
+
+const TenantViewLink = styled.button`
+  padding: 0;
+  border: none;
+  background: none;
+  color: ${({ theme }) => theme.color.primary};
+  font-weight: 800;
+  cursor: pointer;
+`;
+
 const ProjectSelector = styled.div`
   display: grid;
   gap: 6px;
-  width: min(420px, 100%);
+  width: min(320px, 100%);
 
   label {
     color: ${({ theme }) => theme.color.textMuted};

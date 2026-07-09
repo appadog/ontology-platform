@@ -1,0 +1,778 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP6.10 Multi-tenant Planning API",
+    "description": "Planning-only OpenAPI artifact for MVP6.10 Multi-tenant Runtime P0 (read-only tenant context + strict isolation). Additive to MVP1-MVP6.9; replaces no prior OpenAPI draft. The surface is READ-ONLY: it lists the tenants the current actor is an ACTIVE member of ('my tenants'), returns a single tenant summary, lists a tenant's projects (tenant-scoped), and resolves the tenant a project lives in. Nothing is provisioned, mutated, or re-homed: no tenant create/update/delete, no membership mutation, no cross-tenant read, no tenant_id column / FK / migration. Tenant->project mapping is a deterministic fixture. STRICT ISOLATION is the headline invariant (default-deny, 404-not-leak): the caller's visibility set is exactly the tenants where they have an ACTIVE TenantMembership on a non-ARCHIVED tenant; a tenant not in the set (unknown / ARCHIVED / not-a-member) -> 404 TENANT_NOT_FOUND (existence NEVER leaked, 404 not 403); a known-but-inactive relationship (membership SUSPENDED or tenant SUSPENDED) -> 403 TENANT_ACCESS_SUSPENDED; .../tenants/{A}/projects never returns another tenant's projects; /projects/{id}/tenant for an out-of-visibility project -> 404 PROJECT_NOT_FOUND. Every response carries an all-false 8-flag TenantMutationGuard. Reuses MVP5 Role + dev-auth actor and MVP1 project shapes by reference (no renames). See ADR 0017 and docs/pm/MVP6_10_MULTI_TENANT_BRIEF.md. All example values are non-sensitive placeholders.",
+    "version": "0.6.10-draft"
+  },
+  "tags": [
+    {
+      "name": "MVP6.10 Multi-tenant",
+      "description": "Read-only tenant context + strict isolation. Nothing provisioned, mutated, or re-homed; visibility set = ACTIVE membership on non-ARCHIVED tenant; default-deny 404-not-leak; all-false 8-flag mutation guard on every response."
+    }
+  ],
+  "paths": {
+    "/api/v1/tenants": {
+      "get": {
+        "tags": [
+          "MVP6.10 Multi-tenant"
+        ],
+        "summary": "List my tenants (visibility set only)",
+        "description": "Read-only list of EXACTLY the tenants in the current actor's visibility set: tenants where the actor has an ACTIVE TenantMembership on a non-ARCHIVED tenant. Never returns any other tenant's id/name/count/summary; a tenant the actor is not an ACTIVE member of, or that is ARCHIVED, never appears (existence not leaked). Deterministic over the fixture. Carries an all-false TenantMutationGuard. actor_id is an OPTIONAL dev-only override for negative/cross-tenant tests (open gate G1); absent -> the MVP5 dev-auth actor.",
+        "operationId": "listMyTenants",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ActorIdQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The actor's visibility set (may be empty)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantListResponse"
+                },
+                "examples": {
+                  "default": {
+                    "$ref": "#/components/examples/TenantListExample"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenants/{tenant_id}": {
+      "get": {
+        "tags": [
+          "MVP6.10 Multi-tenant"
+        ],
+        "summary": "Get a tenant summary (member-only)",
+        "description": "Read-only summary of a single tenant the actor is an ACTIVE member of. Isolation: tenant_id NOT in the visibility set (unknown / ARCHIVED / not-a-member) -> 404 TENANT_NOT_FOUND (existence never leaked -> 404, never 403); a known-but-inactive relationship (membership SUSPENDED or tenant SUSPENDED) -> 403 TENANT_ACCESS_SUSPENDED. Any ACTIVE member (even Role=VIEWER) may read; Role is surfaced for future write/admin surfaces but not required for this read. Carries an all-false TenantMutationGuard.",
+        "operationId": "getTenantSummary",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TenantIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/ActorIdQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSummaryResponse"
+                },
+                "examples": {
+                  "default": {
+                    "$ref": "#/components/examples/TenantSummaryExample"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/AccessSuspended"
+          },
+          "404": {
+            "$ref": "#/components/responses/TenantNotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/tenants/{tenant_id}/projects": {
+      "get": {
+        "tags": [
+          "MVP6.10 Multi-tenant"
+        ],
+        "summary": "List a tenant's projects (tenant-scoped)",
+        "description": "Read-only, tenant-scoped list of the projects owned by tenant_id, via the deterministic fixture tenant->project mapping. Isolation: returns ONLY projects whose owning tenant is tenant_id; a project belonging to another tenant is NEVER returned here, even for an actor who is a member of tenant_id (cross_tenant_access_granted stays false). Same 404/403 isolation rules as the tenant summary. Project items reuse the MVP1 project summary shape by reference (no rename); existing MVP1-MVP6.9 per-project endpoints are unchanged and tenant-unaware. Carries an all-false TenantMutationGuard.",
+        "operationId": "listTenantProjects",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TenantIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/ActorIdQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projects owned by this tenant (may be empty)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantProjectListResponse"
+                },
+                "examples": {
+                  "default": {
+                    "$ref": "#/components/examples/TenantProjectListExample"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/AccessSuspended"
+          },
+          "404": {
+            "$ref": "#/components/responses/TenantNotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/tenant": {
+      "get": {
+        "tags": [
+          "MVP6.10 Multi-tenant"
+        ],
+        "summary": "Resolve a project's tenant (member-only)",
+        "description": "Read-only resolution of the tenant a given project logically lives in, via the deterministic fixture mapping (no tenant_id column / FK). Isolation: if the project's owning tenant is NOT in the caller's visibility set -> 404 PROJECT_NOT_FOUND (the project's existence is not leaked across the tenant boundary); an unknown project_id likewise -> 404 PROJECT_NOT_FOUND. A known-but-inactive owning-tenant relationship -> 403 TENANT_ACCESS_SUSPENDED. This is the trimmable surface (open gate G4; default: keep). Carries an all-false TenantMutationGuard.",
+        "operationId": "resolveProjectTenant",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectIdPath"
+          },
+          {
+            "$ref": "#/components/parameters/ActorIdQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The tenant the project lives in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTenantResponse"
+                },
+                "examples": {
+                  "default": {
+                    "$ref": "#/components/examples/ProjectTenantExample"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/AccessSuspended"
+          },
+          "404": {
+            "$ref": "#/components/responses/ProjectNotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "TenantIdPath": {
+        "name": "tenant_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Target tenant id. Not in the caller's visibility set -> 404 TENANT_NOT_FOUND (existence not leaked)."
+      },
+      "ProjectIdPath": {
+        "name": "project_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Target project id (reuses the MVP1 project id space by reference). Out-of-visibility or unknown -> 404 PROJECT_NOT_FOUND."
+      },
+      "ActorIdQuery": {
+        "name": "actor_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": "OPTIONAL dev-only actor override so QA can be 'the actor who is / is not a member' for negative/cross-tenant tests (mirrors the MVP6.5 governance pattern). Absent -> the MVP5 dev-auth actor. Open gate G1; exact mechanism finalized in Wave52. Never a real auth/JWT tenant claim."
+      }
+    },
+    "responses": {
+      "TenantNotFound": {
+        "description": "Tenant not in the caller's visibility set: unknown, ARCHIVED, or not-a-member. Returns 404 TENANT_NOT_FOUND (NEVER 403) so tenant existence is not leaked. Body carries no other tenant's id/name/count.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "examples": {
+              "notAMember": {
+                "$ref": "#/components/examples/TenantNotFoundExample"
+              }
+            }
+          }
+        }
+      },
+      "ProjectNotFound": {
+        "description": "Project unknown, or its owning tenant is out of the caller's visibility set. Returns 404 PROJECT_NOT_FOUND so cross-tenant project existence is not leaked.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "examples": {
+              "outOfVisibility": {
+                "$ref": "#/components/examples/ProjectNotFoundExample"
+              }
+            }
+          }
+        }
+      },
+      "AccessSuspended": {
+        "description": "The caller has a KNOWN relationship to the tenant but it is inactive (membership SUSPENDED or tenant SUSPENDED). Returns 403 TENANT_ACCESS_SUSPENDED (safe: the caller already knows the tenant exists). Distinct from 403 PERMISSION_DENIED, which is reserved for future role-gated writes and is not produced by P0 reads.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "examples": {
+              "suspended": {
+                "$ref": "#/components/examples/AccessSuspendedExample"
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "TenantStatus": {
+        "type": "string",
+        "description": "Lifecycle status of a tenant (frozen). ACTIVE: readable by ACTIVE members. SUSPENDED: known-but-inactive -> 403 for members. ARCHIVED: treated as out-of-visibility -> 404 (existence not leaked). No mutation in P0; deterministic fixture value.",
+        "enum": [
+          "ACTIVE",
+          "SUSPENDED",
+          "ARCHIVED"
+        ]
+      },
+      "TenantMembershipStatus": {
+        "type": "string",
+        "description": "Status of an (actor, tenant) membership (frozen). ACTIVE: contributes the tenant to the actor's visibility set. SUSPENDED: known-but-inactive relationship -> 403 TENANT_ACCESS_SUSPENDED.",
+        "enum": [
+          "ACTIVE",
+          "SUSPENDED"
+        ]
+      },
+      "TenantAccessDenialReason": {
+        "type": "string",
+        "description": "Response-side isolation taxonomy explaining a denial. NOT_A_MEMBER -> 404 TENANT_NOT_FOUND; TENANT_ARCHIVED -> 404 TENANT_NOT_FOUND (existence not leaked); MEMBERSHIP_SUSPENDED -> 403 TENANT_ACCESS_SUSPENDED; TENANT_SUSPENDED -> 403 TENANT_ACCESS_SUSPENDED. Carried in ApiError.details.denial_reason on isolation errors.",
+        "enum": [
+          "NOT_A_MEMBER",
+          "TENANT_ARCHIVED",
+          "MEMBERSHIP_SUSPENDED",
+          "TENANT_SUSPENDED"
+        ]
+      },
+      "Role": {
+        "type": "string",
+        "description": "MVP5 RBAC Role reused VERBATIM (no new literal); defined locally to keep this draft self-contained (same names as apps/backend/app/core/enums.py). Carried on a TenantMembership and surfaced for future write/admin surfaces; P0 reads require only an ACTIVE membership (even VIEWER may read).",
+        "enum": [
+          "SYSTEM_ADMIN",
+          "PROJECT_ADMIN",
+          "ONTOLOGY_MANAGER",
+          "DATA_MANAGER",
+          "EXTRACTION_MANAGER",
+          "REVIEWER",
+          "VIEWER",
+          "API_CLIENT"
+        ]
+      },
+      "TenantMutationGuard": {
+        "type": "object",
+        "description": "All-false mutation guard present on EVERY tenant response (my-tenants list, tenant summary, tenant projects, project->tenant). Every flag is false, always; MVP6.10 turns NO flag true, ever. Mirrors the MVP6.1-6.5/6.7/6.9 all-false pattern. cross_tenant_access_granted and project_rehomed are the isolation-specific assertions QA leans on hardest.",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_created": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "tenant_updated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "tenant_deleted": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "membership_mutated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "project_rehomed": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "cross_tenant_access_granted": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "candidate_graph_mutated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "published_graph_mutated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          }
+        },
+        "required": [
+          "tenant_created",
+          "tenant_updated",
+          "tenant_deleted",
+          "membership_mutated",
+          "project_rehomed",
+          "cross_tenant_access_granted",
+          "candidate_graph_mutated",
+          "published_graph_mutated"
+        ]
+      },
+      "TenantMembership": {
+        "type": "object",
+        "description": "An (actor_id, tenant_id, role, status) relationship. role reuses MVP5 Role verbatim; status is TenantMembershipStatus. Read-only fixture; never created/removed/role-changed in P0 (membership_mutated stays false). Surfaced on a TenantSummary as my_membership so the caller's Role + membership status are visible to future write/admin surfaces.",
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TenantMembershipStatus"
+          }
+        },
+        "required": [
+          "actor_id",
+          "tenant_id",
+          "role",
+          "status"
+        ]
+      },
+      "TenantSummary": {
+        "type": "object",
+        "description": "Read-only summary of one tenant in the caller's visibility set. Shared item shape for the my-tenants list, the single-tenant summary, and the project->tenant resolution. Carries the caller's own membership (my_membership) so Role + status are surfaced; NEVER carries another actor's membership or another tenant's data.",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/TenantStatus",
+            "description": "Always ACTIVE for a tenant that appears in a visibility-set response (SUSPENDED -> 403, ARCHIVED -> 404, so neither surfaces here)."
+          },
+          "my_membership": {
+            "$ref": "#/components/schemas/TenantMembership"
+          },
+          "project_count": {
+            "type": "integer",
+            "description": "Exact count of projects owned by this tenant via the fixture mapping (scoped to this tenant only)."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "status",
+          "my_membership",
+          "project_count",
+          "created_at"
+        ]
+      },
+      "ProjectSummaryRef": {
+        "type": "object",
+        "description": "Project summary reused BY REFERENCE from the MVP1 ProjectSummary (same field names; defined locally to keep this draft self-contained, NO rename). The MVP1 Project model is unchanged and tenant-unaware; this is a read overlay, not a schema change (no tenant_id field is added to the project).",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "MVP1 ProjectStatus reused by reference (DRAFT/ACTIVE/ARCHIVED/DELETED). Not re-declared as an enum here to avoid duplicating the MVP1 definition."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source_count": {
+            "type": "integer"
+          },
+          "ontology_version_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "created_at",
+          "updated_at",
+          "source_count",
+          "ontology_version_count"
+        ]
+      },
+      "TenantListResponse": {
+        "type": "object",
+        "description": "The actor's visibility set (my tenants). items contains EXACTLY the tenants the actor is an ACTIVE member of on a non-ARCHIVED tenant; never any other tenant. May be empty.",
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "type": "string",
+            "description": "The resolved actor whose visibility set this is (dev-auth actor, or the actor_id override)."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TenantSummary"
+            }
+          },
+          "total_count": {
+            "type": "integer",
+            "description": "Exact size of the visibility set (== items length; the list is never truncated in P0)."
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/TenantMutationGuard"
+          }
+        },
+        "required": [
+          "actor_id",
+          "items",
+          "total_count",
+          "mutation_guard"
+        ]
+      },
+      "TenantSummaryResponse": {
+        "type": "object",
+        "description": "A single tenant summary (member-only).",
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantSummary"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/TenantMutationGuard"
+          }
+        },
+        "required": [
+          "actor_id",
+          "tenant",
+          "mutation_guard"
+        ]
+      },
+      "TenantProjectListResponse": {
+        "type": "object",
+        "description": "Tenant-scoped project list. items contains ONLY projects owned by tenant_id via the fixture mapping; another tenant's project is never returned here.",
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectSummaryRef"
+            }
+          },
+          "total_count": {
+            "type": "integer",
+            "description": "Exact count of projects owned by this tenant (== items length in P0)."
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/TenantMutationGuard"
+          }
+        },
+        "required": [
+          "actor_id",
+          "tenant_id",
+          "items",
+          "total_count",
+          "mutation_guard"
+        ]
+      },
+      "ProjectTenantResponse": {
+        "type": "object",
+        "description": "Resolves the tenant a project logically lives in (fixture mapping). Only succeeds when the owning tenant is in the caller's visibility set; otherwise 404 PROJECT_NOT_FOUND.",
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantSummary"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/TenantMutationGuard"
+          }
+        },
+        "required": [
+          "actor_id",
+          "project_id",
+          "tenant",
+          "mutation_guard"
+        ]
+      },
+      "ApiError": {
+        "type": "object",
+        "description": "Standard error envelope. P0 tenant isolation codes: TENANT_NOT_FOUND (404, existence not leaked), TENANT_ACCESS_SUSPENDED (403, known-but-inactive), PROJECT_NOT_FOUND (404, out-of-visibility or unknown project). details.denial_reason (when present) is a TenantAccessDenialReason. 403 PERMISSION_DENIED is reserved for future role-gated writes and is NOT produced by P0 reads.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "TENANT_NOT_FOUND",
+              "TENANT_ACCESS_SUSPENDED",
+              "PROJECT_NOT_FOUND"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "denial_reason": {
+                "$ref": "#/components/schemas/TenantAccessDenialReason"
+              }
+            }
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    },
+    "examples": {
+      "TenantListExample": {
+        "value": {
+          "actor_id": "dev-actor",
+          "items": [
+            {
+              "id": "tenant-alpha",
+              "display_name": "Alpha Workspace",
+              "description": "Primary demo tenant (mock).",
+              "status": "ACTIVE",
+              "my_membership": {
+                "actor_id": "dev-actor",
+                "tenant_id": "tenant-alpha",
+                "role": "ONTOLOGY_MANAGER",
+                "status": "ACTIVE"
+              },
+              "project_count": 2,
+              "created_at": "2026-01-01T00:00:00Z"
+            },
+            {
+              "id": "tenant-beta",
+              "display_name": "Beta Workspace",
+              "description": "Second tenant the actor also belongs to (mock).",
+              "status": "ACTIVE",
+              "my_membership": {
+                "actor_id": "dev-actor",
+                "tenant_id": "tenant-beta",
+                "role": "VIEWER",
+                "status": "ACTIVE"
+              },
+              "project_count": 1,
+              "created_at": "2026-01-02T00:00:00Z"
+            }
+          ],
+          "total_count": 2,
+          "mutation_guard": {
+            "tenant_created": false,
+            "tenant_updated": false,
+            "tenant_deleted": false,
+            "membership_mutated": false,
+            "project_rehomed": false,
+            "cross_tenant_access_granted": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false
+          }
+        }
+      },
+      "TenantSummaryExample": {
+        "value": {
+          "actor_id": "dev-actor",
+          "tenant": {
+            "id": "tenant-alpha",
+            "display_name": "Alpha Workspace",
+            "description": "Primary demo tenant (mock).",
+            "status": "ACTIVE",
+            "my_membership": {
+              "actor_id": "dev-actor",
+              "tenant_id": "tenant-alpha",
+              "role": "ONTOLOGY_MANAGER",
+              "status": "ACTIVE"
+            },
+            "project_count": 2,
+            "created_at": "2026-01-01T00:00:00Z"
+          },
+          "mutation_guard": {
+            "tenant_created": false,
+            "tenant_updated": false,
+            "tenant_deleted": false,
+            "membership_mutated": false,
+            "project_rehomed": false,
+            "cross_tenant_access_granted": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false
+          }
+        }
+      },
+      "TenantProjectListExample": {
+        "value": {
+          "actor_id": "dev-actor",
+          "tenant_id": "tenant-alpha",
+          "items": [
+            {
+              "id": "proj-1001",
+              "name": "Customer 360",
+              "description": "Demo project owned by tenant-alpha.",
+              "status": "ACTIVE",
+              "created_at": "2026-01-05T00:00:00Z",
+              "updated_at": "2026-02-01T00:00:00Z",
+              "source_count": 4,
+              "ontology_version_count": 2
+            },
+            {
+              "id": "proj-1002",
+              "name": "Product Catalog",
+              "description": null,
+              "status": "DRAFT",
+              "created_at": "2026-01-06T00:00:00Z",
+              "updated_at": "2026-01-20T00:00:00Z",
+              "source_count": 1,
+              "ontology_version_count": 0
+            }
+          ],
+          "total_count": 2,
+          "mutation_guard": {
+            "tenant_created": false,
+            "tenant_updated": false,
+            "tenant_deleted": false,
+            "membership_mutated": false,
+            "project_rehomed": false,
+            "cross_tenant_access_granted": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false
+          }
+        }
+      },
+      "ProjectTenantExample": {
+        "value": {
+          "actor_id": "dev-actor",
+          "project_id": "proj-1001",
+          "tenant": {
+            "id": "tenant-alpha",
+            "display_name": "Alpha Workspace",
+            "description": "Primary demo tenant (mock).",
+            "status": "ACTIVE",
+            "my_membership": {
+              "actor_id": "dev-actor",
+              "tenant_id": "tenant-alpha",
+              "role": "ONTOLOGY_MANAGER",
+              "status": "ACTIVE"
+            },
+            "project_count": 2,
+            "created_at": "2026-01-01T00:00:00Z"
+          },
+          "mutation_guard": {
+            "tenant_created": false,
+            "tenant_updated": false,
+            "tenant_deleted": false,
+            "membership_mutated": false,
+            "project_rehomed": false,
+            "cross_tenant_access_granted": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false
+          }
+        }
+      },
+      "TenantNotFoundExample": {
+        "value": {
+          "code": "TENANT_NOT_FOUND",
+          "message": "요청한 테넌트를 찾을 수 없습니다.",
+          "details": {
+            "denial_reason": "NOT_A_MEMBER"
+          }
+        }
+      },
+      "ProjectNotFoundExample": {
+        "value": {
+          "code": "PROJECT_NOT_FOUND",
+          "message": "요청한 프로젝트를 찾을 수 없습니다.",
+          "details": null
+        }
+      },
+      "AccessSuspendedExample": {
+        "value": {
+          "code": "TENANT_ACCESS_SUSPENDED",
+          "message": "해당 테넌트에 대한 접근이 일시 중지되었습니다.",
+          "details": {
+            "denial_reason": "MEMBERSHIP_SUSPENDED"
+          }
+        }
+      }
+    }
+  }
+}

@@ -41,6 +41,7 @@ import { ReviewWorkbenchPage } from "../pages/ReviewWorkbenchPage";
 import { SourceDetailPage } from "../pages/SourceDetailPage";
 import { SourceManagerPage } from "../pages/SourceManagerPage";
 import { SourceProfilingPage } from "../pages/SourceProfilingPage";
+import { TenantContextPage } from "../pages/TenantContextPage";
 
 export const router = createBrowserRouter([
   {
@@ -65,6 +66,14 @@ export const router = createBrowserRouter([
       {
         path: "/admin",
         element: <AdminConsolePage />,
+      },
+      {
+        // MVP6.10 (FE6-096 / ADR 0010 contextual-detail carve-out): the read-only
+        // Tenant Context view is a CONTEXTUAL route driven by the client-side active
+        // tenant (no id in the path), reached ONLY from the app-shell header
+        // indicator — never an LNB item. The two LNB zones are unchanged.
+        path: "/tenant",
+        element: <TenantContextPage />,
       },
       {
         path: "/admin/projects",
