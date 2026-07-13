@@ -2,6 +2,7 @@ import {
   Boxes,
   Cable,
   Database,
+  Package,
   FolderKanban,
   ListChecks,
   ShieldCheck,
@@ -36,6 +37,7 @@ export type NavSection =
   | "projects"
   | "admin"
   | "ontology"
+  | "ontology-packs"
   | "sources"
   | "connectors"
   | "extraction"
@@ -83,6 +85,11 @@ export const projectNavGroups: NavGroup[] = [
     label: "Build",
     items: [
       { section: "ontology", label: "Ontology", icon: Boxes, to: (p) => `/projects/${p}/ontology` },
+      // MVP6.11 (FE6-100 / ADR 0018 + PM6-036 G12): read-only ontology-pack catalog
+      // + dry-run apply-preview. It operates on the project's DRAFT ontology, so its
+      // natural neighbor is Ontology — placed immediately after it (before Sources).
+      // Single LNB item; pack detail + apply-preview are contextual sub-views.
+      { section: "ontology-packs", label: "Ontology Packs", icon: Package, to: (p) => `/projects/${p}/ontology-packs` },
       { section: "sources", label: "Sources", icon: Database, to: (p) => `/projects/${p}/sources` },
       // MVP6.9 (FE6-090 / ADR 0016): read-only connector catalog + dry-run import
       // preview. An ingestion-funnel entry upstream of extraction; its natural
@@ -137,6 +144,9 @@ export function resolveActiveSection(pathname: string): NavSection | null {
 
   // Candidates is more specific than Extraction — test it first.
   if (pathname.includes("/candidates") || pathname.includes("/candidate-evidence")) return "candidates";
+  // Ontology Packs is more specific than Ontology (its path contains /ontology) —
+  // test it first so the two never both resolve.
+  if (pathname.includes("/ontology-packs")) return "ontology-packs";
   if (pathname.includes("/ontology")) return "ontology";
   if (pathname.includes("/connectors")) return "connectors";
   if (pathname.includes("/sources")) return "sources";

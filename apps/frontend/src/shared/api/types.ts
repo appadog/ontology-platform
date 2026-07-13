@@ -3925,3 +3925,158 @@ export interface TenantApiError {
   message: string;
   details?: { denial_reason?: TenantAccessDenialReason } | null;
 }
+
+// ---- MVP6.11 Ontology Packs (read-only catalog + deterministic dry-run apply-preview) ----
+//
+// Additive. Matches docs/api/openapi-mvp6-11-draft.json EXACTLY (3 paths / 19
+// schemas / 5 enums). The surface is READ-ONLY: it lists exactly 3 deterministic
+// in-repo MOCK ontology packs (each = a bundle of ontology elements only —
+// classes/properties/relations — plus metadata), exposes each pack's detail, and
+// runs a DRY-RUN apply-preview that maps the pack's elements to WOULD-BE
+// DRAFT-layer items against a project's current DRAFT ontology. A preview APPLIES
+// NOTHING, INSTALLS NOTHING, WRITES NOTHING: it creates no class/property/relation,
+// mutates neither the DRAFT nor the published graph, opens no change request, and
+// never touches the candidate or published graph. A real apply is deferred and
+// would route through the existing MVP1 ontology-edit / MVP6.6 governance-
+// application (DRAFT-only, human-initiated) path. No external fetch. Every response
+// carries an all-false 8-flag OntologyPackMutationGuard. OntologyElementRef (the
+// governance-target shape {target_kind, ontology_*_id, ontology_version_id,
+// status}) and OntologyElementStatus are REUSED BY REFERENCE from MVP1/MVP6.5-6.7
+// (no rename); PackElementKind aligns verbatim with OntologyElementRef.target_kind.
+
+/** NEW (MVP6.11). Kind of an ontology element carried by a pack. Aligns with OntologyElementRef.target_kind (no rename). */
+export type PackElementKind = "CLASS" | "PROPERTY" | "RELATION";
+
+/** NEW (MVP6.11). Apply-preview status. READY: computed against the project's DRAFT. BLOCKED: invalid target / nothing applyable (no crash, no fabricated items). */
+export type PackApplyPreviewStatus = "READY" | "BLOCKED";
+
+/** NEW (MVP6.11). Per-item disposition vs the DRAFT. NEW: would be added. CONFLICT: same identity, differs -> human resolution, NEVER auto-overwritten. DUPLICATE: identical -> no-op. */
+export type PackPreviewItemDisposition = "NEW" | "CONFLICT" | "DUPLICATE";
+
+/** NEW (MVP6.11). Dry-run compatibility rollup. COMPATIBLE: all NEW. WARNING: some DUPLICATE/CONFLICT (applyable, flagged items need human resolution). INCOMPATIBLE: invalid target / nothing applyable (paired with BLOCKED). */
+export type PackApplyCompatibility = "COMPATIBLE" | "WARNING" | "INCOMPATIBLE";
+
+/** NEW (MVP6.11). Target layer a preview item maps to. Single literal DRAFT: WOULD-BE DRAFT-layer elements only, NEVER candidate, NEVER published. */
+export type PackApplyTargetLayer = "DRAFT";
+
+/** NEW (MVP6.11). All-false mutation guard present on EVERY pack response. Every flag is false, always; MVP6.11 turns NO flag true, ever. ontology_draft_mutated + published_graph_mutated are the headline assertions. */
+export interface OntologyPackMutationGuard {
+  pack_installed: false;
+  ontology_draft_mutated: false;
+  ontology_class_created: false;
+  ontology_property_created: false;
+  ontology_relation_created: false;
+  candidate_graph_mutated: false;
+  published_graph_mutated: false;
+  change_request_created: false;
+}
+
+/** NEW (MVP6.11). One warning or blocked-reason element ({code, message}, MVP6.9 precedent). code is a stable UPPER_SNAKE token; message is deterministic Korean-primary. */
+export interface PackPreviewNotice {
+  code: string;
+  message: string;
+}
+
+/** NEW (MVP6.11). Exact element counts for a pack. element_count == class_count + property_count + relation_count. */
+export interface OntologyPackElementCounts {
+  class_count: number;
+  property_count: number;
+  relation_count: number;
+  element_count: number;
+}
+
+/** NEW (MVP6.11). One catalog entry (a deterministic mock ontology pack). Read-only descriptor; NOT an installed pack (nothing is ever installed). */
+export interface OntologyPackCatalogItem {
+  pack_id: string;
+  name: string;
+  domain: string;
+  version: string;
+  description: string;
+  /** Always true: deterministic in-repo mock pack; no external fetch. */
+  mock: true;
+  element_counts: OntologyPackElementCounts;
+}
+
+/** NEW (MVP6.11). Read-only GLOBAL pack catalog list. Carries an all-false guard. */
+export interface OntologyPackCatalogListResponse {
+  items: OntologyPackCatalogItem[];
+  total_count: number;
+  mutation_guard: OntologyPackMutationGuard;
+}
+
+/** NEW (MVP6.11). One bundled ontology element carried by a pack. A pack-internal element definition; element_key is NOT a created ontology element id. */
+export interface PackElementDescriptor {
+  element_key: string;
+  element_kind: PackElementKind;
+  label: string;
+  description?: string | null;
+}
+
+/** NEW (MVP6.11). Pack metadata + ordered bundled elements. Read-only; global (project-agnostic). */
+export interface OntologyPackDetailResponse {
+  pack_id: string;
+  name: string;
+  domain: string;
+  version: string;
+  description: string;
+  mock: true;
+  element_counts: OntologyPackElementCounts;
+  elements: PackElementDescriptor[];
+  mutation_guard: OntologyPackMutationGuard;
+}
+
+/** NEW (MVP6.11). Dry-run apply-preview request. Body optional; only field is an optional item_cap (<=50). Counts remain exact regardless. */
+export interface PackApplyPreviewRequest {
+  item_cap?: number | null;
+}
+
+/** NEW (MVP6.11). Exact rollup counts over the pack's elements vs the DRAFT (always exact, never capped). would_modify_count == conflict_count (DUPLICATE is its own bucket). */
+export interface PackApplyPreviewSummary {
+  would_add_count: number;
+  would_modify_count: number;
+  conflict_count: number;
+  duplicate_count: number;
+  total_element_count: number;
+}
+
+/** NEW (MVP6.11). One WOULD-BE DRAFT-layer preview item. preview_ref is opaque and is NOT a created ontology element id. target_layer is always DRAFT. mapped_ontology_ref reuses OntologyElementRef by reference (null for NEW). */
+export interface PackPreviewItem {
+  /** Opaque, URL-safe, deterministic per (pack element + project DRAFT). NOT a persisted ontology element id. */
+  preview_ref: string;
+  element_kind: PackElementKind;
+  disposition: PackPreviewItemDisposition;
+  target_layer: PackApplyTargetLayer;
+  /** WOULD-BE mapped DRAFT-layer element. null for NEW (no existing element); names the existing DRAFT element for CONFLICT/DUPLICATE. */
+  mapped_ontology_ref?: OntologyElementRef | null;
+  pack_element_label: string;
+  /** Label of the existing DRAFT element (present for CONFLICT/DUPLICATE); null for NEW. */
+  existing_element_label?: string | null;
+  note?: string | null;
+}
+
+/** NEW (MVP6.11). Deterministic dry-run apply-preview. preview_only=true; creates nothing. mutation_guard is all-false. Byte-stable for the same pack + DRAFT, modulo generated_at and preview_id. */
+export interface PackApplyPreviewResponse {
+  /** G1: always null in P0 (compute-on-read / ephemeral; nothing persisted). EXCLUDED from the determinism assertion. */
+  preview_id: string | null;
+  project_id: string;
+  pack_id: string;
+  pack_version: string;
+  /** Set at response time; EXCLUDED from the determinism assertion. */
+  generated_at: string;
+  preview_only: true;
+  status: PackApplyPreviewStatus;
+  compatibility: PackApplyCompatibility;
+  target_layer: PackApplyTargetLayer;
+  summary: PackApplyPreviewSummary;
+  /** Capped list of would-be DRAFT-layer items (<= item_cap). */
+  items: PackPreviewItem[];
+  item_cap: number;
+  truncated: boolean;
+  /** Exact total of would-be items even when truncated. */
+  total_item_count: number;
+  warnings: PackPreviewNotice[];
+  /** Non-empty ONLY when status=BLOCKED; empty otherwise. */
+  blocked_reasons: PackPreviewNotice[];
+  routing_note: string;
+  mutation_guard: OntologyPackMutationGuard;
+}

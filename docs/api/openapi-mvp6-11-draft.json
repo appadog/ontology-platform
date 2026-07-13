@@ -1,0 +1,982 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP6.11 Ontology Packs Planning API",
+    "description": "Planning-only OpenAPI artifact for MVP6.11 Ontology Packs P0 (read-only ontology-pack catalog + deterministic dry-run apply-preview). Additive to MVP1-MVP6.10; replaces no prior OpenAPI draft. The surface is READ-ONLY: it lists exactly 3 deterministic in-repo MOCK ontology packs (each = a bundle of ontology elements only - classes/properties/relations - plus metadata), exposes each pack's detail, and runs a DRY-RUN apply-preview that maps the pack's elements to WOULD-BE DRAFT-layer items against a project's current DRAFT ontology. A preview APPLIES NOTHING, INSTALLS NOTHING, WRITES NOTHING: it creates no ontology class/property/relation, mutates neither the DRAFT nor the published graph, opens no change request, and never touches the candidate or published graph. A real apply is deferred and would route through the existing MVP1 ontology-edit / MVP6.6 governance-application (DRAFT-only, human-initiated) path. No external registry/fetch/download (deterministic in-repo mock packs). Every response carries an all-false 8-flag OntologyPackMutationGuard. See ADR 0018 and docs/pm/MVP6_11_ONTOLOGY_PACKS_BRIEF.md.",
+    "version": "0.6.11-draft"
+  },
+  "tags": [
+    {
+      "name": "MVP6.11 Ontology Packs",
+      "description": "Read-only ontology-pack catalog + deterministic dry-run apply-preview. Nothing installed, nothing applied, nothing written to any ontology layer; all-false mutation guard on every response."
+    }
+  ],
+  "paths": {
+    "/api/v1/ontology-packs": {
+      "get": {
+        "tags": [
+          "MVP6.11 Ontology Packs"
+        ],
+        "summary": "List ontology-pack catalog",
+        "description": "Read-only GLOBAL catalog of the registered deterministic MOCK ontology packs (exactly 3: pack-insurance-core, pack-manufacturing-equipment, pack-legal-compliance). Packs are reusable, project-agnostic templates, so the catalog is not project-scoped. Byte-stable across calls. No external fetch. Any authenticated project member may list. Carries an all-false OntologyPackMutationGuard.",
+        "operationId": "listOntologyPackCatalog",
+        "responses": {
+          "200": {
+            "description": "Ontology-pack catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyPackCatalogListResponse"
+                },
+                "examples": {
+                  "default": {
+                    "$ref": "#/components/examples/OntologyPackCatalogListExample"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/v1/ontology-packs/{pack_id}": {
+      "get": {
+        "tags": [
+          "MVP6.11 Ontology Packs"
+        ],
+        "summary": "Get ontology-pack detail (metadata + bundled elements)",
+        "description": "Read-only GLOBAL detail for one ontology pack: metadata plus the ordered list of bundled ontology elements (classes/properties/relations) it would contribute. Elements are described via OntologyElementRef-style descriptors (reused by reference, no rename); they are pack-internal element definitions, not references to any created ontology rows. Byte-stable. Unknown pack -> 404 ONTOLOGY_PACK_NOT_FOUND. Carries an all-false OntologyPackMutationGuard.",
+        "operationId": "getOntologyPackDetail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PackId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ontology-pack detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OntologyPackDetailResponse"
+                },
+                "examples": {
+                  "default": {
+                    "$ref": "#/components/examples/OntologyPackDetailExample"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/ontology-packs/{pack_id}/apply-preview": {
+      "post": {
+        "tags": [
+          "MVP6.11 Ontology Packs"
+        ],
+        "summary": "Run a dry-run apply-preview (creates nothing)",
+        "description": "DRY-RUN apply-preview for a pack against a project's current DRAFT ontology. Deterministically maps each pack element to a WOULD-BE DRAFT-layer item with a per-item disposition (NEW / CONFLICT / DUPLICATE) and returns a compatibility/summary rollup plus a capped list of preview items. Creates NOTHING: no ontology class/property/relation, no change request; mutates neither the DRAFT nor the published nor the candidate graph. The DRAFT ontology is read ONLY to diff against; it is never modified. A real apply is deferred and would route through the existing MVP1 ontology-edit / MVP6.6 governance-application (DRAFT-only, human-initiated) path. Byte-stable for the same pack + same project DRAFT (modulo generated_at and preview_id). Bounded: counts are always exact; only items[] is capped (item_cap) with truncated + exact total_item_count. Invalid target (unknown pack / missing DRAFT ontology / empty pack) -> status BLOCKED with blocked_reasons (never a crash, never fabricated items). Any project member who can view the project may run it. Carries an all-false OntologyPackMutationGuard.",
+        "operationId": "runOntologyPackApplyPreview",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/PackId"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackApplyPreviewRequest"
+              },
+              "examples": {
+                "previewRequest": {
+                  "$ref": "#/components/examples/PackApplyPreviewRequestExample"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deterministic dry-run apply-preview (nothing applied)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackApplyPreviewResponse"
+                },
+                "examples": {
+                  "default": {
+                    "$ref": "#/components/examples/PackApplyPreviewResponseExample"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ProjectId": {
+        "name": "project_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "PackId": {
+        "name": "pack_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "One of the 3 frozen pack ids (pack-insurance-core / pack-manufacturing-equipment / pack-legal-compliance); unknown -> 404 ONTOLOGY_PACK_NOT_FOUND."
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "Permission denied (PERMISSION_DENIED)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found (PROJECT_NOT_FOUND / ONTOLOGY_PACK_NOT_FOUND)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "PackElementKind": {
+        "type": "string",
+        "description": "Kind of an ontology element carried by a pack. Aligns verbatim with the existing ontology element kind vocabulary (MVP1 / MVP6.5-6.7 OntologyElementRef.target_kind / ChangeRequestTargetKind); no rename.",
+        "enum": [
+          "CLASS",
+          "PROPERTY",
+          "RELATION"
+        ]
+      },
+      "PackApplyPreviewStatus": {
+        "type": "string",
+        "description": "READY: preview computed against the project's current DRAFT ontology. BLOCKED: invalid target (unknown pack / missing project / no DRAFT ontology) or nothing applyable; blocked_reasons explains (no crash, no fabricated items).",
+        "enum": [
+          "READY",
+          "BLOCKED"
+        ]
+      },
+      "PackPreviewItemDisposition": {
+        "type": "string",
+        "description": "Per-item disposition vs the current DRAFT ontology. NEW: no matching element in the DRAFT -> would be added. CONFLICT: an element with the same identity exists but differs -> would need human resolution, NEVER auto-overwritten. DUPLICATE: an identical element already exists -> would be a no-op.",
+        "enum": [
+          "NEW",
+          "CONFLICT",
+          "DUPLICATE"
+        ]
+      },
+      "PackApplyCompatibility": {
+        "type": "string",
+        "description": "Dry-run compatibility rollup, mirroring the MVP5 import dry-run / MVP6.4 GoldSetImportCompatibility precedent. COMPATIBLE: all items NEW; would apply cleanly. WARNING: some DUPLICATE and/or CONFLICT items; applyable but flagged items need human resolution via the real-apply path. INCOMPATIBLE: invalid target or nothing applyable (paired with status=BLOCKED).",
+        "enum": [
+          "COMPATIBLE",
+          "WARNING",
+          "INCOMPATIBLE"
+        ]
+      },
+      "PackApplyTargetLayer": {
+        "type": "string",
+        "description": "Target layer a preview item maps to. Single literal DRAFT: preview items are WOULD-BE DRAFT-ontology-layer elements only, NEVER candidate, NEVER published.",
+        "enum": [
+          "DRAFT"
+        ],
+        "const": "DRAFT"
+      },
+      "OntologyElementStatus": {
+        "type": "string",
+        "description": "Ontology element lifecycle status. Reused BY REFERENCE from MVP1 / MVP6.4-6.7 (same values, no rename). Defined locally to keep this draft self-contained.",
+        "enum": [
+          "DRAFT",
+          "ACTIVE",
+          "ARCHIVED",
+          "DELETED"
+        ]
+      },
+      "OntologyElementRef": {
+        "type": "object",
+        "description": "A reference to a single ontology element. Reused BY REFERENCE from MVP1 / MVP6.5-6.7 (same shape, not renamed). Exactly one of the id fields is set, matching target_kind. In MVP6.11 it names the WOULD-BE mapped DRAFT-layer target of a preview item; it references an existing/would-be element identity and CREATES NOTHING. Defined locally to keep this draft self-contained.",
+        "additionalProperties": false,
+        "properties": {
+          "target_kind": {
+            "$ref": "#/components/schemas/PackElementKind"
+          },
+          "ontology_class_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ontology_property_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ontology_relation_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ontology_version_id": {
+            "type": "string",
+            "description": "The DRAFT ontology version the preview diffed against (the project's current DRAFT). Read-only context; never written."
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OntologyElementStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The existing DRAFT element's status at the read moment (for CONFLICT/DUPLICATE items); null for NEW items (no existing element)."
+          }
+        },
+        "required": [
+          "target_kind",
+          "ontology_version_id"
+        ]
+      },
+      "PackPreviewNotice": {
+        "type": "object",
+        "description": "One warning or blocked-reason element (mirrors the MVP6.9 ConnectorPreviewNotice {code, message} pattern). code is a stable UPPER_SNAKE token (frozen vocabulary, deterministic/byte-stable; drives D6 badge / i18n); message is a deterministic human-readable string (Korean primary). Used by warnings[] and blocked_reasons[].",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable UPPER_SNAKE token. Warnings: EXISTING_DUPLICATE_ELEMENT / NAME_CONFLICT_DIFFERENT_DEFINITION / UNRESOLVED_RELATION_ENDPOINT. Blocked: PACK_NOT_FOUND / NO_DRAFT_ONTOLOGY / EMPTY_PACK."
+          },
+          "message": {
+            "type": "string",
+            "description": "Deterministic human-readable message (Korean primary)."
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "OntologyPackMutationGuard": {
+        "type": "object",
+        "description": "All-false mutation guard present on EVERY ontology-pack response (catalog list, pack detail, apply-preview). Every flag is false, always; MVP6.11 turns NO flag true, ever. ontology_draft_mutated + published_graph_mutated are the headline assertions (distinct from the single MVP6.6 apply guard, which turns ontology_draft_mutated true; MVP6.11 turns no flag true). Mirrors the MVP6.1-6.9 all-false pattern.",
+        "additionalProperties": false,
+        "properties": {
+          "pack_installed": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "ontology_draft_mutated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "ontology_class_created": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "ontology_property_created": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "ontology_relation_created": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "candidate_graph_mutated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "published_graph_mutated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "change_request_created": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          }
+        },
+        "required": [
+          "pack_installed",
+          "ontology_draft_mutated",
+          "ontology_class_created",
+          "ontology_property_created",
+          "ontology_relation_created",
+          "candidate_graph_mutated",
+          "published_graph_mutated",
+          "change_request_created"
+        ]
+      },
+      "PackElementDescriptor": {
+        "type": "object",
+        "description": "One bundled ontology element carried by a pack (in pack detail). A pack-internal element definition (reused OntologyElementRef-style shape, by reference); NOT a reference to any created ontology row. Packs carry ontology elements only.",
+        "additionalProperties": false,
+        "properties": {
+          "element_key": {
+            "type": "string",
+            "description": "Pack-internal stable key for the element (opaque, URL-safe). Used for the element-identity match rule (G4) and deterministic ordering; NOT a created ontology element id."
+          },
+          "element_kind": {
+            "$ref": "#/components/schemas/PackElementKind"
+          },
+          "label": {
+            "type": "string",
+            "description": "Human label (Korean primary)."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "element_key",
+          "element_kind",
+          "label"
+        ]
+      },
+      "OntologyPackElementCounts": {
+        "type": "object",
+        "description": "Exact element counts for a pack. element_count == class_count + property_count + relation_count.",
+        "additionalProperties": false,
+        "properties": {
+          "class_count": {
+            "type": "integer"
+          },
+          "property_count": {
+            "type": "integer"
+          },
+          "relation_count": {
+            "type": "integer"
+          },
+          "element_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "class_count",
+          "property_count",
+          "relation_count",
+          "element_count"
+        ]
+      },
+      "OntologyPackCatalogItem": {
+        "type": "object",
+        "description": "One catalog entry (a deterministic mock ontology pack). Read-only descriptor; not an installed pack (nothing is ever installed/persisted as an install).",
+        "additionalProperties": false,
+        "properties": {
+          "pack_id": {
+            "type": "string",
+            "description": "Opaque stable pack id (one of the 3 frozen ids)."
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string",
+            "description": "Example domain label (insurance / manufacturing / legal)."
+          },
+          "version": {
+            "type": "string",
+            "description": "Single frozen version per pack (P0: 1.0.0; no multi-version management)."
+          },
+          "description": {
+            "type": "string"
+          },
+          "mock": {
+            "type": "boolean",
+            "const": true,
+            "default": true,
+            "description": "Always true: deterministic in-repo mock pack; no external fetch."
+          },
+          "element_counts": {
+            "$ref": "#/components/schemas/OntologyPackElementCounts"
+          }
+        },
+        "required": [
+          "pack_id",
+          "name",
+          "domain",
+          "version",
+          "description",
+          "mock",
+          "element_counts"
+        ]
+      },
+      "OntologyPackCatalogListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OntologyPackCatalogItem"
+            }
+          },
+          "total_count": {
+            "type": "integer",
+            "description": "Exact number of catalog packs (P0: 3)."
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/OntologyPackMutationGuard"
+          }
+        },
+        "required": [
+          "items",
+          "total_count",
+          "mutation_guard"
+        ]
+      },
+      "OntologyPackDetailResponse": {
+        "type": "object",
+        "description": "Pack metadata + ordered bundled elements. Read-only; global (project-agnostic).",
+        "additionalProperties": false,
+        "properties": {
+          "pack_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "mock": {
+            "type": "boolean",
+            "const": true,
+            "default": true
+          },
+          "element_counts": {
+            "$ref": "#/components/schemas/OntologyPackElementCounts"
+          },
+          "elements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackElementDescriptor"
+            },
+            "description": "Ordered bundled ontology elements (classes/properties/relations). Deterministic order."
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/OntologyPackMutationGuard"
+          }
+        },
+        "required": [
+          "pack_id",
+          "name",
+          "domain",
+          "version",
+          "description",
+          "mock",
+          "element_counts",
+          "elements",
+          "mutation_guard"
+        ]
+      },
+      "PackApplyPreviewRequest": {
+        "type": "object",
+        "description": "Dry-run apply-preview request. Body is optional; the only field is an optional item_cap. The preview is computed deterministically from the pack + the project's current DRAFT ontology.",
+        "additionalProperties": false,
+        "properties": {
+          "item_cap": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 50,
+            "default": 50,
+            "description": "Optional client cap on returned items[] (server enforces a hard max, P0=50). Counts remain exact regardless."
+          }
+        }
+      },
+      "PackApplyPreviewSummary": {
+        "type": "object",
+        "description": "Exact rollup counts over the pack's elements vs the DRAFT (always exact, never capped).",
+        "additionalProperties": false,
+        "properties": {
+          "would_add_count": {
+            "type": "integer",
+            "description": "Elements dispositioned NEW."
+          },
+          "would_modify_count": {
+            "type": "integer",
+            "description": "Elements dispositioned CONFLICT (would need human resolution before a real apply)."
+          },
+          "conflict_count": {
+            "type": "integer",
+            "description": "Elements dispositioned CONFLICT (== would_modify_count in P0; kept explicit for clarity)."
+          },
+          "duplicate_count": {
+            "type": "integer",
+            "description": "Elements dispositioned DUPLICATE (no-op)."
+          },
+          "total_element_count": {
+            "type": "integer",
+            "description": "Total pack elements evaluated (== would_add_count + conflict_count + duplicate_count)."
+          }
+        },
+        "required": [
+          "would_add_count",
+          "would_modify_count",
+          "conflict_count",
+          "duplicate_count",
+          "total_element_count"
+        ]
+      },
+      "PackPreviewItem": {
+        "type": "object",
+        "description": "One WOULD-BE DRAFT-layer preview item. preview_ref is opaque and is NOT a created ontology element id (nothing is created). target_layer is always DRAFT. mapped_ontology_ref reuses OntologyElementRef by reference.",
+        "additionalProperties": false,
+        "properties": {
+          "preview_ref": {
+            "type": "string",
+            "description": "Opaque, URL-safe, deterministic per (pack element + project DRAFT). NOT a persisted ontology element id."
+          },
+          "element_kind": {
+            "$ref": "#/components/schemas/PackElementKind"
+          },
+          "disposition": {
+            "$ref": "#/components/schemas/PackPreviewItemDisposition"
+          },
+          "target_layer": {
+            "$ref": "#/components/schemas/PackApplyTargetLayer"
+          },
+          "mapped_ontology_ref": {
+            "description": "WOULD-BE mapped DRAFT-layer ontology element (OntologyElementRef, by reference). For NEW items the id fields may be null (no existing element); for CONFLICT/DUPLICATE they name the existing DRAFT element identity.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OntologyElementRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pack_element_label": {
+            "type": "string",
+            "description": "Label of the pack element."
+          },
+          "existing_element_label": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Label of the existing DRAFT element (present for CONFLICT/DUPLICATE); null for NEW."
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "preview_ref",
+          "element_kind",
+          "disposition",
+          "target_layer",
+          "pack_element_label"
+        ]
+      },
+      "PackApplyPreviewResponse": {
+        "type": "object",
+        "description": "Deterministic dry-run apply-preview. preview_only=true; creates nothing. mutation_guard is all-false. Byte-stable for the same pack + same project DRAFT, modulo generated_at and preview_id.",
+        "additionalProperties": false,
+        "properties": {
+          "preview_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "OPAQUE preview handle; NOT a created ontology element / install id. G1 (Wave54): compute-on-read / EPHEMERAL recommended -> always null, no GET-by-id / list-preview endpoint. Either way read-only + all-false guard. EXCLUDED from the byte-stable determinism assertion."
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "pack_id": {
+            "type": "string"
+          },
+          "pack_version": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Set at response time; EXCLUDED from the byte-stable determinism assertion."
+          },
+          "preview_only": {
+            "type": "boolean",
+            "const": true,
+            "default": true,
+            "description": "Always true: nothing applied."
+          },
+          "status": {
+            "$ref": "#/components/schemas/PackApplyPreviewStatus"
+          },
+          "compatibility": {
+            "$ref": "#/components/schemas/PackApplyCompatibility"
+          },
+          "target_layer": {
+            "$ref": "#/components/schemas/PackApplyTargetLayer"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/PackApplyPreviewSummary"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackPreviewItem"
+            },
+            "description": "Capped list of would-be DRAFT-layer items (<= item_cap)."
+          },
+          "item_cap": {
+            "type": "integer",
+            "description": "Max items returned (P0=50)."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "True when total_item_count > item_cap."
+          },
+          "total_item_count": {
+            "type": "integer",
+            "description": "Exact total of would-be items even when truncated."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackPreviewNotice"
+            }
+          },
+          "blocked_reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackPreviewNotice"
+            },
+            "description": "Non-empty ONLY when status=BLOCKED; empty otherwise."
+          },
+          "routing_note": {
+            "type": "string",
+            "description": "Boundary note, constant: 'preview only - nothing applied; a real apply routes through the existing MVP1 ontology-edit / MVP6.6 governance-application (DRAFT-only, human-initiated) path.'"
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/OntologyPackMutationGuard"
+          }
+        },
+        "required": [
+          "project_id",
+          "pack_id",
+          "pack_version",
+          "generated_at",
+          "preview_only",
+          "status",
+          "compatibility",
+          "target_layer",
+          "summary",
+          "items",
+          "item_cap",
+          "truncated",
+          "total_item_count",
+          "warnings",
+          "blocked_reasons",
+          "routing_note",
+          "mutation_guard"
+        ]
+      },
+      "ApiError": {
+        "type": "object",
+        "description": "Standard error envelope. P0 ontology-pack codes: PROJECT_NOT_FOUND, ONTOLOGY_PACK_NOT_FOUND, PERMISSION_DENIED. Note: an invalid apply-preview target (e.g. no DRAFT ontology) normally yields a 200 preview with status=BLOCKED; 404 is reserved for a missing project / unknown pack.",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    },
+    "examples": {
+      "OntologyPackCatalogListExample": {
+        "value": {
+          "items": [
+            {
+              "pack_id": "pack-insurance-core",
+              "name": "보험 코어 도메인 팩",
+              "domain": "insurance",
+              "version": "1.0.0",
+              "description": "보험 코어 도메인 온톨로지 요소 번들 (mock).",
+              "mock": true,
+              "element_counts": {
+                "class_count": 6,
+                "property_count": 10,
+                "relation_count": 4,
+                "element_count": 20
+              }
+            },
+            {
+              "pack_id": "pack-manufacturing-equipment",
+              "name": "제조 설비 도메인 팩",
+              "domain": "manufacturing",
+              "version": "1.0.0",
+              "description": "제조 설비 도메인 온톨로지 요소 번들 (mock).",
+              "mock": true,
+              "element_counts": {
+                "class_count": 5,
+                "property_count": 8,
+                "relation_count": 3,
+                "element_count": 16
+              }
+            },
+            {
+              "pack_id": "pack-legal-compliance",
+              "name": "법률/규정 도메인 팩",
+              "domain": "legal",
+              "version": "1.0.0",
+              "description": "법률/규정 도메인 온톨로지 요소 번들 (mock).",
+              "mock": true,
+              "element_counts": {
+                "class_count": 4,
+                "property_count": 6,
+                "relation_count": 2,
+                "element_count": 12
+              }
+            }
+          ],
+          "total_count": 3,
+          "mutation_guard": {
+            "pack_installed": false,
+            "ontology_draft_mutated": false,
+            "ontology_class_created": false,
+            "ontology_property_created": false,
+            "ontology_relation_created": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false,
+            "change_request_created": false
+          }
+        }
+      },
+      "OntologyPackDetailExample": {
+        "value": {
+          "pack_id": "pack-insurance-core",
+          "name": "보험 코어 도메인 팩",
+          "domain": "insurance",
+          "version": "1.0.0",
+          "description": "보험 코어 도메인 온톨로지 요소 번들 (mock).",
+          "mock": true,
+          "element_counts": {
+            "class_count": 6,
+            "property_count": 10,
+            "relation_count": 4,
+            "element_count": 20
+          },
+          "elements": [
+            {
+              "element_key": "class.policy",
+              "element_kind": "CLASS",
+              "label": "보험계약(Policy)",
+              "description": "보험 계약 엔티티."
+            },
+            {
+              "element_key": "class.claim",
+              "element_kind": "CLASS",
+              "label": "보험금청구(Claim)",
+              "description": "보험금 청구 엔티티."
+            },
+            {
+              "element_key": "property.policy.premium",
+              "element_kind": "PROPERTY",
+              "label": "보험료(premium)",
+              "description": "보험계약의 보험료."
+            },
+            {
+              "element_key": "relation.policy_has_claim",
+              "element_kind": "RELATION",
+              "label": "계약-청구 관계(hasClaim)",
+              "description": "보험계약과 보험금청구의 관계."
+            }
+          ],
+          "mutation_guard": {
+            "pack_installed": false,
+            "ontology_draft_mutated": false,
+            "ontology_class_created": false,
+            "ontology_property_created": false,
+            "ontology_relation_created": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false,
+            "change_request_created": false
+          }
+        }
+      },
+      "PackApplyPreviewRequestExample": {
+        "value": {
+          "item_cap": 50
+        }
+      },
+      "PackApplyPreviewResponseExample": {
+        "value": {
+          "preview_id": null,
+          "project_id": "demo-project",
+          "pack_id": "pack-insurance-core",
+          "pack_version": "1.0.0",
+          "generated_at": "2026-07-09T00:00:00Z",
+          "preview_only": true,
+          "status": "READY",
+          "compatibility": "WARNING",
+          "target_layer": "DRAFT",
+          "summary": {
+            "would_add_count": 17,
+            "would_modify_count": 2,
+            "conflict_count": 2,
+            "duplicate_count": 1,
+            "total_element_count": 20
+          },
+          "items": [
+            {
+              "preview_ref": "prev_pack_ins_0001",
+              "element_kind": "CLASS",
+              "disposition": "NEW",
+              "target_layer": "DRAFT",
+              "mapped_ontology_ref": {
+                "target_kind": "CLASS",
+                "ontology_class_id": null,
+                "ontology_property_id": null,
+                "ontology_relation_id": null,
+                "ontology_version_id": "onto-ver-draft-demo",
+                "status": null
+              },
+              "pack_element_label": "보험계약(Policy)",
+              "existing_element_label": null,
+              "note": "DRAFT에 없음 -> 추가 대상."
+            },
+            {
+              "preview_ref": "prev_pack_ins_0007",
+              "element_kind": "CLASS",
+              "disposition": "CONFLICT",
+              "target_layer": "DRAFT",
+              "mapped_ontology_ref": {
+                "target_kind": "CLASS",
+                "ontology_class_id": "cls_claim_existing",
+                "ontology_property_id": null,
+                "ontology_relation_id": null,
+                "ontology_version_id": "onto-ver-draft-demo",
+                "status": "DRAFT"
+              },
+              "pack_element_label": "보험금청구(Claim)",
+              "existing_element_label": "청구(Claim)",
+              "note": "동일 identity가 존재하나 정의가 상이 -> human 해소 필요; 자동 덮어쓰기 안 함."
+            },
+            {
+              "preview_ref": "prev_pack_ins_0012",
+              "element_kind": "PROPERTY",
+              "disposition": "DUPLICATE",
+              "target_layer": "DRAFT",
+              "mapped_ontology_ref": {
+                "target_kind": "PROPERTY",
+                "ontology_class_id": null,
+                "ontology_property_id": "prop_premium_existing",
+                "ontology_relation_id": null,
+                "ontology_version_id": "onto-ver-draft-demo",
+                "status": "DRAFT"
+              },
+              "pack_element_label": "보험료(premium)",
+              "existing_element_label": "보험료(premium)",
+              "note": "동일 요소가 이미 존재 -> no-op."
+            }
+          ],
+          "item_cap": 50,
+          "truncated": false,
+          "total_item_count": 20,
+          "warnings": [
+            {
+              "code": "NAME_CONFLICT_DIFFERENT_DEFINITION",
+              "message": "동일 이름의 요소 2건이 DRAFT와 정의가 달라 실제 적용 전 human 해소가 필요합니다."
+            },
+            {
+              "code": "EXISTING_DUPLICATE_ELEMENT",
+              "message": "이미 존재하는 동일 요소 1건은 적용 시 no-op 처리됩니다."
+            }
+          ],
+          "blocked_reasons": [],
+          "routing_note": "preview only - nothing applied; a real apply routes through the existing MVP1 ontology-edit / MVP6.6 governance-application (DRAFT-only, human-initiated) path.",
+          "mutation_guard": {
+            "pack_installed": false,
+            "ontology_draft_mutated": false,
+            "ontology_class_created": false,
+            "ontology_property_created": false,
+            "ontology_relation_created": false,
+            "candidate_graph_mutated": false,
+            "published_graph_mutated": false,
+            "change_request_created": false
+          }
+        }
+      }
+    }
+  }
+}

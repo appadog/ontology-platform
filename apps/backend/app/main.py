@@ -26,6 +26,19 @@ async def connector_validation_exception_handler(
                 )
             ).model_dump(mode="json"),
         )
+    # An invalid MVP6.11 ontology-pack apply-preview body (item_cap out of [1,50],
+    # non-integer, or malformed JSON) maps to 400 INVALID_REQUEST_BODY (G9).
+    if request.url.path.endswith("/apply-preview"):
+        return JSONResponse(
+            status_code=400,
+            content=ApiErrorResponse(
+                error=ApiError(
+                    code="INVALID_REQUEST_BODY",
+                    message="The ontology-pack apply-preview request body is malformed.",
+                    details={"error_count": len(exc.errors())},
+                )
+            ).model_dump(mode="json"),
+        )
     return await request_validation_exception_handler(request, exc)
 
 

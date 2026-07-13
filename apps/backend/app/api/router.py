@@ -14,6 +14,7 @@ from app.modules.learning.router import router as learning_router
 from app.modules.mvp4.router import router as mvp4_router
 from app.modules.mvp5.router import router as mvp5_router
 from app.modules.ontology.router import router as ontology_router
+from app.modules.ontology_packs.router import router as ontology_packs_router
 from app.modules.publish.router import router as publish_router
 from app.modules.prompt.router import router as prompt_router
 from app.modules.project.router import router as project_router
@@ -46,3 +47,4 @@ api_router.include_router(mvp5_router)
 api_router.include_router(copilot_router)
 api_router.include_router(connectors_router)
 api_router.include_router(tenancy_router)
+api_router.include_router(ontology_packs_router)

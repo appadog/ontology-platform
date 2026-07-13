@@ -29,6 +29,7 @@ import { ExtractionJobMonitorPage } from "../pages/ExtractionJobMonitorPage";
 import { IntegratedSearchPage } from "../pages/IntegratedSearchPage";
 import { LearningInsightsPage } from "../pages/LearningInsightsPage";
 import { OntologyModelerPage } from "../pages/OntologyModelerPage";
+import { OntologyPacksPage } from "../pages/OntologyPacksPage";
 import { PromptPerformancePage } from "../pages/PromptPerformancePage";
 import { PublishedGraphExplorerPage } from "../pages/PublishedGraphExplorerPage";
 import { PublishQueuePage } from "../pages/PublishQueuePage";
@@ -194,6 +195,17 @@ export const router = createBrowserRouter([
       {
         path: "/projects/:projectId/evaluation-dataset-versions/:datasetVersionId",
         element: <EvaluationDatasetsPage />,
+      },
+      {
+        // MVP6.11 (FE6-100 / ADR 0018): read-only ontology-pack catalog. Pack
+        // detail + apply-preview are contextual sub-views (bounded pack id set),
+        // never new LNB items.
+        path: "/projects/:projectId/ontology-packs",
+        element: <OntologyPacksPage />,
+      },
+      {
+        path: "/projects/:projectId/ontology-packs/:packId",
+        element: <OntologyPacksPage />,
       },
       {
         path: "/projects/:projectId/connectors",

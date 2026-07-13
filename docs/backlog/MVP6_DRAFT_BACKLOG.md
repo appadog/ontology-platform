@@ -1,6 +1,6 @@
 # MVP 6 Draft Backlog
 
-Status: `MVP6.10 WAVE51 MULTI-TENANT RUNTIME — CONTRACT-FIRST PLANNING FROZEN (PM6-033, ADR 0017); planning IDs BE6-074~075, FE6-094, INT6-080 (prev: MVP6.9 impl Wave50 PM6-032, BE6-070~073, FE6-090~093, INT6-076~079; MVP6.9 plan PM6-031, ADR 0016, BE6-068~069, FE6-089, INT6-075)`
+Status: `MVP6.11 WAVE54 ONTOLOGY PACKS THIN IMPLEMENTATION — PM GATE FREEZE (PM6-036: G1/G3/G4 frozen, G6/G7/G9 confirmed, G12 ratified); impl IDs BE6-082~085, FE6-100~103, INT6-098~101 (prev: MVP6.11 plan Wave53 PM6-035, ADR 0018, BE6-080~081, FE6-099, INT6-094; MVP6.10 impl Wave52 PM6-034, BE6-076~079, FE6-095~098, INT6-090~093)`
 Date: 2026-07-09
 
 MVP6 is broad. Wave28 and Wave29 closed MVP6.1 Gold Set / Benchmark Studio.
@@ -1225,6 +1225,101 @@ tenant's access decision (200/403/404).
 | INT6-091 | P0 | QA | Frontend mock/actual flow | FE6-095~098 | validate header switcher + read-only view mock + actual incl. an isolation negative case; no create/edit/invite/switch-write affordance; live guard proof line (200 only); R8 |
 | INT6-092 | P0 | QA | ISOLATION + no-mutation DATA-LEVEL guard | BE6-077~078 | INDEPENDENTLY (own script) assert not-a-member → 404 with NO name/count/project/data leak; suspended → 403; `/tenants/{B}/projects` + `/projects/{B}/tenant` never leak B; disjoint actor visibility sets (`dev-user` vs `dev-user-2`); NO tenant call mutates any table (before==after); no `tenant_id` column created; R2/R3/R4/R5 |
 | INT6-093 | P0 | QA | Wave52 closeout + regression | INT6-090~092 | MVP6.9/earlier regression + touched smokes green; additive-only + candidate/published separation intact; no leftover listeners on 8000/5173; `git diff --check`; update R9; recommend closeout/hardening |
+
+## Wave53 MVP6.11 Ontology Packs — CONTRACT-FIRST PLANNING (PM6-035)
+
+Wave53 freezes the smallest coherent, SAFE ontology-pack P0 as contract-first
+planning only (no runtime/UI/test/seed code; runtime waits for Wave54). Scope:
+a read-only **ontology-pack catalog** (3 deterministic in-repo mock packs, each a
+bundle of ontology elements + metadata) + a **deterministic dry-run apply-preview**
+(what a pack WOULD add / WOULD modify against a project's current DRAFT ontology,
+per-item disposition NEW / CONFLICT / DUPLICATE + compatibility rollup, "nothing
+applied"). No apply/install, no external registry/fetch, no published-graph write,
+no ontology-draft mutation, all-false 8-flag guard. A real apply would route
+through the existing MVP1 ontology-edit / MVP6.6 governance-application (DRAFT-only,
+human-initiated) path — out of P0. Durable boundary: ADR 0018. Brief:
+`docs/pm/MVP6_11_ONTOLOGY_PACKS_BRIEF.md`.
+
+Frozen enums (planning): `PackElementKind` (CLASS/PROPERTY/RELATION, aligns with
+`OntologyElementRef.target_kind`); `PackApplyPreviewStatus` (READY/BLOCKED);
+`PackPreviewItemDisposition` (NEW/CONFLICT/DUPLICATE); `PackApplyCompatibility`
+(COMPATIBLE/WARNING/INCOMPATIBLE); `PackApplyTargetLayer` (DRAFT single literal);
+`PackPreviewNotice {code, message}`. All-false 8-flag `OntologyPackMutationGuard`
+(`pack_installed`/`ontology_draft_mutated`/`ontology_class_created`/
+`ontology_property_created`/`ontology_relation_created`/`candidate_graph_mutated`/
+`published_graph_mutated`/`change_request_created` — all false;
+`ontology_draft_mutated` + `published_graph_mutated` headline). Reuse by `$ref`
+(no rename): MVP1 ontology element + `OntologyElementRef`, MVP5/MVP6.4 import
+dry-run compatibility, MVP6.9 catalog/preview/notice/bounding pattern, MVP5 `Role`.
+Wave54 open gates: G1 preview_id persist-vs-compute (ephemeral recommended); G2
+catalog global / preview project-scoped (frozen); G3 DRAFT-diff basis + fixture
+matrix; G4 element-identity match rule; G5 Build/Ontology LNB/IA placement (ADR
+0010).
+
+| ID | Priority | Role | Item | Depends on | Acceptance summary |
+|---|---|---|---|---|---|
+| PM6-035 | P0 | PM | MVP6.11 Ontology Packs P0 freeze (contract-first planning) | ADR 0018 | freeze read-only pack catalog (3 deterministic mock packs = ontology-element bundle + metadata/version + counts) + deterministic dry-run apply-preview (would-add/would-modify mapped to DRAFT layer, per-item disposition NEW/CONFLICT/DUPLICATE, compatibility rollup, "nothing applied" routing note), enums (`PackElementKind`/`PackApplyPreviewStatus`/`PackPreviewItemDisposition`/`PackApplyCompatibility`/`PackApplyTargetLayer`/`PackPreviewNotice`), all-false 8-flag `OntologyPackMutationGuard`, authz, read-only + no-apply + no-published-write + no-draft-mutation + no-external-fetch boundary; explicit exclusions; `docs/pm/MVP6_11_ONTOLOGY_PACKS_BRIEF.md` + ADR 0018; no `apps/`/`infra/` |
+| BE6-080 | P0 | Backend | Ontology Packs API contract draft (additive, planning) | PM6-035 | draft `docs/api/MVP6_11_ONTOLOGY_PACKS_API_CONTRACT_DRAFT.md`: additive endpoints (list catalog `GET /ontology-packs`; pack detail `GET /ontology-packs/{pack_id}`; dry-run apply-preview `POST /projects/{project_id}/ontology-packs/{pack_id}/apply-preview`) + DTO/enum names + all-false 8-flag `OntologyPackMutationGuard`; preview creates nothing (would-be DRAFT items, opaque `preview_ref`); reuse MVP1 ontology element + `OntologyElementRef` + MVP5/MVP6.4 dry-run compatibility + MVP6.9 catalog/preview/notice pattern + MVP5 `Role` by `$ref` (no rename); import no ontology-write/install/governance-change/candidate-write/published-write path; bounded (item cap + `truncated` + exact `total_item_count`); `403 PERMISSION_DENIED` / `404 PROJECT_NOT_FOUND` / `404 ONTOLOGY_PACK_NOT_FOUND`; resolve G1–G4; no runtime code |
+| BE6-081 | P0 | Backend | OpenAPI planning artifact | BE6-080 | produce `docs/api/openapi-mvp6-11-draft.json` (OpenAPI 3.1.0, `0.6.11-draft`, disjoint-additive to MVP1–MVP6.10; redefines no prior path); JSON parse; `git diff --check`; no `apps/` |
+| FE6-099 | P0 | Frontend | Ontology Packs UX/API requirements (planning) | PM6-035, BE6-080~081 | `docs/pm/MVP6_11_FRONTEND_UX_REQUIREMENTS.md`: pack catalog + pack detail + dry-run apply-preview UX in the Build/Ontology area (ADR 0010 placement, contextual sub-view, no new ID-bound global LNB page); preview result layout (would-add/would-modify + NEW/CONFLICT/DUPLICATE dispositions + compatibility/summary + capped sample); persistent "preview only — nothing applied; a real apply routes through ontology-edit / governance" boundary copy (no install/apply CTA); live all-false 8-flag guard proof line; first-class loading/empty/error/permission states; closed design language (Section+Card, KO titles, D6 badges); DTO gap vs Backend draft; propose G5 placement; no route/component/type/mock/smoke code |
+| INT6-094 | P0 | QA | Ontology Packs acceptance checklist (planning) | PM6-035, BE6-080~081, FE6-099 | `docs/backlog/INT6_11_ONTOLOGY_PACKS_ACCEPTANCE.md` (C planning gates + R NOT-RUNNABLE runtime gates, continuing INT6 numbering from INT6-094); verify PM/BE/FE agree on P0, catalog + apply-preview model, read-only + dry-run + no-apply + no-published-write + no-draft-mutation + no-external-fetch boundary, all-false 8-flag guard, exclusions; make NO-MUTATION the headline runtime gate (`OntologyPackMutationGuard` all-false; data-level no ontology-draft/class/property/relation/candidate/published/change-request row created/updated/deleted, before==after; preview byte-stable modulo `generated_at`+`preview_id`; disposition NEW/CONFLICT/DUPLICATE + compatibility correct against fixtures; `403`/`404`); confirm no runtime leaked (`apps/`+`infra/`); OpenAPI parse; recommend Wave54 |
+
+## Wave54 MVP6.11 Ontology Packs THIN IMPLEMENTATION — Gate Freeze (PM6-036)
+
+Wave54 implements the frozen read-only pack-catalog + deterministic dry-run
+apply-preview slice (3 endpoints, `openapi-mvp6-11-draft.json` EXACTLY). PM freezes
+the open gates FIRST (this section); Backend ∥ Frontend then implement; QA verifies.
+
+PM freeze (`docs/handoffs/wave-054/PM_REPORT.md`):
+- **G1 `preview_id`** = COMPUTE-ON-READ / EPHEMERAL: always `null`; no GET-by-id, no
+  list-preview endpoint; recompute is byte-identical modulo `generated_at`.
+- **G3 DRAFT-diff basis** = deterministic **process-local DRAFT-ontology snapshot**
+  fixture keyed by `project_id` (connectors/tenancy precedent; read-only; re-seeded
+  by `reset_runtime_store()`; live MVP1 draft-reader wiring is P1, diff logic
+  identical). DRAFT-ness is **version-level** (`OntologyVersion.status==DRAFT`; its
+  non-DELETED elements). Fixture matrix (in PM report) exercises all 3 dispositions
+  + 3 compatibilities: `proj-packs-demo` (mfg overlap) → insurance/legal COMPATIBLE,
+  manufacturing WARNING (NEW+CONFLICT+DUPLICATE); `proj-packs-no-draft` → BLOCKED /
+  INCOMPATIBLE (`NO_DRAFT_ONTOLOGY`).
+- **G4 element-identity match** = `(element_kind + normalized key)`; key normalized
+  NFC+trim+casefold; PROPERTY scoped by owning-class key, RELATION by name. Match +
+  equal `definition_signature` → DUPLICATE; match + different signature → CONFLICT;
+  no match → NEW. `would_modify_count == conflict_count` (CONFLICT only; DUPLICATE is
+  its own bucket); `total_element_count = would_add + conflict + duplicate`.
+- **G6** notice vocab frozen: WARNING `EXISTING_DUPLICATE_ELEMENT` /
+  `NAME_CONFLICT_DIFFERENT_DEFINITION` / `UNRESOLVED_RELATION_ENDPOINT`; BLOCKED
+  `NO_DRAFT_ONTOLOGY` (only one that fires in P0) / `EMPTY_PACK` / `PACK_NOT_FOUND`
+  (last two reserved — unknown pack is a 404, all 3 packs non-empty).
+- **G7** `generated_at` present (ISO-8601 UTC), EXCLUDED (with `preview_id`) from the
+  byte-stable determinism assertion.
+- **G9** invalid body (`item_cap` ∉ [1,50] / malformed) → **400**; unknown pack →
+  **404** `ONTOLOGY_PACK_NOT_FOUND`; unknown project → **404** `PROJECT_NOT_FOUND`;
+  non-member → **403** `PERMISSION_DENIED`; valid target with no DRAFT ontology →
+  **200** `status=BLOCKED` / `INCOMPATIBLE` + `blocked_reasons=[NO_DRAFT_ONTOLOGY]`,
+  zero items. `mapped_ontology_ref` = `null` for NEW; non-null (existing DRAFT
+  element) for CONFLICT/DUPLICATE.
+- **G12** (COMMANDER IA) ratified: BUILD-group LNB item `Ontology Packs` immediately
+  after `Ontology`; H1 `온톨로지 팩`; detail/preview contextual sub-views
+  (`/projects/:p/ontology-packs`, `.../:packId`), not ID-bound global pages.
+
+No contract shape change: the OpenAPI (`0.6.11-draft`, 3 paths / 19 schemas / 5 enums
++ 8-flag guard) is implemented EXACTLY as drafted.
+
+| ID | Priority | Role | Item | Depends on | Acceptance summary |
+|---|---|---|---|---|---|
+| PM6-036 | P0 | PM | MVP6.11 Wave54 gate freeze + scope guard | PM6-035, ADR 0018 | freeze G1 (`preview_id` ephemeral/null), G3 (process-local DRAFT snapshot + fixture matrix: all 3 dispositions + 3 compatibilities), G4 (`(kind+normalized key)` identity + `definition_signature` DUPLICATE/CONFLICT rule; `would_modify_count==conflict_count`); confirm G6 (notice vocab), G7 (`generated_at` excluded from determinism), G9 (400 invalid-body vs 200-BLOCKED vs 403/404; `mapped_ontology_ref` null-for-NEW); ratify G12 (LNB `Ontology Packs` after Ontology, H1 `온톨로지 팩`, contextual sub-views); confirm scope unchanged (read-only, creates nothing, all-false 8-flag guard); `docs/handoffs/wave-054/PM_REPORT.md` + brief §11 refine; no `apps/` |
+| BE6-082 | P0 | Backend | Catalog + detail (3 mock packs) | PM6-036 | `GET /ontology-packs` + `GET /ontology-packs/{pack_id}` in new `apps/backend/app/modules/ontology_packs/` (additive router); 3 frozen packs (insurance/manufacturing/legal) as process-local fixtures + `reset_runtime_store()`; `PackElementDescriptor` bundled elements; byte-stable; all-false 8-flag guard on both; matches `openapi-mvp6-11-draft.json` EXACTLY |
+| BE6-083 | P0 | Backend | Apply-preview (deterministic DRAFT-diff) | BE6-082 | `POST /projects/{project_id}/ontology-packs/{pack_id}/apply-preview`; diff pack vs process-local DRAFT snapshot per G4 → `PackPreviewItemDisposition` + `PackApplyCompatibility` rollup + exact `summary` + bounded (`item_cap`≤50 / `truncated` / exact `total_item_count`); `preview_only:true`; opaque `preview_ref`; `preview_id:null` (G1); `generated_at` (G7); `mapped_ontology_ref` null-for-NEW; BLOCKED non-crash-200 (G9) + notices (G6); creates NOTHING |
+| BE6-084 | P0 | Backend | All-false 8-flag guard + creates-nothing guarantees | BE6-083 | every response (catalog/detail/preview) carries all-false `OntologyPackMutationGuard`; module imports NO ontology-write/install/governance/candidate/published path; DATA-LEVEL no class/property/relation/change-request/version created or mutated (before==after every call incl. preview); DRAFT read-only |
+| BE6-085 | P0 | Backend | OpenAPI export/alignment + no-mutation regression guard | BE6-082~084 | runtime OpenAPI vs `openapi-mvp6-11-draft.json` 0 mismatch (3 paths / 19 schemas / 5 enums / 8-flag guard); `tests/test_mvp6_11_ontology_packs_api.py` (catalog/detail byte-stable; preview deterministic + bounded + all 3 dispositions + 3 compatibilities per matrix; BLOCKED 200; invalid body 400; authz 403/404; data-level no-mutation; all-false guard); `tests/test_mvp6_10_tenancy_api.py` regression; ruff; `git diff --check` |
+| FE6-100 | P0 | Frontend | LNB item + route/IA + types/client/mocks | PM6-036 | `Ontology Packs` LNB item in BUILD after `Ontology` (single active LNB preserved); routes `/projects/:p/ontology-packs` (catalog) + `.../:packId` (detail/preview contextual); H1 `온톨로지 팩`; breadcrumbs (D4); types/client/query/mocks match frozen OpenAPI EXACTLY (reuse by reference, no rename) |
+| FE6-101 | P0 | Frontend | Catalog + detail | FE6-100 | 3 pack cards (name/domain badge/version/description + `class_count`/`property_count`/`relation_count`/`element_count`, DETERMINISTIC_MOCK marker, NO install/apply affordance) → detail (metadata + bundled elements grouped by `PackElementKind`); Section+Card, D6 badges |
+| FE6-102 | P0 | Frontend | Apply-preview result + states + banner | FE6-101 | "적용 미리보기 실행" → result (`PackApplyPreviewStatus` + `PackApplyCompatibility` D6 badges; `summary`; capped `items[]` with `disposition` NEW/CONFLICT/DUPLICATE + `target_layer` DRAFT + `mapped_ontology_ref` null-for-NEW; truncation; `warnings[]`/`blocked_reasons[]`; `routing_note` verbatim); persistent PREVIEW-ONLY banner + live all-false 8-flag guard proof line; INCOMPATIBLE/BLOCKED + WARNING + loading/empty/error/permission states; NO install/apply/execute CTA |
+| FE6-103 | P0 | Frontend | Mock + actual smoke | FE6-102 | `npm run smoke:mvp6:packs:mock` (catalog→detail→preview routes) + `:actual` if backend runnable; `npm run test`, `npm run build`; responsive 0-overflow re-check; `git diff --check` |
+| INT6-098 | P0 | QA | Backend runtime verification | BE6-082~085 | validate 3 endpoints, byte-stable catalog/detail + deterministic bounded preview, all 3 dispositions + 3 compatibilities per the PM fixture matrix, BLOCKED 200 (`NO_DRAFT_ONTOLOGY`), invalid body 400, authz 403/404, OpenAPI alignment; update `INT6_11_ONTOLOGY_PACKS_ACCEPTANCE.md` R1/R2/R3/R5/R7 |
+| INT6-099 | P0 | QA | Frontend mock/actual flow | FE6-100~103 | validate catalog→detail→apply-preview mock + actual (boot backend on SQLite); disposition/compat/truncation/banner + live all-false guard proof; NO install/apply affordance; single active LNB (now incl. Ontology Packs); R6 |
+| INT6-100 | P0 | QA | Creates-nothing + all-false guard DATA-LEVEL | BE6-083~084 | INDEPENDENTLY (own script) assert NO pack call (esp. apply-preview) creates a class/property/relation/change-request/version or mutates any table (before==after); DRAFT + published unchanged; `OntologyPackMutationGuard` all-false on every response; preview byte-stable modulo `generated_at`+`preview_id`; R4 |
+| INT6-101 | P0 | QA | Wave54 closeout + regression | INT6-098~100 | MVP6.10/earlier regression + touched smokes green; additive-only + candidate/published separation intact + single active LNB; no leftover listeners on 8000/5173; `git diff --check`; update R-series; recommend closeout/hardening |
 
 ## Scope Limits
 

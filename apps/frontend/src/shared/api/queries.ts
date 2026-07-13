@@ -6,6 +6,7 @@ import {
   GovernanceWithdrawRequest,
   ConnectorImportPreviewRequest,
   ConnectorKind,
+  PackApplyPreviewRequest,
   CopilotRiskLabel,
   CopilotSuggestionDecisionRequest,
   CopilotSuggestionKind,
@@ -1412,6 +1413,44 @@ export function useRunConnectorImportPreview(projectId: string, connectorKind: C
   return useMutation({
     mutationFn: (payload: ConnectorImportPreviewRequest) =>
       apiClient.runConnectorImportPreview(projectId, connectorKind, payload),
+  });
+}
+
+// ---- MVP6.11 Ontology Packs (read-only catalog + deterministic DRY-RUN apply-preview) ----
+
+export const ontologyPackKeys = {
+  catalog: () => ["ontology-packs", "catalog"] as const,
+  detail: (packId: string) => ["ontology-packs", packId] as const,
+};
+
+/** Read-only GLOBAL pack catalog (3 frozen mock packs). Idempotent GET; all-false guard; installs nothing. */
+export function useOntologyPackCatalog(enabled = true) {
+  return useQuery({
+    queryKey: ontologyPackKeys.catalog(),
+    queryFn: () => apiClient.getOntologyPackCatalog(),
+    enabled,
+  });
+}
+
+/** Read-only GLOBAL pack detail (metadata + bundled elements). */
+export function useOntologyPackDetail(packId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ontologyPackKeys.detail(packId ?? ""),
+    queryFn: () => apiClient.getOntologyPackDetail(packId as string),
+    enabled: Boolean(packId) && enabled,
+  });
+}
+
+/**
+ * Deterministic DRY-RUN apply-preview. Creates NOTHING (no class/property/relation/
+ * change-request; the DRAFT/candidate/published graphs are untouched); the DRAFT is
+ * read-only diff basis. Modeled as a mutation because it is a POST action the user
+ * triggers ("적용 미리보기 실행"), NOT because it mutates state — it does not.
+ */
+export function useRunOntologyPackApplyPreview(projectId: string, packId: string) {
+  return useMutation({
+    mutationFn: (payload: PackApplyPreviewRequest = {}) =>
+      apiClient.runOntologyPackApplyPreview(projectId, packId, payload),
   });
 }
 

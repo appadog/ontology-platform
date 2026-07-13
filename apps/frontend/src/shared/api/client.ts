@@ -142,6 +142,13 @@ import {
   isConnectorKind,
 } from "../mocks/mvp6ConnectorsFixtures";
 import {
+  buildPackApplyPreview,
+  buildPackCatalog,
+  buildPackDetail,
+  isOntologyPackId,
+  allFalseOntologyPackGuard,
+} from "../mocks/mvp6OntologyPacksFixtures";
+import {
   allFalseTenantGuard,
   buildMyTenants,
   projectOwningTenant,
@@ -166,6 +173,10 @@ import {
   ConnectorImportPreviewRequest,
   ConnectorImportPreviewResponse,
   ConnectorKind,
+  OntologyPackCatalogListResponse,
+  OntologyPackDetailResponse,
+  PackApplyPreviewRequest,
+  PackApplyPreviewResponse,
   ProjectTenantResponse,
   TenantAccessDenialReason,
   TenantApiErrorCode,
@@ -407,6 +418,24 @@ export class ConnectorError extends Error {
   constructor(message: string, code: string, status: number) {
     super(message);
     this.name = "ConnectorError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
+// ---- MVP6.11 Ontology Packs error ----
+// READ-ONLY catalog + DRY-RUN apply-preview. Unknown pack -> 404
+// ONTOLOGY_PACK_NOT_FOUND; missing project -> 404 PROJECT_NOT_FOUND; non-member ->
+// 403 PERMISSION_DENIED; invalid item_cap body -> 400. A resolvable target with no
+// DRAFT ontology is NOT an error: it returns a 200 apply-preview with status=BLOCKED
+// (a result state), never a throw.
+export class OntologyPackError extends Error {
+  code: string;
+  status: number;
+
+  constructor(message: string, code: string, status: number) {
+    super(message);
+    this.name = "OntologyPackError";
     this.code = code;
     this.status = status;
   }
@@ -4866,6 +4895,59 @@ export const apiClient = {
     }
     return jsonRequest<ConnectorImportPreviewResponse>(
       `/api/v1/projects/${projectId}/connectors/${connectorKind}/import-preview`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  // ---- MVP6.11 Ontology Packs (read-only catalog + deterministic DRY-RUN apply-preview) ----
+  // Installs NOTHING, applies NOTHING, writes NOTHING. Every response carries an
+  // all-false 8-flag OntologyPackMutationGuard. Catalog + detail are GLOBAL; the
+  // apply-preview is project-scoped and CREATES NOTHING (deterministic diff against
+  // the project's DRAFT ontology snapshot). preview_id is always null (G1).
+
+  async getOntologyPackCatalog(): Promise<OntologyPackCatalogListResponse> {
+    if (USE_MOCK_API) {
+      const items = buildPackCatalog();
+      return delay({
+        items,
+        total_count: items.length,
+        mutation_guard: { ...allFalseOntologyPackGuard },
+      });
+    }
+    return request<OntologyPackCatalogListResponse>(`/api/v1/ontology-packs`);
+  },
+
+  async getOntologyPackDetail(packId: string): Promise<OntologyPackDetailResponse> {
+    if (USE_MOCK_API) {
+      const detail = buildPackDetail(packId);
+      if (!detail) {
+        throw new OntologyPackError("Unknown ontology pack.", "ONTOLOGY_PACK_NOT_FOUND", 404);
+      }
+      return delay(detail);
+    }
+    return request<OntologyPackDetailResponse>(`/api/v1/ontology-packs/${packId}`);
+  },
+
+  async runOntologyPackApplyPreview(
+    projectId: string,
+    packId: string,
+    payload: PackApplyPreviewRequest = {},
+  ): Promise<PackApplyPreviewResponse> {
+    if (USE_MOCK_API) {
+      if (!isOntologyPackId(packId)) {
+        throw new OntologyPackError("Unknown ontology pack.", "ONTOLOGY_PACK_NOT_FOUND", 404);
+      }
+      // Deterministic dry-run diff against the project's DRAFT snapshot. Creates
+      // nothing. generated_at is set here at "response time" and is EXCLUDED from
+      // the byte-stable determinism assertion (G7); preview_id stays null (G1).
+      const computed = buildPackApplyPreview(projectId, packId, payload.item_cap);
+      if (!computed) {
+        throw new OntologyPackError("Unknown ontology pack.", "ONTOLOGY_PACK_NOT_FOUND", 404);
+      }
+      return delay({ ...computed, generated_at: new Date().toISOString() });
+    }
+    return jsonRequest<PackApplyPreviewResponse>(
+      `/api/v1/projects/${projectId}/ontology-packs/${packId}/apply-preview`,
       { method: "POST", body: JSON.stringify(payload) },
     );
   },

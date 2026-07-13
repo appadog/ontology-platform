@@ -2,13 +2,16 @@ import {
   AlertTriangle,
   Archive,
   Ban,
+  Box,
   CheckCircle2,
+  Copy,
   PauseCircle,
   CircleDashed,
   CircleSlash,
   Clock,
   CloudOff,
   FileQuestion,
+  GitBranch,
   History,
   Info,
   Layers,
@@ -19,7 +22,9 @@ import {
   Minus,
   MinusCircle,
   PencilLine,
+  PlusCircle,
   RotateCcw,
+  Tag,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -172,6 +177,15 @@ const tokenTable: Record<string, TokenSpec> = {
   TENANT_ARCHIVED: { tone: "neutral", icon: Archive, ko: "테넌트 보관됨" },
   MEMBERSHIP_SUSPENDED: { tone: "warning", icon: PauseCircle, ko: "멤버십 중단" },
   TENANT_SUSPENDED: { tone: "warning", icon: PauseCircle, ko: "테넌트 중단" },
+  // MVP6.11 Ontology Packs (read-only catalog + dry-run apply-preview). READY /
+  // BLOCKED / COMPATIBLE / WARNING / INCOMPATIBLE / DRAFT reuse existing rows.
+  // PackPreviewItemDisposition + PackElementKind tokens (D6; extend-with-same-rule):
+  NEW: { tone: "success", icon: PlusCircle, ko: "신규(추가 예정)" },
+  CONFLICT: { tone: "warning", icon: AlertTriangle, ko: "충돌(해소 필요)" },
+  DUPLICATE: { tone: "neutral", icon: Copy, ko: "중복(no-op)" },
+  CLASS: { tone: "info", icon: Box, ko: "클래스" },
+  PROPERTY: { tone: "info", icon: Tag, ko: "속성" },
+  RELATION: { tone: "info", icon: GitBranch, ko: "관계" },
 };
 
 interface StatusBadgeProps {
