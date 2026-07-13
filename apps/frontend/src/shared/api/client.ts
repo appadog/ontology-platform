@@ -148,6 +148,7 @@ import {
   isOntologyPackId,
   allFalseOntologyPackGuard,
 } from "../mocks/mvp6OntologyPacksFixtures";
+import { buildGraphViz, GraphVizFixtureError } from "../mocks/mvp6GraphVizFixtures";
 import {
   allFalseTenantGuard,
   buildMyTenants,
@@ -269,6 +270,8 @@ import {
   OntologyChangeRequestUpdateRequest,
   GraphExploreRequest,
   GraphExploreResponse,
+  GraphVizRequest,
+  GraphVizResponse,
   ModelRun,
   OperationsDashboardResponse,
   OrganizationAdminSummary,
@@ -436,6 +439,25 @@ export class OntologyPackError extends Error {
   constructor(message: string, code: string, status: number) {
     super(message);
     this.name = "OntologyPackError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
+// ---- MVP6.12 Advanced Visualization error ----
+// READ-ONLY whole-graph viz data + summary. Invalid cap -> 400 INVALID_CAP;
+// missing project -> 404 PROJECT_NOT_FOUND; explicitly-requested unknown version ->
+// 404 PUBLISHED_GRAPH_VERSION_NOT_FOUND; non-member -> 403 PERMISSION_DENIED. A
+// project with NO current published version and none requested is NOT an error: it
+// returns a 200 response with status=EMPTY (a result state), never a throw. The
+// TOO_LARGE_SUMMARY_ONLY / EMPTY statuses are 200 result states, never errors.
+export class GraphVizError extends Error {
+  code: string;
+  status: number;
+
+  constructor(message: string, code: string, status: number) {
+    super(message);
+    this.name = "GraphVizError";
     this.code = code;
     this.status = status;
   }
@@ -1333,6 +1355,35 @@ function buildAnyQueryString(filters: Record<string, unknown> = {}): string {
 
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+// MVP6.12 graph-viz query string: scalars via set(), the class_ids / relation_ids
+// filter hints as REPEATED array params (class_ids=a&class_ids=b) matching the
+// frozen OpenAPI array schema. Empty arrays impose no restriction (omitted).
+function buildGraphVizQueryString(params: GraphVizRequest = {}): string {
+  const search = new URLSearchParams();
+  if (params.version_id) search.set("version_id", params.version_id);
+  if (params.node_cap !== undefined && params.node_cap !== null) {
+    search.set("node_cap", String(params.node_cap));
+  }
+  if (params.edge_cap !== undefined && params.edge_cap !== null) {
+    search.set("edge_cap", String(params.edge_cap));
+  }
+  for (const classId of params.class_ids ?? []) search.append("class_ids", classId);
+  for (const relationId of params.relation_ids ?? []) search.append("relation_ids", relationId);
+  const query = search.toString();
+  return query ? `?${query}` : "";
+}
+
+/** Structural guard for the mock GraphVizFixtureError shape (interface, not a class). */
+function isGraphVizFixtureError(error: unknown): error is GraphVizFixtureError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    "status" in error &&
+    "message" in error
+  );
 }
 
 function assertMvp4Project(projectId: string) {
@@ -4949,6 +5000,33 @@ export const apiClient = {
     return jsonRequest<PackApplyPreviewResponse>(
       `/api/v1/projects/${projectId}/ontology-packs/${packId}/apply-preview`,
       { method: "POST", body: JSON.stringify(payload) },
+    );
+  },
+
+  // ---- MVP6.12 Advanced Visualization (read-only whole-graph viz data + summary) ----
+  // ONE read-only GET. MUTATES NOTHING: no graph/version/snapshot write, no
+  // server-side layout, no layout persistence. The summary is exact over the FULL
+  // published graph in every status; nodes[]/edges[] carry layout HINTS (degree,
+  // component_id) only — the FE computes positions client-side (no x/y). Every
+  // response carries an ALL-FALSE 6-flag GraphVizMutationGuard. generated_at is set
+  // here at "response time" and is the ONLY non-byte-stable field.
+  async getProjectGraphViz(
+    projectId: string,
+    params: GraphVizRequest = {},
+  ): Promise<GraphVizResponse> {
+    if (USE_MOCK_API) {
+      try {
+        const projection = buildGraphViz(projectId, params);
+        return await delay({ ...projection, generated_at: new Date().toISOString() });
+      } catch (error) {
+        if (isGraphVizFixtureError(error)) {
+          throw new GraphVizError(error.message, error.code, error.status);
+        }
+        throw error;
+      }
+    }
+    return request<GraphVizResponse>(
+      `/api/v1/projects/${projectId}/graph-viz${buildGraphVizQueryString(params)}`,
     );
   },
 

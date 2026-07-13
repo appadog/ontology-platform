@@ -1,6 +1,6 @@
 # MVP 6 Draft Backlog
 
-Status: `MVP6.11 WAVE54 ONTOLOGY PACKS THIN IMPLEMENTATION — PM GATE FREEZE (PM6-036: G1/G3/G4 frozen, G6/G7/G9 confirmed, G12 ratified); impl IDs BE6-082~085, FE6-100~103, INT6-098~101 (prev: MVP6.11 plan Wave53 PM6-035, ADR 0018, BE6-080~081, FE6-099, INT6-094; MVP6.10 impl Wave52 PM6-034, BE6-076~079, FE6-095~098, INT6-090~093)`
+Status: `MVP6.12 WAVE56 ADVANCED VISUALIZATION THIN IMPLEMENTATION — PM GATE FREEZE (PM6-038: G1/G3 frozen, G2/G5 confirmed, G12 ratified, fixture matrix READY/TOO_LARGE/EMPTY frozen); impl IDs BE6-088~091, FE6-105~108, INT6-103~106 (prev: MVP6.12 plan Wave55 PM6-037, ADR 0019, BE6-086~087, FE6-104, INT6-102; MVP6.11 impl Wave54 PM6-036, BE6-082~085, FE6-100~103, INT6-098~101)`
 Date: 2026-07-09
 
 MVP6 is broad. Wave28 and Wave29 closed MVP6.1 Gold Set / Benchmark Studio.
@@ -1320,6 +1320,73 @@ No contract shape change: the OpenAPI (`0.6.11-draft`, 3 paths / 19 schemas / 5 
 | INT6-099 | P0 | QA | Frontend mock/actual flow | FE6-100~103 | validate catalog→detail→apply-preview mock + actual (boot backend on SQLite); disposition/compat/truncation/banner + live all-false guard proof; NO install/apply affordance; single active LNB (now incl. Ontology Packs); R6 |
 | INT6-100 | P0 | QA | Creates-nothing + all-false guard DATA-LEVEL | BE6-083~084 | INDEPENDENTLY (own script) assert NO pack call (esp. apply-preview) creates a class/property/relation/change-request/version or mutates any table (before==after); DRAFT + published unchanged; `OntologyPackMutationGuard` all-false on every response; preview byte-stable modulo `generated_at`+`preview_id`; R4 |
 | INT6-101 | P0 | QA | Wave54 closeout + regression | INT6-098~100 | MVP6.10/earlier regression + touched smokes green; additive-only + candidate/published separation intact + single active LNB; no leftover listeners on 8000/5173; `git diff --check`; update R-series; recommend closeout/hardening |
+
+## Wave55 MVP6.12 Advanced Visualization — CONTRACT-FIRST PLANNING (PM6-037)
+
+FINAL MVP6 theme (roadmap §12 Theme 9 Advanced Visualization). Contract-first
+**planning only** (no runtime/UI/test/seed code; runtime waits for Wave56). Smallest
+coherent SAFE P0: a single read-only, whole-graph **viz data + summary-stats**
+endpoint over a project's **PUBLISHED** graph — bounded node/edge elements + layout
+**hints** (degree/component/class group; NO server-side x/y) + graph-level summary
+(`node_counts_by_class`/`edge_counts_by_relation`/`density`/`component_count`/
+`largest_component_size`/`isolated_node_count`/`max_degree`), with a deterministic
+**too-large → summary-only** fallback (reuse MVP4 `SAFE_TOO_LARGE`: caps 150/300 +
+`truncated` + exact totals + `GraphTooLargeState`). PUBLISHED-only P0
+(`GraphVizScope=PUBLISHED` single literal; `CANDIDATE` reserved/never-produced =
+P1). No mutation/publish/version/snapshot creation, no candidate viz, no server-side
+layout, **no layout persistence/cache**. Enums: `GraphVizStatus`
+(READY/TOO_LARGE_SUMMARY_ONLY/EMPTY), `GraphVizScope` (PUBLISHED). All-false 6-flag
+`GraphVizMutationGuard` (`published_graph_mutated`/`candidate_graph_mutated`/
+`ontology_draft_mutated`/`published_version_created`/`graph_snapshot_created`/
+`layout_persisted` — all false; `published_graph_mutated` + `layout_persisted`
+headline). Reuse by reference (no rename): MVP3 `PublishedEntity`/`PublishedRelation`/
+`PublishedGraphVersion`, MVP4 `GraphExploreNode`/`GraphExploreEdge`/`GraphTooLargeState`/
+`PublishedGraphVersionRef` (`GraphExploreState` = structural precedent for
+`GraphVizStatus`), MVP1 `class_id`/`relation_id` grouping keys, MVP5 `Role`.
+Neighborhood/focus reuses the existing MVP4 explore endpoint (root+hops), NOT
+re-implemented. Authz: any project member who can view the project; `400` invalid
+cap; `403 PERMISSION_DENIED`; `404 PROJECT_NOT_FOUND` / `404
+PUBLISHED_GRAPH_VERSION_NOT_FOUND`; `200 EMPTY` when no current published version.
+Durable boundary: ADR 0019. Wave56 open gates: G1 filter-hints P0-vs-P1 (recommend
+optional filters, summary always over full graph); G2 no-current-version → 200 EMPTY
+(recommended) vs 404; G3 directed density / undirected component definition; G4
+LNB/IA = contextual sub-view of Published Graph (ADR 0010, no new global LNB item).
+
+| ID | Priority | Role | Item | Depends on | Acceptance summary |
+|---|---|---|---|---|---|
+| PM6-037 | P0 | PM | MVP6.12 Advanced Visualization P0 freeze (contract-first planning) | ADR 0019 | freeze single read-only whole-graph published viz data + summary endpoint (bounded nodes/edges + layout hints + `GraphVizSummary` stats), deterministic bounding (caps 150/300 + `truncated` + exact totals) + `TOO_LARGE_SUMMARY_ONLY` fallback (summary over full graph, elements omitted; reuse MVP4 safe-too-large), enums (`GraphVizStatus`/`GraphVizScope`), published-only P0 / candidate P1, all-false 6-flag `GraphVizMutationGuard`, authz, read-only + no-mutation + no-layout-persist + no-server-layout + no-candidate-viz boundary; explicit exclusions; `docs/pm/MVP6_12_ADVANCED_VIZ_BRIEF.md` + ADR 0019; no `apps/`/`infra/` |
+| BE6-086 | P0 | Backend | Advanced Viz API contract draft (additive, planning) | PM6-037 | draft `docs/api/MVP6_12_ADVANCED_VIZ_API_CONTRACT_DRAFT.md`: additive `GET /projects/{project_id}/graph-viz` (optional `version_id`/`node_cap`/`edge_cap`/filter hints) → `GraphVizResponse` (status + `GraphVizSummary` + bounded `nodes[]`/`edges[]` w/ layout hints + `too_large` + all-false 6-flag `GraphVizMutationGuard` + `boundary_note`); reuse MVP3 published-graph + MVP4 `GraphExploreNode`/`GraphExploreEdge`/`GraphTooLargeState`/`PublishedGraphVersionRef` + MVP5 `Role` by `$ref` (no rename); import NO publish/version-write/candidate-write/ontology-write/layout-persist path; bounded (caps + `truncated` + exact totals) + `TOO_LARGE_SUMMARY_ONLY`; NO server-side x/y layout; `400`/`403 PERMISSION_DENIED`/`404 PROJECT_NOT_FOUND`/`404 PUBLISHED_GRAPH_VERSION_NOT_FOUND`/`200 EMPTY`; resolve/record G1–G4; no runtime code |
+| BE6-087 | P0 | Backend | OpenAPI planning artifact | BE6-086 | produce `docs/api/openapi-mvp6-12-draft.json` (OpenAPI 3.1.0, `0.6.12-draft`, disjoint-additive to MVP1–MVP6.11; redefines no prior path); JSON parse; `git diff --check`; no `apps/` |
+| FE6-104 | P0 | Frontend | Advanced Viz UX/API requirements (planning) | PM6-037, BE6-086~087 | `docs/pm/MVP6_12_FRONTEND_UX_REQUIREMENTS.md`: viz summary/statistics panel + whole-graph bounded view (layout hints, no coordinates) as a contextual sub-view of the Publish-group Published Graph surface (ADR 0010, no new global LNB ID-page); `READY` / `TOO_LARGE_SUMMARY_ONLY` (summary-only + "narrow with filters") / `EMPTY` states; read-only class/relation filters + focus/neighborhood (reuse MVP4 explore); persistent "read-only visualization — nothing changes the graph" boundary copy (no mutate/publish/save-layout CTA); live all-false 6-flag guard proof line; first-class loading/empty/error/permission states; closed design language (Section+Card, KO titles, D6 badges); DTO gap vs Backend draft; propose G4 placement; no route/component/type/mock/smoke code |
+| INT6-102 | P0 | QA | Advanced Viz acceptance checklist (planning) | PM6-037, BE6-086~087, FE6-104 | `docs/backlog/INT6_12_ADVANCED_VIZ_ACCEPTANCE.md` (C planning gates + R NOT-RUNNABLE runtime gates, continuing INT6 numbering from INT6-102); verify PM/BE/FE agree on P0, the viz data + summary model, read-only + bounded + `TOO_LARGE_SUMMARY_ONLY` + no-mutation + no-layout-persist + published-only boundary, all-false 6-flag guard, exclusions; make NO-MUTATION the headline runtime gate (`GraphVizMutationGuard` all-false; data-level no published/candidate/ontology/version/snapshot row created/updated/deleted, before==after; summary counts exact + byte-stable modulo `generated_at`; `READY` cap-bounded vs over-cap `TOO_LARGE_SUMMARY_ONLY` empty-elements + exact totals; layout hints present, NO coordinates; `EMPTY` no-version; `400`/`403`/`404`); confirm no runtime leaked (`apps/`+`infra/`); OpenAPI parse; recommend Wave56 |
+
+## Wave56 MVP6.12 Advanced Visualization THIN IMPLEMENTATION — Gate Freeze (PM6-038)
+
+Wave56 implements the frozen read-only whole-graph published viz data + summary
+slice (the FINAL MVP6 theme). PM freeze (PM6-038) is the first, blocking step:
+G1 filter-hints semantics FROZEN (element-view only, summary always over the full
+graph), G2 no-version→200 EMPTY CONFIRMED, G3 stat formulas FROZEN (directed
+density, undirected components/degree), G5 `hop` OMITTED CONFIRMED, G12 Korean copy
+RATIFIED, and a deterministic published-graph fixture matrix (READY / TOO_LARGE_
+SUMMARY_ONLY / EMPTY) FROZEN. No contract shape change vs `openapi-mvp6-12-draft.json`
+(1 path / 1 op / 12 schemas / all-false 6-flag `GraphVizMutationGuard`). Details:
+`docs/handoffs/wave-056/PM_REPORT.md` + `docs/pm/MVP6_12_ADVANCED_VIZ_BRIEF.md` §11.
+
+| ID | P | Role | Task | Deps | Detail |
+|---|---|---|---|---|---|
+| PM6-038 | P0 | PM | MVP6.12 Wave56 gate freeze + scope guard | PM6-037, ADR 0019 | freeze G1 (filter hints `class_ids`/`relation_ids` in P0: induced element-view only — node in iff `class_id`∈`class_ids`, edge in iff `relation_id`∈`relation_ids` AND both endpoints in; summary/status/`truncated`/`degree`/`component_id` ALWAYS over the FULL unfiltered graph), G3 (density=`E/(V*(V-1))` directed for V>1 else 0; `component_count`/`largest_component_size`/`max_degree`/`isolated_node_count` over the UNDIRECTED projection; single O(V+E) pass); confirm G2 (no current published version→`200 EMPTY`, zeroed summary + empty elements + `too_large:null` + all-false guard, not 404), G5 (`hop` OMITTED from `GraphVizNode`; `degree`+`component_id` present, no x/y); ratify G12 (LNB `Published Graph` UNCHANGED, H1 `게시 그래프 탐색기` unchanged, sub-view toggle `탐색기` \| `시각화 · 요약`, status/scope/boundary glosses); freeze fixture matrix READY(`proj-viz-demo` 12n/9e)/TOO_LARGE_SUMMARY_ONLY(`proj-viz-large` 210n/480e)/EMPTY(`proj-viz-empty` no version); confirm scope unchanged (read-only, no mutation/layout/persistence, all-false 6-flag guard, published-only); `docs/handoffs/wave-056/PM_REPORT.md` + brief §11 refine; no `apps/`/`infra/` |
+| BE6-088 | P0 | Backend | graph-viz endpoint + summary stats (O(V+E)) | PM6-038 | `GET /api/v1/projects/{project_id}/graph-viz` in new `apps/backend/app/modules/graph_viz/` (additive router); `GraphVizSummary` exact over FULL graph, G3 formulas; deterministic process-local published-graph fixtures + `reset_runtime_store()` per the PM matrix |
+| BE6-089 | P0 | Backend | bounded whole-graph view + too-large-summary + EMPTY | PM6-038, BE6-088 | caps 150/300 (overridable in range, else `400 INVALID_CAP`) + `truncated` + exact totals; layout HINTS `degree`/`component_id` (no x/y, no `hop`); over-cap→`TOO_LARGE_SUMMARY_ONLY` (empty elements); no version→`200 EMPTY`; G1 filter hints (element-view only); deterministic ordering |
+| BE6-090 | P0 | Backend | all-false 6-flag guard + no-mutation/no-layout guarantees | PM6-038, BE6-088 | every response carries all-false `GraphVizMutationGuard` (6 flags); module imports NO publish/version-write/candidate-write/ontology-write/layout-persist path; DATA-LEVEL before==after (no version/snapshot/row created) |
+| BE6-091 | P0 | Backend | OpenAPI export/alignment + regression guard | BE6-088~090 | runtime OpenAPI 0-mismatch vs `openapi-mvp6-12-draft.json`; `tests/test_mvp6_12_graph_viz_api.py` (READY/TOO_LARGE/EMPTY/filter/byte-stable/invalid-cap/authz/no-mutation/guard/OpenAPI); MVP6.11 + earlier regression; ruff; `git diff --check` |
+| FE6-105 | P0 | Frontend | viz sub-view/toggle + types/client/mocks | PM6-038 | `Visualization · Summary` sub-view on Published Graph (toggle `탐색기`\|`시각화 · 요약`; NO new LNB item; single active LNB preserved); types/client/query/mocks match frozen OpenAPI exactly (reuse by reference, no rename) |
+| FE6-106 | P0 | Frontend | summary-stats panel (always shown, exact) | PM6-038, FE6-105 | `GraphVizSummary` panel: totals, by-class/by-relation, density/components/largest/isolated/max-degree; exact in every status; density 3-dp; filtered element view never changes summary numbers |
+| FE6-107 | P0 | Frontend | bounded whole-graph render (client-side layout) + too-large/EMPTY | PM6-038, FE6-105 | READY whole-graph laid out CLIENT-SIDE from hints (`degree`/`component_id`/`class_id`; no server x/y); read-only class/relation filters; `TOO_LARGE_SUMMARY_ONLY` (summary + notice, zero fabricated nodes); `EMPTY` (zeroed summary + publish-first); persistent read-only banner + live all-false 6-flag guard proof; D6 status badges; loading/error/permission |
+| FE6-108 | P0 | Frontend | mock + actual smoke | FE6-105~107 | `npm run smoke:mvp6:graphviz:mock` (+ `:actual` if backend runnable); `npm run test`/`build`; 0-overflow re-check; `git diff --check` |
+| INT6-103 | P0 | QA | backend runtime | BE6-088~091 | validate endpoint, summary exactness (G3), bounded view + layout hints (no x/y/hop), `TOO_LARGE_SUMMARY_ONLY` + `EMPTY`, filter hints, authz `400`/`403`/`404`; fixture matrix READY/TOO_LARGE/EMPTY |
+| INT6-104 | P0 | QA | frontend mock/API | FE6-105~108, BE6-088~091 | FE mock + actual flow (boot backend on SQLite); sub-view toggle + single active LNB; summary always exact; no fabricated too-large nodes |
+| INT6-105 | P0 | QA | read-only/no-mutation + all-false guard (data-level) | BE6-088~091 | INDEPENDENTLY verify (own script) the viz call mutates NOTHING (all tables before==after; no version/snapshot created), 6-flag guard all-false, no server-side layout/persistence |
+| INT6-106 | P0 | QA | Wave56 closeout + MVP6 sequence complete | INT6-103~105 | MVP6.11/earlier regression + touched smokes green; additive-only + candidate/published separation + single active LNB; recommend closeout; note MVP6.12 completes the user-directed MVP6 theme sequence (6.1–6.12); no leftover listeners on 8000/5173; `git diff --check` |
 
 ## Scope Limits
 

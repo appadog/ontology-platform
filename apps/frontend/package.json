@@ -34,7 +34,9 @@
     "smoke:mvp6:connectors:mock": "node scripts/mvp6-connectors-mock-route-smoke.mjs",
     "smoke:mvp6:connectors:actual": "node scripts/mvp6-connectors-actual-api-smoke.mjs",
     "smoke:mvp6:tenancy:mock": "node scripts/mvp6-tenancy-mock-route-smoke.mjs",
-    "smoke:mvp6:tenancy:actual": "node scripts/mvp6-tenancy-actual-api-smoke.mjs"
+    "smoke:mvp6:tenancy:actual": "node scripts/mvp6-tenancy-actual-api-smoke.mjs",
+    "smoke:mvp6:graphviz:mock": "node scripts/mvp6-graphviz-mock-route-smoke.mjs",
+    "smoke:mvp6:graphviz:actual": "node scripts/mvp6-graphviz-actual-api-smoke.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.81.5",

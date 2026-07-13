@@ -4,9 +4,9 @@
 
 ## Latest Wave
 
-- Current wave: `wave-054`
-- Overall status: `MVP6.11 ONTOLOGY PACKS THIN IMPLEMENTATION CLOSED (PASS; R6 smoke P2)`
-- 기준일: 2026-07-08
+- Current wave: `wave-056`
+- Overall status: `MVP6.12 ADVANCED VISUALIZATION THIN IMPLEMENTATION PASS — MVP6 SEQUENCE (6.1–6.12) COMPLETE`
+- 기준일: 2026-07-13
 
 ## Latest Decisions
 
@@ -276,6 +276,11 @@
 - Frontend added the `Ontology Packs` LNB item (BUILD, after Ontology; single active LNB preserved) + catalog/detail/apply-preview surface (disposition/compat D6 badges, "nothing applied" banner, all-false guard proof, NO install/apply affordance) + types/client/mocks + a packs mock contract test. 108 FE tests + build clean. The `smoke:mvp6:packs:mock`/`:actual` scripts were NOT created (FE agent dropped) — a P2 follow-up (R6 PARTIAL).
 - QA verdict PASS (R1-R5, R7 PASS; R6 PARTIAL). Data-level creates-nothing + all-false guard are test-verified (`test_data_level_no_mutation`, `test_guard_all_false_on_every_response`); all 3 dispositions + 3 compatibilities verified via the fixture matrix. QA (like BE/FE) was commander-finalized after the QA agent hit a session limit; the commander independently re-ran backend (25 + 254 + ruff + OpenAPI-collision-check) and frontend (108 + build) validations.
 - MVP6.11 non-blocking follow-ups: P2 add the packs mock/actual smoke scripts (FE6-103); P1 wire apply-preview's DRAFT-diff to the live MVP1 ontology reader (P0 uses a deterministic process-local DRAFT snapshot).
+- Wave55 opened the FINAL MVP6 theme (user-directed sequence): **MVP6.12 Advanced Visualization** — a read-only graph-viz data + summary surface over the PUBLISHED graph. Contract-first planning; PM/BE/FE/QA all PASS (planning). Runtime NOT RUNNABLE until Wave56.
+- MVP6.12 P0 frozen: a single read-only endpoint `GET /api/v1/projects/{project_id}/graph-viz` (compute-on-read, published graph). Returns `GraphVizSummary` (exact over the FULL graph in every status — node/edge counts by class/relation, density, component_count, largest_component_size, isolated_node_count, max_degree, one O(V+E) pass) + a bounded whole-graph node/edge view (caps 150/300 + `truncated` + exact totals; layout HINTS only — `degree`/`component_id`/class group, NO server-side x/y, FE lays out client-side; `hop` OMITTED as meaningless for a whole-graph view). Enums `GraphVizStatus` (READY/TOO_LARGE_SUMMARY_ONLY/EMPTY), `GraphVizScope` (PUBLISHED; CANDIDATE reserved never-produced = P1).
+- MVP6.12 durable boundary recorded in ADR 0019: READ-ONLY viz data only — no mutation of any graph/version/snapshot, no server-side layout, no layout persistence/cache. Over-cap -> `TOO_LARGE_SUMMARY_ONLY` (summary over the full graph, elements omitted, zero fabricated nodes; reuses MVP4 `SAFE_TOO_LARGE`/`GraphTooLargeState` verbatim). No current published version -> `200 EMPTY` (result state, not 404). Every response carries an all-false 6-flag `GraphVizMutationGuard` (published_graph_mutated / candidate_graph_mutated / ontology_draft_mutated / published_version_created / graph_snapshot_created / layout_persisted). Authz: any project member who can view; 400 invalid cap / 403 / 404.
+- MVP6.12 OpenAPI planning artifact `docs/api/openapi-mvp6-12-draft.json` parses 3.1.0 `0.6.12-draft`, 1 path / 12 schemas, disjoint-additive; reuses MVP3 published-graph + MVP4 `GraphExploreNode/Edge/GraphTooLargeState` + MVP1/MVP5 shapes by reference (no renames). FE surface = a contextual `Explorer | Visualization·Summary` sub-view of the existing Published Graph destination (no new LNB item). No MVP6.12 runtime leaked.
+- Wave56 gates (recorded): G1 filter-hints in P0 (commander-accepted); G2 no-version->200 EMPTY (accepted); G3 directed-density / undirected-components (accepted); G4 COMMANDER IA RULING = contextual sub-view of the existing Published Graph surface (no new LNB item); G5 `hop` OMITTED on whole-graph nodes (BE-resolved); G12 Korean copy confirm.
 - MVP 3 `ReviewDecisionType` is `APPROVE`, `REJECT`, `REQUEST_CHANGES`, `MODIFY_AND_APPROVE`.
 - MVP 3 `ReviewDecisionType` maps to `CandidateReviewStatus` as `APPROVE -> APPROVED`, `REJECT -> REJECTED`, `REQUEST_CHANGES -> NEEDS_DISCUSSION`, `MODIFY_AND_APPROVE -> MODIFIED`.
 - MVP 3 warning publish policy: candidates with `WARNING` validation may publish only with explicit reviewer reason, evidence present, and no `FAILED` validation. Missing evidence remains non-publishable.
@@ -383,6 +388,8 @@
 | MVP6.11 Ontology Packs Contract | Closed in Wave53 (planning PASS). PM brief + ADR 0018, Backend `openapi-mvp6-11-draft.json` (3 paths/19 schemas) + companion, Frontend UX requirements, QA `INT6_11` checklist (C1-C10 / R1-R7); read-only catalog + dry-run apply-preview / preview-creates-nothing / no-published-write / all-false 8-flag guard; no runtime leakage; PARSE_OK. | PM6-035, BE6-080~081, FE6-099, INT6-094~097 |
 | MVP6.11 Ontology Packs Thin Runtime/UI | Closed in Wave54 (PASS; R6 smoke P2). ontology_packs module (3 read-only endpoints), deterministic preview creates-nothing/byte-stable, all 3 dispositions + 3 compatibilities, all-false 8-flag guard, malformed->400/authz 403-404; Ontology Packs LNB (BUILD/after Ontology) + catalog/detail/preview UI (no install/apply affordance); data-level no-mutation test-verified; 25+254 BE tests + 108 FE tests + build; R1-R5,R7 PASS / R6 PARTIAL. | BE6-082~085, FE6-100~103, INT6-098~101 |
 | MVP6.11 Wave54 Follow-up | P2: add packs mock/actual smoke scripts (FE6-103). P1: wire apply-preview DRAFT-diff to the live MVP1 ontology reader (P0 uses a process-local DRAFT snapshot). | FE/BE |
+| MVP6.12 Advanced Viz Contract | Closed in Wave55 (planning PASS). PM brief + ADR 0019, Backend `openapi-mvp6-12-draft.json` (1 path/12 schemas) + companion, Frontend UX requirements, QA `INT6_12` checklist (C1-C13 / R1-R9); read-only graph-viz + summary / bounded + too-large-summary / all-false 6-flag guard; no runtime leakage; PARSE_OK; 0 residual DTO gap. | PM6-037, BE6-086~087, FE6-104, INT6-102 |
+| MVP6.12 Advanced Viz Thin Runtime/UI | Open for Wave56 (FINAL theme). Implement the read-only `graph-viz` endpoint (summary exact + bounded whole-graph + too-large-summary + all-false 6-flag guard) reusing MVP3/MVP4 shapes; Published Graph Visualization·Summary sub-view (client-side layout from hints); mock+actual smoke. PM freezes G1/G2/G3/G5 + G12 copy first. | BE6-088+, FE6-105+, INT6-103+ |
 
 ## Next Gate
 
@@ -400,10 +407,14 @@ MVP6.10 Multi-tenant is closed (Wave51 planning + Wave52 implementation both PAS
 
 MVP6.11 Ontology Packs is closed (Wave53 planning + Wave54 implementation both PASS; R6 smoke as a P2 follow-up). Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison, 6.4 Gold Set authoring + dataset revisioning, 6.5 Governance workflow, 6.6 Governance Change Application, 6.7 Impact Simulation, 6.8 Copilot, 6.9 Connectors, 6.10 Multi-tenant, 6.11 Ontology Packs. UI/UX review remediation + reference-driven design upgrade also closed (Wave35-38).
 
-The FINAL user-directed theme is **advanced visualization** — MVP6.12. **Wave55 = advanced-viz contract-first planning** is the next gate. PM freezes the smallest coherent, safe P0 — likely a read-only graph-visualization data/summary surface over the published (and/or candidate) graph, no mutation, deterministic, all-false guard, bounded for large graphs (the MVP3 published-graph "safe too large" precedent). After 6.12 the full user-directed MVP6 theme sequence (6.1-6.12) is complete.
-1. Next MVP6 theme (PM contract-first freeze first): Gold Set authoring/dataset revisioning (PM6-005/BE6-006), or a Theme-3+ slice (governance, impact simulation, copilot/agents, connector/plugin SDK, multi-tenant, ontology packs, advanced viz).
-2. Sweep accumulated MVP6.x P1/P2 follow-ups (stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, strict-required field promotion, divergent-run seed) in one hardening wave.
-3. Resume the paused Wave27 release/demo packaging.
+MVP6.12 Advanced Visualization is closed (Wave55 planning + Wave56 implementation both PASS). Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison, 6.4 Gold Set authoring + dataset revisioning, 6.5 Governance workflow, 6.6 Governance Change Application, 6.7 Impact Simulation, 6.8 Copilot, 6.9 Connectors, 6.10 Multi-tenant, 6.11 Ontology Packs, 6.12 Advanced Visualization. UI/UX review remediation + reference-driven design upgrade also closed (Wave35-38).
+
+**✅ The full user-directed MVP6 theme sequence (6.1–6.12) is COMPLETE.** Wave56: Backend `graph_viz` read-only endpoint (summary exact O(V+E) + bounded whole-graph view + TOO_LARGE_SUMMARY_ONLY + 200 EMPTY + all-false 6-flag guard) 22+276 tests; Frontend Published Graph `탐색기 | 시각화·요약` sub-view (client-side layout from hints, no new LNB) 116 tests/build/mock smoke; QA R1-R9 9/9 (data-level no-mutation + no-server-layout verified). Commander-finalized after BE/QA agents hit session limits (GraphVizPublishedVersionRef name-scoping fix + independent revalidation).
+
+Next candidate gates (no active user directive — await instruction):
+1. Sweep accumulated MVP6.x P1/P2/P3 follow-ups in one hardening wave: `smoke:mvp6:graphviz:actual` + packs smoke (P3), stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, strict-required field promotion, divergent-run seed, shared error-envelope unwrap helper (wave-052 P1).
+2. Resume the paused Wave27 release/demo packaging (full-product demo script + release notes across MVP1–MVP6.12).
+3. A full-product regression/closeout wave certifying the entire MVP1–MVP6.12 surface.
 
 ## Latest Role Reports
 
@@ -612,6 +623,14 @@ The FINAL user-directed theme is **advanced visualization** — MVP6.12. **Wave5
 | Backend | wave-054 | `PASS / MVP6.11 THIN RUNTIME READY (commander-finalized)` | ontology_packs 3 read-only endpoints, deterministic preview creates-nothing, all-false 8-flag guard; 25+254 tests, ruff clean; commander completed the PackOntologyElementRef rename + collision check |
 | Frontend | wave-054 | `PASS / PACKS SURFACE READY (commander-finalized; smoke P2)` | Ontology Packs LNB + catalog/detail/preview UI (no install affordance) + mock contract; 108 tests + build; smoke scripts deferred P2 |
 | QA | wave-054 | `PASS / MVP6.11 CLOSEOUT (commander-finalized)` | R1-R5,R7 PASS (data-level no-mutation + all-false guard + 3 dispositions/compat test-verified); R6 PARTIAL (unit tests+build; smoke P2); 254 BE + 108 FE regression; commander re-ran validations |
+| PM | wave-055 | `PASS / MVP6.12 VIZ FROZEN` | Read-only graph-viz + summary P0 (bounded + too-large-summary, layout hints only, all-false 6-flag guard); ADR 0019; PM6-037 + BE6-086~087/FE6-104/INT6-102 |
+| Backend | wave-055 | `PASS / MVP6.12 CONTRACT DRAFT READY` | 1 path/12 schemas `openapi-mvp6-12-draft.json` 0.6.12-draft; all-false 6-flag guard; summary exact + too-large-summary + 200 EMPTY; hop omitted; PARSE_OK, disjoint |
+| Frontend | wave-055 | `PASS / MVP6.12 UX REQUIREMENTS READY` | Published Graph `Explorer\|Visualization·Summary` sub-view (no new LNB); summary panel + client-side layout from hints + too-large/EMPTY states; §8 reconciled, G5 hop omitted |
+| QA | wave-055 | `PASS / WAVE56 RECOMMENDED (FINAL theme)` | INT6_12 checklist C1-C13 PASS / R1-R9 NOT RUNNABLE; PM/BE/FE agree, 0 residual gap; PARSE_OK+disjoint; no leakage; gates G1/G2/G3/G4/G5/G12 |
+| PM | wave-056 | `PASS / G1/G2/G3/G5 + G12 FROZEN` | filter-hints over full-graph summary; no-version->200 EMPTY; density directed/components undirected; hop omitted; fixture matrix (READY 12n/9e, TOO_LARGE 210n/480e, EMPTY); H1 `게시 그래프 탐색기` + `탐색기\|시각화·요약` toggle; PM6-038 + BE6-088~091/FE6-105~108/INT6-103~106 |
+| Backend | wave-056 | `PASS / MVP6.12 THIN RUNTIME READY (commander-finalized)` | graph_viz 1 read-only endpoint; summary exact O(V+E) + bounded view (layout hints, no x/y/hop) + TOO_LARGE_SUMMARY_ONLY + 200 EMPTY; all-false 6-flag guard; 22+276 tests, ruff clean; commander completed GraphVizPublishedVersionRef name-scoping + collision check |
+| Frontend | wave-056 | `PASS / VIZ·SUMMARY SURFACE READY` | Published Graph `탐색기\|시각화·요약` sub-view (no new LNB); always-shown summary panel + READY client-side layout from hints + TOO_LARGE/EMPTY states + read-only filters + boundary banner + live all-false 6-flag proof; 116 tests/build; mock smoke PASS; 0 overflow |
+| QA | wave-056 | `PASS / MVP6.12 CLOSEOUT — MVP6 (6.1–6.12) COMPLETE (commander-finalized)` | R1-R9 9/9; data-level no-mutation + all-false 6-flag guard + summary-exact + too-large-summary + no-server-layout verified; FE 116 + build + mock smoke PASS; regression 276 BE + packs 25; commander re-ran validations |
 
 ## Report Index
 
@@ -671,3 +690,5 @@ The FINAL user-directed theme is **advanced visualization** — MVP6.12. **Wave5
 | wave-052 | `wave-052/PM_REPORT.md` | `wave-052/BACKEND_REPORT.md` | `wave-052/FRONTEND_REPORT.md` | `wave-052/QA_REPORT.md` | `wave-052/NEXT_ORDERS.md` |
 | wave-053 | `wave-053/PM_REPORT.md` | `wave-053/BACKEND_REPORT.md` | `wave-053/FRONTEND_REPORT.md` | `wave-053/QA_REPORT.md` | `wave-053/NEXT_ORDERS.md` |
 | wave-054 | `wave-054/PM_REPORT.md` | `wave-054/BACKEND_REPORT.md` | `wave-054/FRONTEND_REPORT.md` | `wave-054/QA_REPORT.md` | `wave-054/NEXT_ORDERS.md` |
+| wave-055 | `wave-055/PM_REPORT.md` | `wave-055/BACKEND_REPORT.md` | `wave-055/FRONTEND_REPORT.md` | `wave-055/QA_REPORT.md` | `wave-055/NEXT_ORDERS.md` |
+| wave-056 | `wave-056/PM_REPORT.md` | `wave-056/BACKEND_REPORT.md` | `wave-056/FRONTEND_REPORT.md` | `wave-056/QA_REPORT.md` | `wave-056/NEXT_ORDERS.md` |

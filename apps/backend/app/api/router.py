@@ -10,6 +10,7 @@ from app.modules.evaluation.router import router as evaluation_router
 from app.modules.extraction.router import router as extraction_router
 from app.modules.goldset_authoring.router import router as goldset_authoring_router
 from app.modules.governance.router import router as governance_router
+from app.modules.graph_viz.router import router as graph_viz_router
 from app.modules.learning.router import router as learning_router
 from app.modules.mvp4.router import router as mvp4_router
 from app.modules.mvp5.router import router as mvp5_router
@@ -48,3 +49,4 @@ api_router.include_router(copilot_router)
 api_router.include_router(connectors_router)
 api_router.include_router(tenancy_router)
 api_router.include_router(ontology_packs_router)
+api_router.include_router(graph_viz_router)

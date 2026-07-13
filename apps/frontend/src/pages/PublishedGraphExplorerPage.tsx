@@ -10,19 +10,99 @@ import { HanaBadge, HanaButton, HanaCard } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
 import { CardBody, KeyValue, Mvp3ActionLink, Muted, Mvp3Workflow, Stack } from "./mvp3Shared";
 import { InlineList, Mvp4Panel, Mvp4TwoColumn, PageActions, StateBadge, Toolbar, versionLabel } from "./mvp4Shared";
+import { GraphVizSummaryView } from "./GraphVizSummaryView";
+
+// The Published Graph surface hosts TWO in-screen sub-views on the ONE LNB
+// destination (`published-graph`): the existing MVP4 Explorer (root+hops) and the
+// MVP6.12 Advanced Visualization "시각화 · 요약" (whole-graph + summary). The toggle
+// is in-page state (no new route, no path change) so the single active-LNB invariant
+// is preserved and `resolveActiveSection` (matched on `/published-graph`) is untouched.
+type PublishedGraphView = "explorer" | "viz";
 
 export function PublishedGraphExplorerPage() {
   const { projectId = "" } = useParams();
-  const [state, setState] = useState<GraphExploreState>("READY");
-  const [maxHops, setMaxHops] = useState(2);
+  const [view, setView] = useState<PublishedGraphView>("explorer");
   const projectQuery = useProject(projectId);
-  const graphQuery = usePublishedGraphExplore(projectId, { state, max_hops: maxHops });
 
-  if (projectQuery.isLoading || graphQuery.isLoading) {
+  if (projectQuery.isLoading) {
     return <PageState kind="loading" title="Published graph is loading" description="Explorer filters and published facts are being prepared." />;
   }
 
-  if (projectQuery.isError || graphQuery.isError || !projectQuery.data || !graphQuery.data) {
+  if (projectQuery.isError || !projectQuery.data) {
+    return (
+      <PageState
+        kind="error"
+        title="Published graph could not load"
+        description="Retry the selected project."
+        actionLabel="Retry"
+        onAction={() => void projectQuery.refetch()}
+      />
+    );
+  }
+
+  return (
+    <>
+      <Breadcrumbs
+        items={[
+          { label: projectQuery.data.name, to: `/projects/${projectId}` },
+          { label: "Published Graph" },
+        ]}
+      />
+      <PageHeader
+        title="게시 그래프 탐색기"
+        description={
+          view === "viz"
+            ? "시각화 · 요약 — 읽기 전용 전체 그래프 뷰 + 요약 통계"
+            : "탐색기 — 루트 중심 이웃 뷰 · published facts only"
+        }
+      >
+        <PageActions>
+          <HanaBadge tone="success">PUBLISHED ONLY</HanaBadge>
+          <HanaBadge tone="success">PUBLISHED FACTS</HanaBadge>
+          <Mvp3ActionLink to={`/projects/${projectId}/quality`}>Quality dashboard</Mvp3ActionLink>
+        </PageActions>
+      </PageHeader>
+
+      <ViewToggle role="tablist" aria-label="Published Graph 하위 뷰">
+        <ToggleButton
+          type="button"
+          role="tab"
+          aria-selected={view === "explorer"}
+          data-active={view === "explorer" ? "true" : "false"}
+          onClick={() => setView("explorer")}
+        >
+          탐색기
+        </ToggleButton>
+        <ToggleButton
+          type="button"
+          role="tab"
+          aria-selected={view === "viz"}
+          data-active={view === "viz" ? "true" : "false"}
+          onClick={() => setView("viz")}
+        >
+          시각화 · 요약
+        </ToggleButton>
+      </ViewToggle>
+
+      {view === "viz" ? (
+        <GraphVizSummaryView projectId={projectId} projectName={projectQuery.data.name} />
+      ) : (
+        <ExplorerView projectId={projectId} />
+      )}
+    </>
+  );
+}
+
+function ExplorerView({ projectId }: { projectId: string }) {
+  const [state, setState] = useState<GraphExploreState>("READY");
+  const [maxHops, setMaxHops] = useState(2);
+  const graphQuery = usePublishedGraphExplore(projectId, { state, max_hops: maxHops });
+
+  if (graphQuery.isLoading) {
+    return <PageState kind="loading" title="Published graph is loading" description="Explorer filters and published facts are being prepared." />;
+  }
+
+  if (graphQuery.isError || !graphQuery.data) {
     return (
       <PageState
         kind="error"
@@ -38,20 +118,10 @@ export function PublishedGraphExplorerPage() {
 
   return (
     <>
-      <Breadcrumbs
-        items={[
-          { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Published Graph" },
-        ]}
-      />
-      <PageHeader title="게시 그래프 탐색기" description={`${versionLabel(graph.published_graph_version_ref)} · published facts only`}>
-        <PageActions>
-          <StateBadge state={graph.state} />
-          <HanaBadge tone="success">PUBLISHED ONLY</HanaBadge>
-          <HanaBadge tone="success">PUBLISHED FACTS</HanaBadge>
-          <Mvp3ActionLink to={`/projects/${projectId}/quality`}>Quality dashboard</Mvp3ActionLink>
-        </PageActions>
-      </PageHeader>
+      <ExplorerStatusRow>
+        <StateBadge state={graph.state} />
+        <Muted as="span">{versionLabel(graph.published_graph_version_ref)} · published facts only</Muted>
+      </ExplorerStatusRow>
 
       <Mvp3Workflow current="Published graph" />
 
@@ -163,6 +233,40 @@ export function PublishedGraphExplorerPage() {
     </>
   );
 }
+
+const ViewToggle = styled.div`
+  display: inline-flex;
+  gap: 4px;
+  margin: ${({ theme }) => theme.spacing.md} 0;
+  padding: 4px;
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: 999px;
+  background: ${({ theme }) => theme.color.surfaceRaised};
+`;
+
+const ToggleButton = styled.button`
+  padding: 6px 16px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: ${({ theme }) => theme.color.textMuted};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  cursor: pointer;
+
+  &[data-active="true"] {
+    background: ${({ theme }) => theme.color.primary};
+    color: ${({ theme }) => theme.color.textOnStrong};
+  }
+`;
+
+const ExplorerStatusRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+`;
 
 const GraphCanvas = styled.div`
   display: grid;

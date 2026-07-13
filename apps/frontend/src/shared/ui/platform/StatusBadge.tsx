@@ -186,6 +186,12 @@ const tokenTable: Record<string, TokenSpec> = {
   CLASS: { tone: "info", icon: Box, ko: "클래스" },
   PROPERTY: { tone: "info", icon: Tag, ko: "속성" },
   RELATION: { tone: "info", icon: GitBranch, ko: "관계" },
+  // MVP6.12 Advanced Visualization (read-only whole-graph viz + summary).
+  // GraphVizStatus tokens (D6; extend-with-same-rule). READY / CANDIDATE / PUBLISHED
+  // reuse existing rows above; the viz over-budget token is a DISTINCT literal from
+  // the MVP4 SAFE_TOO_LARGE (no rename of the MVP4 enum).
+  TOO_LARGE_SUMMARY_ONLY: { tone: "warning", icon: AlertTriangle, ko: "너무 큼 · 요약만" },
+  EMPTY: { tone: "neutral", icon: MinusCircle, ko: "데이터 없음" },
 };
 
 interface StatusBadgeProps {

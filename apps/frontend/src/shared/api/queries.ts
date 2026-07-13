@@ -32,6 +32,7 @@ import {
   GoldEntityCreateRequest,
   GoldRelationCreateRequest,
   GraphExploreRequest,
+  GraphVizRequest,
   OntologyClassCreateRequest,
   OntologyClassUpdateRequest,
   OntologyPropertyCreateRequest,
@@ -715,6 +716,29 @@ export function usePublishedGraphExplore(projectId: string, filters: GraphExplor
     queryKey: ["projects", projectId, "published-graph-explore", filters],
     queryFn: () => apiClient.explorePublishedGraph(projectId, filters),
     enabled: Boolean(projectId),
+  });
+}
+
+// ---- MVP6.12 Advanced Visualization (read-only whole-graph viz data + summary) ----
+
+export const graphVizKeys = {
+  view: (projectId: string, params: GraphVizRequest) =>
+    ["projects", projectId, "graph-viz", params] as const,
+};
+
+/**
+ * Read-only whole-graph viz data + graph-level summary for a project's published
+ * graph. Idempotent GET; all-false 6-flag guard; mutates/publishes/persists NOTHING.
+ * The `params` (version_id / caps / class_ids / relation_ids filter hints) are folded
+ * into the query key so a filter/cap change re-fetches. TOO_LARGE_SUMMARY_ONLY / EMPTY
+ * are 200 result states (not errors); 400/403/404 reject as a GraphVizError.
+ */
+export function useProjectGraphViz(projectId: string, params: GraphVizRequest = {}, enabled = true) {
+  return useQuery({
+    queryKey: graphVizKeys.view(projectId, params),
+    queryFn: () => apiClient.getProjectGraphViz(projectId, params),
+    enabled: Boolean(projectId) && enabled,
+    retry: false,
   });
 }
 

@@ -1599,6 +1599,108 @@ export interface GraphExploreResponse {
   too_large?: GraphTooLargeState;
 }
 
+// ---- MVP6.12 Advanced Visualization (read-only whole-graph viz data + summary) ----
+// Field/enum names match docs/api/openapi-mvp6-12-draft.json EXACTLY (1 path / 1
+// operation / 12 schemas / 2 enums + all-false 6-flag GraphVizMutationGuard). The
+// surface is READ-ONLY: no mutate/publish/version/snapshot/layout-persist. Reuses
+// MVP4 GraphExploreNode/GraphExploreEdge element fields + GraphTooLargeState +
+// PublishedGraphVersionRef by reference (no rename). GraphVizNode omits the MVP4
+// root-anchored `hop` (whole-graph, not root-anchored) and carries layout HINTS
+// (degree, component_id); NO x/y coordinates (layout is computed client-side).
+
+export type GraphVizStatus = "READY" | "TOO_LARGE_SUMMARY_ONLY" | "EMPTY";
+
+export type GraphVizScope = "PUBLISHED" | "CANDIDATE";
+
+/** All-false 6-flag mutation guard present on EVERY graph-viz response. */
+export interface GraphVizMutationGuard {
+  published_graph_mutated: boolean;
+  candidate_graph_mutated: boolean;
+  ontology_draft_mutated: boolean;
+  published_version_created: boolean;
+  graph_snapshot_created: boolean;
+  layout_persisted: boolean;
+}
+
+export interface GraphVizClassCount {
+  class_id: string;
+  count: number;
+}
+
+export interface GraphVizRelationCount {
+  relation_id: string;
+  count: number;
+}
+
+export interface GraphVizSummary {
+  total_node_count: number;
+  total_edge_count: number;
+  node_counts_by_class: GraphVizClassCount[];
+  edge_counts_by_relation: GraphVizRelationCount[];
+  density: number;
+  component_count: number;
+  largest_component_size: number;
+  isolated_node_count: number;
+  max_degree: number;
+}
+
+export interface GraphVizNode {
+  id: string;
+  published_entity_id: string;
+  class_id: string;
+  label: string;
+  properties?: Record<string, unknown>;
+  quality_summary?: Record<string, unknown>;
+  source_count?: number;
+  evidence_count?: number;
+  lineage_available?: boolean;
+  /** Layout HINT: undirected degree in the full published graph. NOT a coordinate. */
+  degree: number;
+  /** Layout HINT: deterministic connected-component id (undirected). NOT a coordinate. */
+  component_id: string;
+}
+
+export interface GraphVizEdge {
+  id: string;
+  published_relation_id: string;
+  source_node_id: string;
+  target_node_id: string;
+  relation_id: string;
+  label: string;
+  properties?: Record<string, unknown>;
+  quality_summary?: Record<string, unknown>;
+  evidence_count?: number;
+  lineage_available?: boolean;
+}
+
+/** Reused-by-reference from MVP4 GraphTooLargeState (SAFE_TOO_LARGE precedent). */
+export type GraphVizTooLargeState = GraphTooLargeState;
+
+export interface GraphVizRequest {
+  version_id?: string;
+  node_cap?: number;
+  edge_cap?: number;
+  class_ids?: string[];
+  relation_ids?: string[];
+}
+
+export interface GraphVizResponse {
+  project_id: string;
+  scope: GraphVizScope;
+  published_graph_version_ref?: PublishedGraphVersionRef | null;
+  generated_at: string;
+  status: GraphVizStatus;
+  summary: GraphVizSummary;
+  node_cap: number;
+  edge_cap: number;
+  truncated: boolean;
+  nodes: GraphVizNode[];
+  edges: GraphVizEdge[];
+  too_large?: GraphVizTooLargeState | null;
+  mutation_guard: GraphVizMutationGuard;
+  boundary_note: string;
+}
+
 export type ExternalApiAuthMode = "DEV_AUTH";
 
 export interface ExternalApiEndpointDoc {

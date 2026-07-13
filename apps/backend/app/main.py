@@ -39,6 +39,19 @@ async def connector_validation_exception_handler(
                 )
             ).model_dump(mode="json"),
         )
+    # An invalid MVP6.12 graph-viz cap (node_cap out of [1,150] or edge_cap out of
+    # [1,300], or non-integer) maps to 400 INVALID_CAP (G9).
+    if request.url.path.endswith("/graph-viz"):
+        return JSONResponse(
+            status_code=400,
+            content=ApiErrorResponse(
+                error=ApiError(
+                    code="INVALID_CAP",
+                    message="node_cap must be within [1,150] and edge_cap within [1,300].",
+                    details={"error_count": len(exc.errors())},
+                )
+            ).model_dump(mode="json"),
+        )
     return await request_validation_exception_handler(request, exc)
 
 

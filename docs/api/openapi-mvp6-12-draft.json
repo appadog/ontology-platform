@@ -1,0 +1,822 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ontology Platform MVP6.12 Advanced Visualization Planning API",
+    "description": "Planning-only OpenAPI artifact for MVP6.12 Advanced Visualization P0 (read-only, whole-graph graph-viz data + graph-level summary statistics over a project's PUBLISHED graph). Additive to MVP1-MVP6.11; replaces no prior OpenAPI draft. The surface is READ-ONLY and the thinnest additive delta over the two existing graph read surfaces (MVP3 published graph, MVP4 graph-explore): the genuine gap it fills is graph-level SUMMARY STATISTICS (computed in a single O(V+E) pass over the FULL published graph) plus a WHOLE-GRAPH (not root-anchored) bounded node/edge view with client-side layout HINTS. Neighborhood/focus stays served by the existing MVP4 graph-explore endpoint (root + hops) and is NOT re-implemented here. Bounded + deterministic + byte-stable modulo generated_at: caps 150 nodes / 300 edges + truncated + exact totals; over budget -> TOO_LARGE_SUMMARY_ONLY (summary over the full graph, elements omitted) reusing the MVP4 SAFE_TOO_LARGE precedent verbatim; no current published version -> 200 EMPTY. It computes NOTHING that mutates or re-homes data: no graph mutation (published/candidate/draft), no publish, no PublishedGraphVersion/PublishedGraphSnapshot creation, no server-side x/y layout, no layout persistence/cache. GraphVizScope=PUBLISHED single literal; CANDIDATE reserved, never produced in P0. Reuses MVP4 GraphExploreNode/GraphExploreEdge/GraphTooLargeState/PublishedGraphVersionRef and MVP1 class_id/relation_id and MVP5 Role by reference (no renames). Every response carries an all-false 6-flag GraphVizMutationGuard. See ADR 0019 and docs/pm/MVP6_12_ADVANCED_VIZ_BRIEF.md.",
+    "version": "0.6.12-draft"
+  },
+  "tags": [
+    {
+      "name": "MVP6.12 Advanced Visualization",
+      "description": "Read-only whole-graph viz data + graph-level summary statistics over the PUBLISHED graph. Bounded (150/300 + truncated + exact totals) with a too-large-summary-only fallback; layout HINTS only (degree/component_id/class group), no server-side coordinates; nothing mutated, published, versioned, snapshotted, cached, or persisted; all-false mutation guard on every response."
+    }
+  ],
+  "paths": {
+    "/api/v1/projects/{project_id}/graph-viz": {
+      "get": {
+        "tags": [
+          "MVP6.12 Advanced Visualization"
+        ],
+        "summary": "Get read-only whole-graph viz data + summary for a project's published graph",
+        "description": "Read-only, compute-on-read graph-visualization surface for a project's PUBLISHED graph. Returns graph-level summary statistics (node_counts_by_class, edge_counts_by_relation, density, component_count, largest_component_size, isolated_node_count, max_degree) computed in a single O(V+E) pass over the FULL published graph, plus a bounded WHOLE-GRAPH node/edge view (caps 150 nodes / 300 edges) with client-side layout HINTS (degree, component_id) and NO server-side x/y coordinates. Statuses: READY (both totals within budget -> full bounded nodes[]/edges[] + full summary, truncated=false, too_large=null); TOO_LARGE_SUMMARY_ONLY (either total over its cap -> nodes[]/edges[] EMPTY, summary still exact over the FULL graph, truncated=true, too_large populated) mirroring the MVP4 SAFE_TOO_LARGE precedent; EMPTY (published graph has zero entities -> zeroed summary, empty elements, too_large=null). No current published version and none requested -> 200 EMPTY (a result state, not a 4xx). Optional query: version_id (target a specific published version; unknown -> 404 PUBLISHED_GRAPH_VERSION_NOT_FOUND), node_cap [1,150], edge_cap [1,300] (out of range -> 400 INVALID_CAP), and read-only class_ids/relation_ids filter hints (bound the element set only; the summary is ALWAYS over the full published graph). Compute-on-read: no viz_id, no GET-by-id, no list. Any project member who can view the project (and its MVP3 Published Graph Explorer) may read; reuses MVP5 Role, no new role literal. Deterministic node/edge ordering, byte-stable modulo generated_at. Carries an all-false 6-flag GraphVizMutationGuard.",
+        "operationId": "getProjectGraphViz",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/VersionIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/NodeCapQuery"
+          },
+          {
+            "$ref": "#/components/parameters/EdgeCapQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ClassIdsQuery"
+          },
+          {
+            "$ref": "#/components/parameters/RelationIdsQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Graph-viz data + summary (READY / TOO_LARGE_SUMMARY_ONLY / EMPTY). Always carries an all-false GraphVizMutationGuard.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphVizResponse"
+                },
+                "examples": {
+                  "ready": {
+                    "$ref": "#/components/examples/GraphVizReadyExample"
+                  },
+                  "tooLargeSummaryOnly": {
+                    "$ref": "#/components/examples/GraphVizTooLargeExample"
+                  },
+                  "empty": {
+                    "$ref": "#/components/examples/GraphVizEmptyExample"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ProjectId": {
+        "name": "project_id",
+        "in": "path",
+        "required": true,
+        "description": "Project identifier.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "VersionIdQuery": {
+        "name": "version_id",
+        "in": "query",
+        "required": false,
+        "description": "Optional published graph version id to target. Omitted -> the project's current published version (or 200 EMPTY if none). Unknown -> 404 PUBLISHED_GRAPH_VERSION_NOT_FOUND.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "NodeCapQuery": {
+        "name": "node_cap",
+        "in": "query",
+        "required": false,
+        "description": "Node budget for the bounded whole-graph view. Out of range -> 400 INVALID_CAP. The summary is always exact over the full graph regardless of cap.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 150,
+          "default": 150
+        }
+      },
+      "EdgeCapQuery": {
+        "name": "edge_cap",
+        "in": "query",
+        "required": false,
+        "description": "Edge budget for the bounded whole-graph view. Out of range -> 400 INVALID_CAP. The summary is always exact over the full graph regardless of cap.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300,
+          "default": 300
+        }
+      },
+      "ClassIdsQuery": {
+        "name": "class_ids",
+        "in": "query",
+        "required": false,
+        "description": "Read-only filter hint (G1): restrict the bounded element set to these MVP1 class_ids. Bounds the nodes[]/edges[] view only; the summary is ALWAYS over the full published graph. Deferrable to P1 per open question G1.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "RelationIdsQuery": {
+        "name": "relation_ids",
+        "in": "query",
+        "required": false,
+        "description": "Read-only filter hint (G1): restrict the bounded element set to these MVP1 relation_ids. Bounds the nodes[]/edges[] view only; the summary is ALWAYS over the full published graph. Deferrable to P1 per open question G1.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request (INVALID_CAP: node_cap outside [1,150] or edge_cap outside [1,300]).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Permission denied (PERMISSION_DENIED: caller is not a member who can view this project).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found (PROJECT_NOT_FOUND / PUBLISHED_GRAPH_VERSION_NOT_FOUND). Note: a project with no current published version and no version_id requested returns 200 EMPTY, not 404.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "GraphVizStatus": {
+        "type": "string",
+        "description": "Viz-scoped result status (structural precedent = MVP4 GraphExploreState, not renamed). READY = full bounded viz data + summary within budget. TOO_LARGE_SUMMARY_ONLY = over budget; exact summary + totals only, no elements (mirrors MVP4 SAFE_TOO_LARGE). EMPTY = published graph has zero entities (also returned when no current published version exists and none was requested). No ERROR state in P0: an invalid target is a 400/403/404, not a result state.",
+        "enum": [
+          "READY",
+          "TOO_LARGE_SUMMARY_ONLY",
+          "EMPTY"
+        ]
+      },
+      "GraphVizScope": {
+        "type": "string",
+        "description": "Asserts which graph the viz reads. PUBLISHED is the only literal ever produced in P0: the viz reads the published graph only, never candidate, never draft. CANDIDATE is reserved (P1 candidate viz + candidate/published comparison) and is NEVER produced in P0.",
+        "enum": [
+          "PUBLISHED",
+          "CANDIDATE"
+        ]
+      },
+      "GraphVizMutationGuard": {
+        "type": "object",
+        "description": "All-false 6-flag mutation guard present on EVERY graph-viz response (READY / TOO_LARGE_SUMMARY_ONLY / EMPTY). Every flag is false, always; MVP6.12 turns NO flag true, ever. published_graph_mutated + layout_persisted are the headline assertions: the viz reads already-published facts and computes layout HINTS only (no server-side coordinates, nothing cached/stored). Mirrors the MVP6.1-6.11 all-false pattern.",
+        "additionalProperties": false,
+        "properties": {
+          "published_graph_mutated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "candidate_graph_mutated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "ontology_draft_mutated": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "published_version_created": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "graph_snapshot_created": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          },
+          "layout_persisted": {
+            "type": "boolean",
+            "const": false,
+            "default": false
+          }
+        },
+        "required": [
+          "published_graph_mutated",
+          "candidate_graph_mutated",
+          "ontology_draft_mutated",
+          "published_version_created",
+          "graph_snapshot_created",
+          "layout_persisted"
+        ]
+      },
+      "PublishedGraphVersionRef": {
+        "type": "object",
+        "description": "Reused-by-reference from MVP4 (openapi-mvp4-draft.json; no rename). The published graph version the viz was computed over. Present for READY and TOO_LARGE_SUMMARY_ONLY; may be null for EMPTY when no current published version exists.",
+        "required": [
+          "published_graph_version_id",
+          "published_graph_version",
+          "ontology_version_id",
+          "is_current"
+        ],
+        "properties": {
+          "published_graph_version_id": {
+            "type": "string"
+          },
+          "published_graph_version": {
+            "type": "integer"
+          },
+          "ontology_version_id": {
+            "type": "string"
+          },
+          "is_current": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "GraphVizClassCount": {
+        "type": "object",
+        "description": "One summary bucket keyed by an opaque MVP1 class_id (no new enum).",
+        "required": [
+          "class_id",
+          "count"
+        ],
+        "properties": {
+          "class_id": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "GraphVizRelationCount": {
+        "type": "object",
+        "description": "One summary bucket keyed by an opaque MVP1 relation_id (no new enum).",
+        "required": [
+          "relation_id",
+          "count"
+        ],
+        "properties": {
+          "relation_id": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "GraphVizSummary": {
+        "type": "object",
+        "description": "Graph-level summary statistics computed in a single linear O(V+E) pass (counts + union-find) over the FULL published graph. Exact in every status (READY, TOO_LARGE_SUMMARY_ONLY, EMPTY). No layout, no centrality, no clustering, no path-finding. density (G3) = directed E / (V*(V-1)) for V>1, else 0; component_count + largest_component_size are over the UNDIRECTED projection of edges (connectivity ignores direction).",
+        "required": [
+          "total_node_count",
+          "total_edge_count",
+          "node_counts_by_class",
+          "edge_counts_by_relation",
+          "density",
+          "component_count",
+          "largest_component_size",
+          "isolated_node_count",
+          "max_degree"
+        ],
+        "properties": {
+          "total_node_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total_edge_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "node_counts_by_class": {
+            "type": "array",
+            "description": "Exact per-class node counts (deterministically ordered). Sum == total_node_count.",
+            "items": {
+              "$ref": "#/components/schemas/GraphVizClassCount"
+            },
+            "default": []
+          },
+          "edge_counts_by_relation": {
+            "type": "array",
+            "description": "Exact per-relation edge counts (deterministically ordered). Sum == total_edge_count.",
+            "items": {
+              "$ref": "#/components/schemas/GraphVizRelationCount"
+            },
+            "default": []
+          },
+          "density": {
+            "type": "number",
+            "description": "Directed graph density E / (V*(V-1)) for V>1, else 0 (G3).",
+            "minimum": 0
+          },
+          "component_count": {
+            "type": "integer",
+            "description": "Number of connected components over the undirected projection of edges (G3). 0 when the graph is empty.",
+            "minimum": 0
+          },
+          "largest_component_size": {
+            "type": "integer",
+            "description": "Node count of the largest connected component (undirected projection). 0 when empty.",
+            "minimum": 0
+          },
+          "isolated_node_count": {
+            "type": "integer",
+            "description": "Number of nodes with degree 0.",
+            "minimum": 0
+          },
+          "max_degree": {
+            "type": "integer",
+            "description": "Maximum node degree (undirected). 0 when empty.",
+            "minimum": 0
+          }
+        }
+      },
+      "GraphVizNode": {
+        "type": "object",
+        "description": "A published-graph node projected for whole-graph visualization. Reuses the MVP4 GraphExploreNode element fields by reference (published_entity_id, class_id, label, properties, quality_summary, source_count, evidence_count, lineage_available; no rename) PLUS client-side layout HINTS (degree, component_id). There are NO x/y coordinates: layout is computed client-side. The MVP4 root-anchored 'hop' field is not meaningful for a whole-graph view and is omitted. Present only when status=READY.",
+        "required": [
+          "id",
+          "published_entity_id",
+          "class_id",
+          "label",
+          "degree",
+          "component_id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "published_entity_id": {
+            "type": "string"
+          },
+          "class_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "quality_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "source_count": {
+            "type": "integer",
+            "default": 0
+          },
+          "evidence_count": {
+            "type": "integer",
+            "default": 0
+          },
+          "lineage_available": {
+            "type": "boolean",
+            "default": false
+          },
+          "degree": {
+            "type": "integer",
+            "description": "Layout HINT: undirected degree of this node in the full published graph.",
+            "minimum": 0
+          },
+          "component_id": {
+            "type": "string",
+            "description": "Layout HINT: deterministic id of the connected component (undirected projection) this node belongs to. NOT a coordinate."
+          }
+        }
+      },
+      "GraphVizEdge": {
+        "type": "object",
+        "description": "A published-graph edge projected for whole-graph visualization. Reuses the MVP4 GraphExploreEdge element fields by reference (published_relation_id, source_node_id, target_node_id, relation_id, label, properties, quality_summary, evidence_count, lineage_available; no rename). No layout coordinates. Present only when status=READY.",
+        "required": [
+          "id",
+          "published_relation_id",
+          "source_node_id",
+          "target_node_id",
+          "relation_id",
+          "label"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "published_relation_id": {
+            "type": "string"
+          },
+          "source_node_id": {
+            "type": "string"
+          },
+          "target_node_id": {
+            "type": "string"
+          },
+          "relation_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "quality_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "evidence_count": {
+            "type": "integer",
+            "default": 0
+          },
+          "lineage_available": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "GraphVizTooLargeState": {
+        "type": "object",
+        "description": "Reused-by-reference from MVP4 GraphTooLargeState (SAFE_TOO_LARGE precedent; no rename). Present ONLY when status=TOO_LARGE_SUMMARY_ONLY. node_budget/edge_budget default to the 150/300 caps (or the caller's in-range caps). suggested_filters carries read-only narrowing hints (class/relation ids); message is user-facing copy.",
+        "required": [
+          "estimated_nodes",
+          "estimated_edges",
+          "node_budget",
+          "edge_budget",
+          "message"
+        ],
+        "properties": {
+          "estimated_nodes": {
+            "type": "integer",
+            "description": "Exact total node count of the full published graph (over budget)."
+          },
+          "estimated_edges": {
+            "type": "integer",
+            "description": "Exact total edge count of the full published graph (over budget)."
+          },
+          "node_budget": {
+            "type": "integer",
+            "default": 150
+          },
+          "edge_budget": {
+            "type": "integer",
+            "default": 300
+          },
+          "suggested_filters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "GraphVizResponse": {
+        "type": "object",
+        "description": "Read-only whole-graph viz data + summary for a project's published graph. scope is always PUBLISHED in P0. summary is exact in every status. nodes[]/edges[] are populated only when status=READY (empty for TOO_LARGE_SUMMARY_ONLY and EMPTY). too_large is populated only when status=TOO_LARGE_SUMMARY_ONLY. Deterministic + byte-stable modulo generated_at. Always carries an all-false GraphVizMutationGuard.",
+        "required": [
+          "project_id",
+          "scope",
+          "generated_at",
+          "status",
+          "summary",
+          "node_cap",
+          "edge_cap",
+          "truncated",
+          "nodes",
+          "edges",
+          "mutation_guard",
+          "boundary_note"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/GraphVizScope"
+          },
+          "published_graph_version_ref": {
+            "description": "The published graph version projected over. Present for READY / TOO_LARGE_SUMMARY_ONLY; null (or omitted) for EMPTY when no current published version exists.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PublishedGraphVersionRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The ONLY non-byte-stable field: two calls over the same published version yield byte-identical bodies modulo this timestamp."
+          },
+          "status": {
+            "$ref": "#/components/schemas/GraphVizStatus"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/GraphVizSummary"
+          },
+          "node_cap": {
+            "type": "integer",
+            "description": "Effective node budget applied (default 150, or the caller's in-range node_cap).",
+            "minimum": 1,
+            "maximum": 150,
+            "default": 150
+          },
+          "edge_cap": {
+            "type": "integer",
+            "description": "Effective edge budget applied (default 300, or the caller's in-range edge_cap).",
+            "minimum": 1,
+            "maximum": 300,
+            "default": 300
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "true iff status=TOO_LARGE_SUMMARY_ONLY (elements omitted). false for READY and EMPTY.",
+            "default": false
+          },
+          "nodes": {
+            "type": "array",
+            "description": "Bounded whole-graph nodes with layout hints. Deterministically ordered. Populated only when status=READY; empty otherwise.",
+            "items": {
+              "$ref": "#/components/schemas/GraphVizNode"
+            },
+            "default": []
+          },
+          "edges": {
+            "type": "array",
+            "description": "Bounded whole-graph edges. Deterministically ordered. Populated only when status=READY; empty otherwise.",
+            "items": {
+              "$ref": "#/components/schemas/GraphVizEdge"
+            },
+            "default": []
+          },
+          "too_large": {
+            "description": "Populated ONLY when status=TOO_LARGE_SUMMARY_ONLY; null/omitted otherwise.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GraphVizTooLargeState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mutation_guard": {
+            "$ref": "#/components/schemas/GraphVizMutationGuard"
+          },
+          "boundary_note": {
+            "type": "string",
+            "description": "Human-readable read-only assertion, e.g. 'read-only visualization - nothing changes the graph; publishing stays the separate MVP3 publish path.'"
+          }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "description": "Standard error envelope. P0 graph-viz codes: INVALID_CAP (400), PERMISSION_DENIED (403), PROJECT_NOT_FOUND (404), PUBLISHED_GRAPH_VERSION_NOT_FOUND (404). Note: a project with no current published version and no version_id requested is NOT an error - it yields a 200 response with status=EMPTY.",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    },
+    "examples": {
+      "GraphVizReadyExample": {
+        "summary": "READY - whole-graph bounded view within budget",
+        "value": {
+          "project_id": "proj-001",
+          "scope": "PUBLISHED",
+          "published_graph_version_ref": {
+            "published_graph_version_id": "pgv-007",
+            "published_graph_version": 7,
+            "ontology_version_id": "onto-003",
+            "is_current": true,
+            "created_at": "2026-07-01T09:00:00Z"
+          },
+          "generated_at": "2026-07-13T12:00:00Z",
+          "status": "READY",
+          "summary": {
+            "total_node_count": 4,
+            "total_edge_count": 3,
+            "node_counts_by_class": [
+              { "class_id": "class-company", "count": 2 },
+              { "class_id": "class-person", "count": 2 }
+            ],
+            "edge_counts_by_relation": [
+              { "relation_id": "rel-employs", "count": 2 },
+              { "relation_id": "rel-partners-with", "count": 1 }
+            ],
+            "density": 0.25,
+            "component_count": 1,
+            "largest_component_size": 4,
+            "isolated_node_count": 0,
+            "max_degree": 3
+          },
+          "node_cap": 150,
+          "edge_cap": 300,
+          "truncated": false,
+          "nodes": [
+            {
+              "id": "n-1",
+              "published_entity_id": "pe-1",
+              "class_id": "class-company",
+              "label": "Acme Corp",
+              "properties": {},
+              "quality_summary": {},
+              "source_count": 3,
+              "evidence_count": 5,
+              "lineage_available": true,
+              "degree": 3,
+              "component_id": "c-0"
+            },
+            {
+              "id": "n-2",
+              "published_entity_id": "pe-2",
+              "class_id": "class-person",
+              "label": "Jane Doe",
+              "properties": {},
+              "quality_summary": {},
+              "source_count": 1,
+              "evidence_count": 2,
+              "lineage_available": true,
+              "degree": 1,
+              "component_id": "c-0"
+            }
+          ],
+          "edges": [
+            {
+              "id": "e-1",
+              "published_relation_id": "pr-1",
+              "source_node_id": "n-1",
+              "target_node_id": "n-2",
+              "relation_id": "rel-employs",
+              "label": "employs",
+              "properties": {},
+              "quality_summary": {},
+              "evidence_count": 2,
+              "lineage_available": true
+            }
+          ],
+          "too_large": null,
+          "mutation_guard": {
+            "published_graph_mutated": false,
+            "candidate_graph_mutated": false,
+            "ontology_draft_mutated": false,
+            "published_version_created": false,
+            "graph_snapshot_created": false,
+            "layout_persisted": false
+          },
+          "boundary_note": "read-only visualization - nothing changes the graph; publishing stays the separate MVP3 publish path."
+        }
+      },
+      "GraphVizTooLargeExample": {
+        "summary": "TOO_LARGE_SUMMARY_ONLY - over budget; summary exact, elements omitted",
+        "value": {
+          "project_id": "proj-001",
+          "scope": "PUBLISHED",
+          "published_graph_version_ref": {
+            "published_graph_version_id": "pgv-007",
+            "published_graph_version": 7,
+            "ontology_version_id": "onto-003",
+            "is_current": true,
+            "created_at": "2026-07-01T09:00:00Z"
+          },
+          "generated_at": "2026-07-13T12:00:00Z",
+          "status": "TOO_LARGE_SUMMARY_ONLY",
+          "summary": {
+            "total_node_count": 5200,
+            "total_edge_count": 14800,
+            "node_counts_by_class": [
+              { "class_id": "class-company", "count": 1200 },
+              { "class_id": "class-person", "count": 4000 }
+            ],
+            "edge_counts_by_relation": [
+              { "relation_id": "rel-employs", "count": 9000 },
+              { "relation_id": "rel-partners-with", "count": 5800 }
+            ],
+            "density": 0.00054,
+            "component_count": 37,
+            "largest_component_size": 4800,
+            "isolated_node_count": 12,
+            "max_degree": 210
+          },
+          "node_cap": 150,
+          "edge_cap": 300,
+          "truncated": true,
+          "nodes": [],
+          "edges": [],
+          "too_large": {
+            "estimated_nodes": 5200,
+            "estimated_edges": 14800,
+            "node_budget": 150,
+            "edge_budget": 300,
+            "suggested_filters": [
+              "class_ids=class-company",
+              "relation_ids=rel-partners-with"
+            ],
+            "message": "This published graph is too large to render fully (5200 nodes / 14800 edges over the 150 / 300 budget). Showing summary only - narrow with class/relation filters or focus a node's neighborhood."
+          },
+          "mutation_guard": {
+            "published_graph_mutated": false,
+            "candidate_graph_mutated": false,
+            "ontology_draft_mutated": false,
+            "published_version_created": false,
+            "graph_snapshot_created": false,
+            "layout_persisted": false
+          },
+          "boundary_note": "read-only visualization - nothing changes the graph; publishing stays the separate MVP3 publish path."
+        }
+      },
+      "GraphVizEmptyExample": {
+        "summary": "EMPTY - no current published version / zero entities",
+        "value": {
+          "project_id": "proj-001",
+          "scope": "PUBLISHED",
+          "published_graph_version_ref": null,
+          "generated_at": "2026-07-13T12:00:00Z",
+          "status": "EMPTY",
+          "summary": {
+            "total_node_count": 0,
+            "total_edge_count": 0,
+            "node_counts_by_class": [],
+            "edge_counts_by_relation": [],
+            "density": 0,
+            "component_count": 0,
+            "largest_component_size": 0,
+            "isolated_node_count": 0,
+            "max_degree": 0
+          },
+          "node_cap": 150,
+          "edge_cap": 300,
+          "truncated": false,
+          "nodes": [],
+          "edges": [],
+          "too_large": null,
+          "mutation_guard": {
+            "published_graph_mutated": false,
+            "candidate_graph_mutated": false,
+            "ontology_draft_mutated": false,
+            "published_version_created": false,
+            "graph_snapshot_created": false,
+            "layout_persisted": false
+          },
+          "boundary_note": "read-only visualization - nothing changes the graph; publishing stays the separate MVP3 publish path."
+        }
+      }
+    }
+  }
+}
