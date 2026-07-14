@@ -27,9 +27,9 @@ export function SourceManagerPage() {
     return (
       <PageState
         kind="empty"
-        title="Project context가 필요합니다"
-        description="Projects에서 작업할 Project를 선택한 뒤 Source를 업로드하세요."
-        actionLabel="Projects로 이동"
+        title="프로젝트 선택이 필요합니다"
+        description="프로젝트 목록에서 작업할 프로젝트를 선택한 뒤 소스를 업로드하세요."
+        actionLabel="프로젝트로 이동"
         onAction={() => navigate("/projects")}
       />
     );
@@ -80,9 +80,21 @@ export function SourceManagerPage() {
         ]}
       />
       <PageHeader title="소스" description="프로젝트의 CSV, Excel, PDF, TXT 원천 데이터 상태와 다음 처리 단계를 확인합니다.">
-        <HanaButton variant="primary" type="button" disabled={!canUpload} onClick={handleUpload}>
+        <HanaButton
+          variant="primary"
+          type="button"
+          onClick={() => {
+            if (canUpload) {
+              handleUpload();
+              return;
+            }
+            const input = document.querySelector<HTMLInputElement>("input[type='file']");
+            input?.scrollIntoView({ behavior: "smooth", block: "center" });
+            input?.focus();
+          }}
+        >
           <Upload aria-hidden="true" />
-          {uploadSource.isPending ? "업로드 중" : "Source 업로드"}
+          {uploadSource.isPending ? "업로드 중" : file ? "소스 업로드" : "파일 선택"}
         </HanaButton>
       </PageHeader>
       <HanaCard
@@ -92,11 +104,11 @@ export function SourceManagerPage() {
       >
         <UploadGrid>
           <Field>
-            <span>File</span>
+            <span>파일</span>
             <FileInput type="file" onChange={(event: ChangeEvent<HTMLInputElement>) => setFile(event.target.files?.[0] ?? null)} />
           </Field>
           <Field>
-            <span>Source Type</span>
+            <span>소스 유형</span>
             <HanaSelect value={sourceType} onChange={(event) => setSourceType(event.target.value as SourceType)}>
               <option value="CSV">CSV</option>
               <option value="EXCEL">EXCEL</option>
@@ -105,7 +117,7 @@ export function SourceManagerPage() {
             </HanaSelect>
           </Field>
           <Field>
-            <span>Display Name</span>
+            <span>표시 이름</span>
             <HanaInput
               value={displayName}
               onChange={(event: ChangeEvent<HTMLInputElement>) => setDisplayName(event.target.value)}
@@ -129,13 +141,13 @@ export function SourceManagerPage() {
             <table>
               <thead>
                 <tr>
-                  <th>File</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Preview</th>
-                  <th>Next</th>
-                  <th>Size</th>
-                  <th>Uploaded</th>
+                  <th>파일</th>
+                  <th>유형</th>
+                  <th>상태</th>
+                  <th>미리보기</th>
+                  <th>다음</th>
+                  <th>크기</th>
+                  <th>업로드</th>
                 </tr>
               </thead>
               <tbody>
@@ -158,7 +170,7 @@ export function SourceManagerPage() {
                     </td>
                     <td>
                       <SourceLink to={`/projects/${projectId}/sources/${source.id}`}>
-                        <strong>{source.source_type === "CSV" || source.source_type === "EXCEL" ? "Profile" : "Chunks"}</strong>
+                        <strong>{source.source_type === "CSV" || source.source_type === "EXCEL" ? "프로파일" : "구간"}</strong>
                       </SourceLink>
                     </td>
                     <td>{formatBytes(source.size_bytes)}</td>

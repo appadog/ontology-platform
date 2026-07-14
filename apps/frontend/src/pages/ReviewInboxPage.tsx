@@ -40,15 +40,15 @@ export function ReviewInboxPage() {
   const reviewTasksQuery = useReviewTasks(projectId, filters);
 
   if (projectQuery.isLoading || reviewTasksQuery.isLoading) {
-    return <PageState kind="loading" title="Review inbox를 불러오는 중" description="검수 대상과 우선순위를 정리하고 있습니다." />;
+    return <PageState kind="loading" title="검수 인박스를 불러오는 중" description="검수 대상과 우선순위를 정리하고 있습니다." />;
   }
 
   if (projectQuery.isError || reviewTasksQuery.isError || !projectQuery.data || !reviewTasksQuery.data) {
     return (
       <PageState
         kind="error"
-        title="Review inbox를 불러오지 못했습니다"
-        description="현재 filter를 유지한 채 다시 조회할 수 있습니다."
+        title="검수 인박스를 불러오지 못했습니다"
+        description="현재 필터를 유지한 채 다시 조회할 수 있습니다."
         actionLabel="다시 시도"
         onAction={() => {
           void projectQuery.refetch();
@@ -66,75 +66,75 @@ export function ReviewInboxPage() {
       <Breadcrumbs
         items={[
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Review" },
+          { label: "검수" },
         ]}
       />
-      <PageHeader title="검수 인박스" description="Candidate decisions stay separate from published facts until publish eligibility passes.">
-        <Mvp3ActionLink to={`/projects/${projectId}/publish`}>Publish queue</Mvp3ActionLink>
+      <PageHeader title="검수 인박스" description="후보 결정은 게시 적격 조건을 통과하기 전까지 게시된 사실과 분리되어 유지됩니다.">
+        <Mvp3ActionLink to={`/projects/${projectId}/publish`}>게시 큐</Mvp3ActionLink>
       </PageHeader>
-      <Mvp3Workflow current="Review inbox" action={<Mvp3ActionLink to={`/projects/${projectId}/quality`}>Quality dashboard</Mvp3ActionLink>} />
-      <HanaCard title="Queue filters" description="Assignment, status, validation, confidence, source and job context are preserved in the wrapped inbox response.">
+      <Mvp3Workflow current="Review inbox" action={<Mvp3ActionLink to={`/projects/${projectId}/quality`}>품질 대시보드</Mvp3ActionLink>} />
+      <HanaCard title="검수 큐 필터" description="담당·상태·검증·신뢰도, 소스와 작업 맥락이 인박스 응답에 함께 유지됩니다.">
         <FieldGrid>
           <FieldLabel>
-            <span>Assignment</span>
+            <span>담당</span>
             <HanaSelect value={assignment} onChange={(event) => setAssignment(event.target.value as AssignmentFilter)}>
-              <option value="assigned-to-me">Assigned to me</option>
-              <option value="unassigned">Unassigned</option>
-              <option value="all">All reviewable</option>
+              <option value="assigned-to-me">나에게 배정됨</option>
+              <option value="unassigned">미배정</option>
+              <option value="all">전체 검수 대상</option>
             </HanaSelect>
           </FieldLabel>
           <FieldLabel>
-            <span>Status</span>
+            <span>상태</span>
             <HanaSelect value={status} onChange={(event) => setStatus(event.target.value as CandidateReviewStatus | "ALL")}>
-              <option value="ALL">All</option>
-              <option value="PENDING">PENDING</option>
-              <option value="APPROVED">APPROVED</option>
-              <option value="REJECTED">REJECTED</option>
-              <option value="MODIFIED">MODIFIED</option>
-              <option value="NEEDS_DISCUSSION">NEEDS_DISCUSSION</option>
+              <option value="ALL">전체</option>
+              <option value="PENDING">PENDING · 대기</option>
+              <option value="APPROVED">APPROVED · 승인됨</option>
+              <option value="REJECTED">REJECTED · 반려됨</option>
+              <option value="MODIFIED">MODIFIED · 수정 승인</option>
+              <option value="NEEDS_DISCUSSION">NEEDS_DISCUSSION · 논의 필요</option>
             </HanaSelect>
           </FieldLabel>
           <FieldLabel>
-            <span>Validation</span>
+            <span>검증</span>
             <HanaSelect value={validationStatus} onChange={(event) => setValidationStatus(event.target.value as ValidationStatus | "ALL")}>
-              <option value="ALL">All</option>
-              <option value="PASSED">PASSED</option>
-              <option value="WARNING">WARNING</option>
-              <option value="FAILED">FAILED</option>
-              <option value="NOT_VALIDATED">NOT_VALIDATED</option>
+              <option value="ALL">전체</option>
+              <option value="PASSED">PASSED · 통과</option>
+              <option value="WARNING">WARNING · 경고</option>
+              <option value="FAILED">FAILED · 실패</option>
+              <option value="NOT_VALIDATED">NOT_VALIDATED · 미검증</option>
             </HanaSelect>
           </FieldLabel>
           <FieldLabel>
-            <span>Confidence</span>
+            <span>신뢰도</span>
             <HanaSelect value={confidence} onChange={(event) => setConfidence(event.target.value as ConfidenceFilter)}>
-              <option value="all">All</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
+              <option value="all">전체</option>
+              <option value="low">낮음</option>
+              <option value="medium">중간</option>
+              <option value="high">높음</option>
             </HanaSelect>
           </FieldLabel>
         </FieldGrid>
       </HanaCard>
       {assignedElsewhereCount > 0 ? (
-        <PageState kind="permission" title="Read-only rows included" description="Some filtered tasks are assigned to another reviewer and open in read-only mode." />
+        <PageState kind="permission" title="읽기 전용 항목 포함" description="일부 항목은 다른 검수자에게 배정되어 읽기 전용으로 열립니다." />
       ) : null}
       {tasks.length === 0 ? (
-        <PageState kind="empty" title="No review tasks in this view" description="Switch assignment or validation filters to widen the queue." />
+        <PageState kind="empty" title="이 조건에 해당하는 검수 대상이 없습니다" description="담당 또는 검증 필터를 바꿔 검수 큐 범위를 넓혀 보세요." />
       ) : (
-        <HanaCard title={`${reviewTasksQuery.data.total_count} review tasks`} description="Priority and reason stay visible before opening the workbench.">
+        <HanaCard title={`검수 대상 ${reviewTasksQuery.data.total_count}건`} description="워크벤치를 열기 전에 우선순위와 사유가 먼저 보입니다.">
           <CompactTable>
             <table>
               <thead>
                 <tr>
-                  <th>Candidate</th>
-                  <th>Status</th>
-                  <th>Validation</th>
-                  <th>Priority</th>
-                  <th>Assignment</th>
-                  <th>Source / Job</th>
-                  <th>Evidence</th>
-                  <th>Updated</th>
-                  <th>Workbench</th>
+                  <th>후보</th>
+                  <th>상태</th>
+                  <th>검증</th>
+                  <th>우선순위</th>
+                  <th>담당</th>
+                  <th>소스 / 작업</th>
+                  <th>근거</th>
+                  <th>수정 시각</th>
+                  <th>워크벤치</th>
                 </tr>
               </thead>
               <tbody>
@@ -158,7 +158,7 @@ export function ReviewInboxPage() {
                       <td>
                         <CandidateName>
                           <strong>{task.candidate_display_name ?? task.candidate_id}</strong>
-                          <span>{task.candidate_summary ?? `${task.candidate_kind} candidate`}</span>
+                          <span>{task.candidate_summary ?? `${task.candidate_kind} 후보`}</span>
                           <BadgeRow>
                             <HanaBadge tone="neutral">{task.candidate_kind}</HanaBadge>
                             {typeof taskAny.confidence === "number" ? <strong>{percent(taskAny.confidence)}</strong> : null}
@@ -181,15 +181,15 @@ export function ReviewInboxPage() {
                       <td>
                         <CandidateName>
                           <strong>{task.priority}</strong>
-                          <span>{task.priority_reason ?? "Seeded review priority"}</span>
+                          <span>{task.priority_reason ?? "기본 검수 우선순위"}</span>
                         </CandidateName>
                       </td>
-                      <td>{task.assignee_display_name ?? "Unassigned"}</td>
+                      <td>{task.assignee_display_name ?? "미배정"}</td>
                       <td>
                         <CandidateName>
-                          <strong>{taskAny.source_display_name ?? task.source_id ?? "Source unavailable"}</strong>
-                          <span>{taskAny.job_display_label ?? task.extraction_job_id ?? "Job unavailable"}</span>
-                          <span>{taskAny.source_context_label ?? "Actual API source context"}</span>
+                          <strong>{taskAny.source_display_name ?? task.source_id ?? "소스 정보 없음"}</strong>
+                          <span>{taskAny.job_display_label ?? task.extraction_job_id ?? "작업 정보 없음"}</span>
+                          <span>{taskAny.source_context_label ?? "소스 맥락"}</span>
                         </CandidateName>
                       </td>
                       <td>
@@ -200,7 +200,7 @@ export function ReviewInboxPage() {
                       </td>
                       <td>{formatDateTime(task.updated_at)}</td>
                       <td>
-                        <Mvp3PrimaryLink to={`/projects/${projectId}/review/${task.id}`}>Open</Mvp3PrimaryLink>
+                        <Mvp3PrimaryLink to={`/projects/${projectId}/review/${task.id}`}>열기</Mvp3PrimaryLink>
                       </td>
                     </tr>
                   );
@@ -210,10 +210,10 @@ export function ReviewInboxPage() {
           </CompactTable>
         </HanaCard>
       )}
-      <HanaCard title="Queue response">
+      <HanaCard title="큐 응답">
         <CardBody>
           <Muted>
-            items {tasks.length} / total {reviewTasksQuery.data.total_count} · limit {reviewTasksQuery.data.limit} · offset{" "}
+            항목 {tasks.length} / 전체 {reviewTasksQuery.data.total_count} · 페이지 크기 {reviewTasksQuery.data.limit} · 시작 위치{" "}
             {reviewTasksQuery.data.offset}
           </Muted>
         </CardBody>

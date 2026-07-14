@@ -19,22 +19,32 @@ import { GraphVizSummaryView } from "./GraphVizSummaryView";
 // is preserved and `resolveActiveSection` (matched on `/published-graph`) is untouched.
 type PublishedGraphView = "explorer" | "viz";
 
+// F2: user-facing Korean labels for the state-simulation toggle. The underlying
+// GraphExploreState value is unchanged (kept in component state); only the button
+// text is glossed so no raw enum is shown to non-developer users.
+const exploreStateLabels: Record<GraphExploreState, string> = {
+  READY: "준비됨",
+  SAFE_TOO_LARGE: "안전 한도 초과",
+  EMPTY: "데이터 없음",
+  ERROR: "오류",
+};
+
 export function PublishedGraphExplorerPage() {
   const { projectId = "" } = useParams();
   const [view, setView] = useState<PublishedGraphView>("explorer");
   const projectQuery = useProject(projectId);
 
   if (projectQuery.isLoading) {
-    return <PageState kind="loading" title="Published graph is loading" description="Explorer filters and published facts are being prepared." />;
+    return <PageState kind="loading" title="게시 그래프를 불러오는 중" description="탐색기 필터와 게시된 사실을 준비하고 있습니다." />;
   }
 
   if (projectQuery.isError || !projectQuery.data) {
     return (
       <PageState
         kind="error"
-        title="Published graph could not load"
-        description="Retry the selected project."
-        actionLabel="Retry"
+        title="게시 그래프를 불러오지 못했습니다"
+        description="선택한 프로젝트로 다시 시도하세요."
+        actionLabel="다시 시도"
         onAction={() => void projectQuery.refetch()}
       />
     );
@@ -45,7 +55,7 @@ export function PublishedGraphExplorerPage() {
       <Breadcrumbs
         items={[
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Published Graph" },
+          { label: "게시 그래프" },
         ]}
       />
       <PageHeader
@@ -57,9 +67,9 @@ export function PublishedGraphExplorerPage() {
         }
       >
         <PageActions>
-          <HanaBadge tone="success">PUBLISHED ONLY</HanaBadge>
-          <HanaBadge tone="success">PUBLISHED FACTS</HanaBadge>
-          <Mvp3ActionLink to={`/projects/${projectId}/quality`}>Quality dashboard</Mvp3ActionLink>
+          <HanaBadge tone="success">PUBLISHED ONLY · 게시 전용</HanaBadge>
+          <HanaBadge tone="success">PUBLISHED FACTS · 게시된 사실</HanaBadge>
+          <Mvp3ActionLink to={`/projects/${projectId}/quality`}>품질 대시보드</Mvp3ActionLink>
         </PageActions>
       </PageHeader>
 
@@ -99,16 +109,16 @@ function ExplorerView({ projectId }: { projectId: string }) {
   const graphQuery = usePublishedGraphExplore(projectId, { state, max_hops: maxHops });
 
   if (graphQuery.isLoading) {
-    return <PageState kind="loading" title="Published graph is loading" description="Explorer filters and published facts are being prepared." />;
+    return <PageState kind="loading" title="게시 그래프를 불러오는 중" description="탐색기 필터와 게시된 사실을 준비하고 있습니다." />;
   }
 
   if (graphQuery.isError || !graphQuery.data) {
     return (
       <PageState
         kind="error"
-        title="Published graph could not load"
-        description="Reset filters or retry the selected project graph."
-        actionLabel="Retry"
+        title="게시 그래프를 불러오지 못했습니다"
+        description="필터를 초기화하거나 선택한 프로젝트 그래프로 다시 시도하세요."
+        actionLabel="다시 시도"
         onAction={() => void graphQuery.refetch()}
       />
     );
@@ -120,39 +130,39 @@ function ExplorerView({ projectId }: { projectId: string }) {
     <>
       <ExplorerStatusRow>
         <StateBadge state={graph.state} />
-        <Muted as="span">{versionLabel(graph.published_graph_version_ref)} · published facts only</Muted>
+        <Muted as="span">{versionLabel(graph.published_graph_version_ref)} · 게시된 사실만</Muted>
       </ExplorerStatusRow>
 
       <Mvp3Workflow current="Published graph" />
 
-      <HanaCard title="Explorer controls" description="Default is 2 hops. Maximum supported hop depth is 3.">
+      <HanaCard title="탐색기 컨트롤" description="기본값은 2홉이며, 지원되는 최대 탐색 깊이는 3홉입니다.">
         <Toolbar>
           <SlidersHorizontal aria-hidden="true" size={18} />
-          <MarkerText>Published-only graph state. SAFE TOO LARGE is handled without rendering unsafe partial graphs.</MarkerText>
+          <MarkerText>게시된 사실만 표시합니다. 그래프가 안전 한도를 초과하면 부분 그래프를 위험하게 그리지 않고 요약만 처리합니다.</MarkerText>
           {(["READY", "SAFE_TOO_LARGE", "EMPTY", "ERROR"] as GraphExploreState[]).map((nextState) => (
             <HanaButton key={nextState} type="button" variant={state === nextState ? "primary" : "secondary"} onClick={() => setState(nextState)}>
-              {nextState}
+              {exploreStateLabels[nextState]}
             </HanaButton>
           ))}
           {[1, 2, 3, 4].map((hop) => (
             <HanaButton key={hop} type="button" variant={maxHops === hop ? "primary" : "secondary"} disabled={hop > 3} onClick={() => setMaxHops(hop)}>
-              {hop} hop
+              {hop}홉
             </HanaButton>
           ))}
         </Toolbar>
       </HanaCard>
 
       {graph.state === "SAFE_TOO_LARGE" ? (
-        <HanaCard title="Safe too large" description="The explorer does not render unsafe partial graphs.">
+        <HanaCard title="안전 한도 초과" description="탐색기는 안전하지 않은 부분 그래프를 그리지 않습니다.">
           <CardBody>
             <KeyValue>
-              <dt>Estimated nodes</dt>
+              <dt>예상 노드 수</dt>
               <dd>{graph.too_large?.estimated_nodes}</dd>
-              <dt>Estimated edges</dt>
+              <dt>예상 엣지 수</dt>
               <dd>{graph.too_large?.estimated_edges}</dd>
-              <dt>Node budget</dt>
+              <dt>노드 예산</dt>
               <dd>{graph.too_large?.node_budget}</dd>
-              <dt>Edge budget</dt>
+              <dt>엣지 예산</dt>
               <dd>{graph.too_large?.edge_budget}</dd>
             </KeyValue>
             <Muted>{graph.too_large?.message}</Muted>
@@ -160,70 +170,70 @@ function ExplorerView({ projectId }: { projectId: string }) {
               {(graph.too_large?.suggested_filters ?? []).map((filter) => (
                 <Mvp4Panel key={filter}>
                   <strong>{filter}</strong>
-                  <span>Apply this filter before rendering the graph.</span>
+                  <span>그래프를 그리기 전에 이 필터를 적용하세요.</span>
                 </Mvp4Panel>
               ))}
             </InlineList>
           </CardBody>
         </HanaCard>
       ) : graph.state === "EMPTY" ? (
-        <PageState kind="empty" title="No graph facts for this filter" description="Choose another root entity, version, or filter set." />
+        <PageState kind="empty" title="이 필터에 해당하는 그래프 사실이 없습니다" description="다른 루트 엔티티, 버전 또는 필터 조합을 선택하세요." />
       ) : graph.state === "ERROR" ? (
-        <PageState kind="error" title="Graph explorer state returned error" description="Retry after resetting filters." actionLabel="Show READY" onAction={() => setState("READY")} />
+        <PageState kind="error" title="그래프 탐색기 상태가 오류를 반환했습니다" description="필터를 초기화한 뒤 다시 시도하세요." actionLabel="준비됨으로 보기" onAction={() => setState("READY")} />
       ) : (
         <Mvp4TwoColumn>
           <Stack>
-            <HanaCard title="Current snapshot" description="Published entities and relations are shown from the selected published graph version.">
+            <HanaCard title="현재 스냅샷" description="선택한 게시 그래프 버전의 게시된 엔티티와 관계를 표시합니다.">
               <GraphCanvas>
                 {graph.nodes.map((node) => (
                   <GraphNode key={node.id}>
                     <strong>{node.label}</strong>
-                    <span>{node.class_id} · hop {node.hop}</span>
-                    <small>{node.source_count ?? 0} sources · {node.evidence_count ?? 0} evidence refs</small>
+                    <span>{node.class_id} · {node.hop}홉</span>
+                    <small>출처 {node.source_count ?? 0} · 근거 {node.evidence_count ?? 0}건</small>
                   </GraphNode>
                 ))}
                 {graph.edges.map((edge) => (
                   <GraphEdge key={edge.id}>
                     <GitBranch aria-hidden="true" size={18} />
                     <strong>{edge.label}</strong>
-                    <span>{edge.source_node_id} to {edge.target_node_id}</span>
-                    <small>{edge.evidence_count ?? 0} evidence refs</small>
+                    <span>{edge.source_node_id} → {edge.target_node_id}</span>
+                    <small>근거 {edge.evidence_count ?? 0}건</small>
                   </GraphEdge>
                 ))}
               </GraphCanvas>
             </HanaCard>
-            <HanaCard title="Overlays">
+            <HanaCard title="오버레이">
               <CardBody>
-                <Muted>{graph.quality_overlays?.length ?? 0} quality overlays · {graph.source_overlays?.length ?? 0} source/evidence overlays</Muted>
+                <Muted>품질 오버레이 {graph.quality_overlays?.length ?? 0}개 · 출처/근거 오버레이 {graph.source_overlays?.length ?? 0}개</Muted>
               </CardBody>
             </HanaCard>
           </Stack>
           <Stack>
-            <HanaCard title="Lineage panel">
+            <HanaCard title="계보 패널">
               <CardBody>
                 {graph.lineage_panel ? (
                   <KeyValue>
-                    <dt>Fact</dt>
+                    <dt>사실</dt>
                     <dd>{graph.lineage_panel.fact_ref.label}</dd>
-                    <dt>Version</dt>
+                    <dt>버전</dt>
                     <dd>{versionLabel(graph.lineage_panel.published_graph_version_ref)}</dd>
-                    <dt>Publish job</dt>
-                    <dd>{graph.lineage_panel.publish_job_id ?? "Unavailable"}</dd>
-                    <dt>Review decision</dt>
-                    <dd>{graph.lineage_panel.review_decision_ref?.review_decision_type ?? "Unavailable"}</dd>
-                    <dt>Candidate context</dt>
-                    <dd>{graph.lineage_panel.candidate_ref?.candidate_id ?? "Unavailable"} as provenance only</dd>
-                    <dt>Evidence</dt>
+                    <dt>게시 작업</dt>
+                    <dd>{graph.lineage_panel.publish_job_id ?? "정보 없음"}</dd>
+                    <dt>검수 결정</dt>
+                    <dd>{graph.lineage_panel.review_decision_ref?.review_decision_type ?? "정보 없음"}</dd>
+                    <dt>후보 맥락</dt>
+                    <dd>{graph.lineage_panel.candidate_ref?.candidate_id ?? "정보 없음"} · 출처 정보로만 사용</dd>
+                    <dt>근거</dt>
                     <dd>{graph.lineage_panel.evidence_refs.map((ref) => ref.locator).join(", ")}</dd>
-                    <dt>Ontology</dt>
-                    <dd>{graph.lineage_panel.ontology_version_id ?? "Unavailable"}</dd>
-                    <dt>Model run</dt>
-                    <dd>{graph.lineage_panel.model_run_id ?? "Unavailable"}</dd>
-                    <dt>Prompt ref</dt>
-                    <dd>{graph.lineage_panel.prompt_version_id ?? "Unavailable"}</dd>
+                    <dt>온톨로지</dt>
+                    <dd>{graph.lineage_panel.ontology_version_id ?? "정보 없음"}</dd>
+                    <dt>모델 실행</dt>
+                    <dd>{graph.lineage_panel.model_run_id ?? "정보 없음"}</dd>
+                    <dt>프롬프트</dt>
+                    <dd>{graph.lineage_panel.prompt_version_id ?? "정보 없음"}</dd>
                   </KeyValue>
                 ) : (
-                  <Muted>Select a fact with lineage available.</Muted>
+                  <Muted>계보 정보가 있는 사실을 선택하세요.</Muted>
                 )}
               </CardBody>
             </HanaCard>

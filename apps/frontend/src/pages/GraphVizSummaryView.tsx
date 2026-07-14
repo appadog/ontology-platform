@@ -17,6 +17,7 @@ import { PageState } from "../shared/ui/platform/PageState";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { CardBody, KeyValue, Muted, Stack } from "./mvp3Shared";
 import { versionLabel } from "./mvp4Shared";
+import { formatDateTime } from "../shared/lib/format";
 
 // MVP6.12 Advanced Visualization — Published Graph "시각화 · 요약" sub-view (FE6-106/
 // FE6-107). READ-ONLY whole-graph viz data + graph-level summary over the PUBLISHED
@@ -104,7 +105,7 @@ export function GraphVizSummaryView({
           <p>
             게시 그래프를 읽기 전용으로 시각화하고 요약 통계를 보여줄 뿐입니다. 후보/게시/DRAFT 그래프를 변경하지
             않고, 게시 버전이나 스냅샷을 만들지 않으며, 화면에 그려진 레이아웃은 클라이언트에서만 계산되어 서버에
-            저장·캐시되지 않습니다. 게시는 기존 MVP3 게시 경로로만 이루어집니다.
+            저장·캐시되지 않습니다. 게시는 별도의 게시 경로로만 이루어집니다.
           </p>
           <ChipRow>
             <HanaBadge tone="progress">READ_ONLY · 읽기 전용</HanaBadge>
@@ -113,7 +114,6 @@ export function GraphVizSummaryView({
             <HanaBadge tone="progress">NO_LAYOUT_SAVED · 레이아웃 저장 없음</HanaBadge>
             <HanaBadge tone="progress">PUBLISHED_ONLY · 게시 전용</HanaBadge>
           </ChipRow>
-          {viz ? <BoundaryNote>{viz.boundary_note}</BoundaryNote> : null}
         </div>
       </BoundaryBanner>
 
@@ -221,7 +221,7 @@ function VizBody({
         <StatusBadge token={viz.status} />
         <StatusBadge token={viz.scope} koLabel="게시 전용" />
         <Muted as="span">{versionLabel(viz.published_graph_version_ref)} · 요약은 항상 전체 그래프 기준</Muted>
-        <Muted as="span">생성 시각: {viz.generated_at}</Muted>
+        <Muted as="span">생성 시각: {formatDateTime(viz.generated_at)}</Muted>
       </StatusRow>
 
       {/* §2.2 Summary-stats panel — always shown, exact in every status. */}
@@ -657,15 +657,6 @@ const BoundaryBanner = styled.div`
   > div {
     min-width: 0;
   }
-`;
-
-const BoundaryNote = styled.p`
-  margin: ${({ theme }) => theme.spacing.sm} 0 0;
-  padding-left: ${({ theme }) => theme.spacing.sm};
-  border-left: 3px solid ${({ theme }) => theme.color.primary};
-  color: ${({ theme }) => theme.color.textMuted};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  overflow-wrap: anywhere;
 `;
 
 const ChipRow = styled.div`

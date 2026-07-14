@@ -33,10 +33,10 @@ export function valueLabel(value?: number | null, rate?: number | null) {
 
 export function versionLabel(version?: { published_graph_version: number; is_current: boolean } | null) {
   if (!version) {
-    return "No published version";
+    return "게시된 버전 없음";
   }
 
-  return `Published graph v${version.published_graph_version}${version.is_current ? " current" : " selected"}`;
+  return `게시 그래프 v${version.published_graph_version} · ${version.is_current ? "현재" : "선택됨"}`;
 }
 
 export function stateTone(

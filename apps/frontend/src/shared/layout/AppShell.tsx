@@ -1,6 +1,6 @@
-import { PropsWithChildren, useEffect, useMemo } from "react";
+import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Building2, ChevronDown, CircleUserRound } from "lucide-react";
+import { Building2, ChevronDown, CircleUserRound, Menu, X } from "lucide-react";
 import styled from "styled-components";
 import { globalNavItems, projectNavGroups, resolveActiveSection, type NavItem } from "./navigation";
 import { useMyTenants, useProjects } from "../api/queries";
@@ -19,6 +19,13 @@ const recentProjectStorageKey = "ontology-platform:recent-project-id";
 export function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const location = useLocation();
+  // F4: mobile nav drawer. Closed by default so page content (breadcrumb/H1) is
+  // visible first on mobile; the desktop fixed sidebar is unaffected (the drawer
+  // styles only apply under the mobile breakpoint). Any route change closes it.
+  const [navOpen, setNavOpen] = useState(false);
+  useEffect(() => {
+    setNavOpen(false);
+  }, [location.pathname]);
   const { data: projects = [], isLoading: isProjectsLoading } = useProjects();
   const routeProjectId = useMemo(() => {
     const match = location.pathname.match(/^\/projects\/([^/]+)/);
@@ -68,7 +75,22 @@ export function AppShell({ children }: PropsWithChildren) {
 
   return (
     <Shell>
-      <Sidebar>
+      <MobileBar>
+        <MobileMenuButton
+          type="button"
+          aria-label="내비게이션 열기/닫기"
+          aria-expanded={navOpen}
+          aria-controls="app-sidebar"
+          onClick={() => setNavOpen((open) => !open)}
+        >
+          {navOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+        </MobileMenuButton>
+        <MobileBrand>
+          <strong>Ontology</strong>
+          <span>Data Platform</span>
+        </MobileBrand>
+      </MobileBar>
+      <Sidebar id="app-sidebar" data-open={navOpen ? "true" : "false"}>
         <Brand>
           <strong>Ontology</strong>
           <span>Data Platform</span>
@@ -210,11 +232,25 @@ const Sidebar = styled.aside`
   background: ${({ theme }) => theme.color.surfaceRaised};
   padding: 22px 16px;
 
+  /* F4: under the mobile breakpoint the sidebar becomes a collapsible drawer
+     toggled from the mobile app bar. Closed by default (max-height 0) so page
+     content sits directly beneath the app bar and is visible first. */
   @media (max-width: 860px) {
     position: static;
     height: auto;
+    max-height: 0;
+    overflow: hidden;
     border-right: 0;
-    border-bottom: 1px solid ${({ theme }) => theme.color.border};
+    border-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+
+    &[data-open="true"] {
+      max-height: none;
+      padding-top: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid ${({ theme }) => theme.color.border};
+    }
   }
 `;
 
@@ -231,6 +267,62 @@ const Brand = styled.div`
   span {
     color: ${({ theme }) => theme.color.textMuted};
     font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* The brand shows in the mobile app bar instead, so hide the in-drawer copy. */
+  @media (max-width: 860px) {
+    display: none;
+  }
+`;
+
+const MobileBar = styled.div`
+  display: none;
+
+  @media (max-width: 860px) {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid ${({ theme }) => theme.color.border};
+    background: ${({ theme }) => theme.color.surfaceRaised};
+  }
+`;
+
+const MobileMenuButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background: ${({ theme }) => theme.color.surface};
+  color: ${({ theme }) => theme.color.text};
+  cursor: pointer;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const MobileBrand = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+
+  strong {
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  span {
+    color: ${({ theme }) => theme.color.textMuted};
+    font-size: 12px;
     font-weight: 700;
   }
 `;
@@ -361,6 +453,12 @@ const Topbar = styled.header`
   border-bottom: 1px solid ${({ theme }) => theme.color.border};
   background: rgba(247, 249, 251, 0.92);
   backdrop-filter: blur(10px);
+
+  /* F4: the mobile app bar is the sticky top element on mobile; keep the topbar
+     in-flow so the two don't stack/overlap on scroll. */
+  @media (max-width: 860px) {
+    position: static;
+  }
 
   @media (max-width: 760px) {
     align-items: stretch;

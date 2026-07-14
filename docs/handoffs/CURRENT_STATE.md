@@ -4,8 +4,8 @@
 
 ## Latest Wave
 
-- Current wave: `wave-057`
-- Overall status: `FULL-PRODUCT REGRESSION (MVP1–MVP6.12) PASS — 0 genuine regressions; surface GREEN`
+- Current wave: `wave-058`
+- Overall status: `UI/UX REVIEW + REMEDIATION (F1–F6) PASS + END-TO-END USER GUIDE — full surface still GREEN`
 - 기준일: 2026-07-14
 
 ## Latest Decisions
@@ -635,6 +635,9 @@ Next candidate gates (no active user directive — await instruction):
 | Frontend | wave-056 | `PASS / VIZ·SUMMARY SURFACE READY` | Published Graph `탐색기\|시각화·요약` sub-view (no new LNB); always-shown summary panel + READY client-side layout from hints + TOO_LARGE/EMPTY states + read-only filters + boundary banner + live all-false 6-flag proof; 116 tests/build; mock smoke PASS; 0 overflow |
 | QA | wave-056 | `PASS / MVP6.12 CLOSEOUT — MVP6 (6.1–6.12) COMPLETE (commander-finalized)` | R1-R9 9/9; data-level no-mutation + all-false 6-flag guard + summary-exact + too-large-summary + no-server-layout verified; FE 116 + build + mock smoke PASS; regression 276 BE + packs 25; commander re-ran validations |
 | QA | wave-057 | `PASS / FULL-PRODUCT REGRESSION MVP1–6.12 GREEN` | BE 276 + ruff clean; 17/17 OpenAPI parse; FE 116 + build; mock smokes 13/13; actual smokes 14 PASS + 1 DEFERRED (mvp3 collapsed-`<details>` harness gap, mvp5 needs org-env+isolated-DB) — **0 genuine product regressions**; commander ran deterministic+mock, QA agent ran actual battery |
+| Review | wave-058 | `PASS / UI-UX REVIEW — 6 findings (2×P1, 2×P2, 2×P3)` | live-app review (desktop+mobile) per `ui_ux_reviewer_long.md`: F1 한/영 혼용(핵심 저니), F4 모바일 내비 첫화면 점유, F2 개발용어 노출, F3 raw ISO 타임스탬프, F5 잘린 카디널리티, F6 업로드 진입점; all Frontend-only; `docs/pm/UIUX_REVIEW_WAVE058.md` |
+| Frontend | wave-058 | `PASS / F1–F6 ALL DONE (commander-verified)` | 8 files (5 pages + mvp3/mvp4Shared + AppShell); F1 핵심 저니 한국어화(영어 잔존 0), F4 모바일 앱바+햄버거 드로어(0-overflow, H1 above-fold), F2 용어/내부명 제거, F3 formatDateTime, F5 카디널리티 라벨, F6 업로드 버튼; 116 tests + build + graphviz mock PASS; runtime-verified via live preview |
+| Docs | wave-058 | `DONE / END-TO-END USER GUIDE` | `docs/USER_GUIDE.md` — 처음부터 끝까지(개요→화면구조→온톨로지→소스→추출→후보/근거→검수→게시→품질→거버넌스→활용→관리) + 전체흐름 다이어그램 + 자주 막히는 지점 |
 
 ## Report Index
 
@@ -697,3 +700,4 @@ Next candidate gates (no active user directive — await instruction):
 | wave-055 | `wave-055/PM_REPORT.md` | `wave-055/BACKEND_REPORT.md` | `wave-055/FRONTEND_REPORT.md` | `wave-055/QA_REPORT.md` | `wave-055/NEXT_ORDERS.md` |
 | wave-056 | `wave-056/PM_REPORT.md` | `wave-056/BACKEND_REPORT.md` | `wave-056/FRONTEND_REPORT.md` | `wave-056/QA_REPORT.md` | `wave-056/NEXT_ORDERS.md` |
 | wave-057 | — | — | — | `wave-057/QA_REPORT.md` | — (regression/closeout wave — QA only) |
+| wave-058 | `docs/pm/UIUX_REVIEW_WAVE058.md` (review) | — | `wave-058/FRONTEND_REPORT.md` | — | `docs/USER_GUIDE.md` (guide) |

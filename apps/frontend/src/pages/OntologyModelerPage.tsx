@@ -36,6 +36,23 @@ const cardinalityOptions: Cardinality[] = [
   "MULTIPLE",
 ];
 
+// F5: friendlier, non-clipping labels for the cardinality selects. The option
+// value stays the Cardinality enum (never renamed); only the visible text is
+// shortened/glossed so "MANY_TO_MANY" no longer truncates to "MANY_TO_MA".
+const cardinalityLabels: Record<Cardinality, string> = {
+  ONE_TO_ONE: "1:1 (일대일)",
+  ONE_TO_MANY: "1:N (일대다)",
+  MANY_TO_ONE: "N:1 (다대일)",
+  MANY_TO_MANY: "N:N (다대다)",
+  OPTIONAL: "선택 (optional)",
+  REQUIRED: "필수 (required)",
+  MULTIPLE: "다중 (multiple)",
+};
+
+function cardinalityLabel(option: Cardinality) {
+  return cardinalityLabels[option] ?? option;
+}
+
 function nullableText(value: string) {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
@@ -642,7 +659,7 @@ export function OntologyModelerPage() {
           >
             {cardinalityOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {cardinalityLabel(option)}
               </option>
             ))}
           </HanaSelect>
@@ -688,7 +705,7 @@ export function OntologyModelerPage() {
           >
             {cardinalityOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {cardinalityLabel(option)}
               </option>
             ))}
           </HanaSelect>
@@ -901,7 +918,7 @@ export function OntologyModelerPage() {
                     >
                       {cardinalityOptions.map((option) => (
                         <option key={option} value={option}>
-                          {option}
+                          {cardinalityLabel(option)}
                         </option>
                       ))}
                     </HanaSelect>
@@ -1002,7 +1019,7 @@ export function OntologyModelerPage() {
                     >
                       {cardinalityOptions.map((option) => (
                         <option key={option} value={option}>
-                          {option}
+                          {cardinalityLabel(option)}
                         </option>
                       ))}
                     </HanaSelect>

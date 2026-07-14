@@ -17,19 +17,30 @@ const mvp3Stages = ["Review inbox", "Workbench", "Publish queue", "Published gra
 
 type Mvp3Stage = (typeof mvp3Stages)[number];
 
+// Korean display labels for the review→publish stepper. The English stage keys
+// above are internal identifiers used for indexing (never renamed); only the
+// visible label is Korean.
+const mvp3StageLabels: Record<Mvp3Stage, string> = {
+  "Review inbox": "검수 인박스",
+  Workbench: "검수 워크벤치",
+  "Publish queue": "게시 큐",
+  "Published graph": "게시 그래프",
+  Quality: "품질",
+};
+
 export function Mvp3Workflow({ current, action }: { current: Mvp3Stage; action?: ReactNode }) {
   const currentIndex = mvp3Stages.indexOf(current);
 
   return (
-    <WorkflowWrap aria-label="MVP3 review workflow">
+    <WorkflowWrap aria-label="검수·게시 워크플로">
       <WorkflowHeader>
-        <strong>Review to published facts</strong>
+        <strong>검수에서 게시된 사실까지</strong>
         {action}
       </WorkflowHeader>
       <WorkflowList>
         {mvp3Stages.map((stage, index) => (
           <WorkflowItem key={stage} data-state={index === currentIndex ? "current" : index < currentIndex ? "done" : "ready"}>
-            <span>{stage}</span>
+            <span>{mvp3StageLabels[stage]}</span>
           </WorkflowItem>
         ))}
       </WorkflowList>
