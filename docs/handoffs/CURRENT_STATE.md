@@ -4,9 +4,9 @@
 
 ## Latest Wave
 
-- Current wave: `wave-056`
-- Overall status: `MVP6.12 ADVANCED VISUALIZATION THIN IMPLEMENTATION PASS — MVP6 SEQUENCE (6.1–6.12) COMPLETE`
-- 기준일: 2026-07-13
+- Current wave: `wave-057`
+- Overall status: `FULL-PRODUCT REGRESSION (MVP1–MVP6.12) PASS — 0 genuine regressions; surface GREEN`
+- 기준일: 2026-07-14
 
 ## Latest Decisions
 
@@ -409,12 +409,15 @@ MVP6.11 Ontology Packs is closed (Wave53 planning + Wave54 implementation both P
 
 MVP6.12 Advanced Visualization is closed (Wave55 planning + Wave56 implementation both PASS). Closed MVP6 themes: 6.1 Gold Set/Benchmark Studio, 6.2 Active Learning, 6.3 Benchmark Comparison, 6.4 Gold Set authoring + dataset revisioning, 6.5 Governance workflow, 6.6 Governance Change Application, 6.7 Impact Simulation, 6.8 Copilot, 6.9 Connectors, 6.10 Multi-tenant, 6.11 Ontology Packs, 6.12 Advanced Visualization. UI/UX review remediation + reference-driven design upgrade also closed (Wave35-38).
 
-**✅ The full user-directed MVP6 theme sequence (6.1–6.12) is COMPLETE.** Wave56: Backend `graph_viz` read-only endpoint (summary exact O(V+E) + bounded whole-graph view + TOO_LARGE_SUMMARY_ONLY + 200 EMPTY + all-false 6-flag guard) 22+276 tests; Frontend Published Graph `탐색기 | 시각화·요약` sub-view (client-side layout from hints, no new LNB) 116 tests/build/mock smoke; QA R1-R9 9/9 (data-level no-mutation + no-server-layout verified). Commander-finalized after BE/QA agents hit session limits (GraphVizPublishedVersionRef name-scoping fix + independent revalidation).
+**✅ The full user-directed MVP6 theme sequence (6.1–6.12) is COMPLETE.** Wave56: Backend `graph_viz` read-only endpoint (summary exact O(V+E) + bounded whole-graph view + TOO_LARGE_SUMMARY_ONLY + 200 EMPTY + all-false 6-flag guard) 22+276 tests; Frontend Published Graph `탐색기 | 시각화·요약` sub-view (client-side layout from hints, no new LNB) 116 tests/build/mock smoke; QA R1-R9 9/9 (data-level no-mutation + no-server-layout verified). Commander-finalized after BE/QA agents hit session limits (GraphVizPublishedVersionRef name-scoping fix + independent revalidation). Committed by user as `e83eb52 -6.12 구현`.
+
+**✅ Wave57 = FULL-PRODUCT REGRESSION (MVP1–MVP6.12) — PASS, surface GREEN.** Backend 276 passed + ruff clean; 17/17 OpenAPI drafts parse; Frontend 116 passed + build; **mock smokes 13/13 PASS**; **actual smokes 14 PASS + 1 DEFERRED**; `git diff --check` clean; no leftover listeners. **0 genuine product regressions.** Two harness/env deferrals (NOT product bugs), logged P3:
+- `mvp3:actual` — the legacy "Candidates/Validation/Review/Publish" cards render inside a default-collapsed `<details>` in `QualityDashboardPage.tsx` (`LegacyQualitySummary`); the smoke's final `role=heading "Candidates"` assertion never expands the section. Fix = expand the `<summary>` in the smoke (or make the section default-open).
+- `mvp5:actual` — FE defaults org id to mock `org-ontology-demo` while the real seed creates `org-corp-knowledge` (needs `VITE_MVP5_ORGANIZATION_ID=org-corp-knowledge`); and the `/admin` console 404s on self-seeded mvp6/mvp2 projects lacking admin records → must run on an isolated mvp5-only DB. Passes when isolated + org-env set.
 
 Next candidate gates (no active user directive — await instruction):
-1. Sweep accumulated MVP6.x P1/P2/P3 follow-ups in one hardening wave: `smoke:mvp6:graphviz:actual` + packs smoke (P3), stale `openapi-mvp2-draft.json` regen, SQLite smoke-boot doc, strict-required field promotion, divergent-run seed, shared error-envelope unwrap helper (wave-052 P1).
+1. Sweep the accumulated P1/P2/P3 follow-ups in one hardening wave: the two Wave57 smoke-harness gaps above; `smoke:mvp6:graphviz:actual` + packs actual smoke; stale `openapi-mvp2-draft.json` regen; SQLite smoke-boot doc; strict-required field promotion; divergent-run seed; shared error-envelope unwrap helper (wave-052 P1).
 2. Resume the paused Wave27 release/demo packaging (full-product demo script + release notes across MVP1–MVP6.12).
-3. A full-product regression/closeout wave certifying the entire MVP1–MVP6.12 surface.
 
 ## Latest Role Reports
 
@@ -631,6 +634,7 @@ Next candidate gates (no active user directive — await instruction):
 | Backend | wave-056 | `PASS / MVP6.12 THIN RUNTIME READY (commander-finalized)` | graph_viz 1 read-only endpoint; summary exact O(V+E) + bounded view (layout hints, no x/y/hop) + TOO_LARGE_SUMMARY_ONLY + 200 EMPTY; all-false 6-flag guard; 22+276 tests, ruff clean; commander completed GraphVizPublishedVersionRef name-scoping + collision check |
 | Frontend | wave-056 | `PASS / VIZ·SUMMARY SURFACE READY` | Published Graph `탐색기\|시각화·요약` sub-view (no new LNB); always-shown summary panel + READY client-side layout from hints + TOO_LARGE/EMPTY states + read-only filters + boundary banner + live all-false 6-flag proof; 116 tests/build; mock smoke PASS; 0 overflow |
 | QA | wave-056 | `PASS / MVP6.12 CLOSEOUT — MVP6 (6.1–6.12) COMPLETE (commander-finalized)` | R1-R9 9/9; data-level no-mutation + all-false 6-flag guard + summary-exact + too-large-summary + no-server-layout verified; FE 116 + build + mock smoke PASS; regression 276 BE + packs 25; commander re-ran validations |
+| QA | wave-057 | `PASS / FULL-PRODUCT REGRESSION MVP1–6.12 GREEN` | BE 276 + ruff clean; 17/17 OpenAPI parse; FE 116 + build; mock smokes 13/13; actual smokes 14 PASS + 1 DEFERRED (mvp3 collapsed-`<details>` harness gap, mvp5 needs org-env+isolated-DB) — **0 genuine product regressions**; commander ran deterministic+mock, QA agent ran actual battery |
 
 ## Report Index
 
@@ -692,3 +696,4 @@ Next candidate gates (no active user directive — await instruction):
 | wave-054 | `wave-054/PM_REPORT.md` | `wave-054/BACKEND_REPORT.md` | `wave-054/FRONTEND_REPORT.md` | `wave-054/QA_REPORT.md` | `wave-054/NEXT_ORDERS.md` |
 | wave-055 | `wave-055/PM_REPORT.md` | `wave-055/BACKEND_REPORT.md` | `wave-055/FRONTEND_REPORT.md` | `wave-055/QA_REPORT.md` | `wave-055/NEXT_ORDERS.md` |
 | wave-056 | `wave-056/PM_REPORT.md` | `wave-056/BACKEND_REPORT.md` | `wave-056/FRONTEND_REPORT.md` | `wave-056/QA_REPORT.md` | `wave-056/NEXT_ORDERS.md` |
+| wave-057 | — | — | — | `wave-057/QA_REPORT.md` | — (regression/closeout wave — QA only) |
