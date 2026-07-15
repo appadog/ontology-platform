@@ -9,3 +9,10 @@ __pycache__
 dist
 build
 htmlcov
+.env
+.env.*
+.local
+*.db
+*.sqlite
+*.sqlite3
+tests

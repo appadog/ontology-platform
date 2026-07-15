@@ -1,0 +1,47 @@
+# Ontology Platform frontend — nginx site config.
+# ${BACKEND_UPSTREAM} is substituted at container start by the nginx:alpine
+# envsubst step; nginx runtime vars ($uri, $host, ...) are left intact.
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Fail fast if a client sends a huge body; adjust for large source uploads.
+    client_max_body_size 50m;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    # API reverse proxy -> backend (SPA calls same-origin /api/v1/...).
+    location /api/ {
+        proxy_pass ${BACKEND_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+
+    # Backend liveness passthrough (handy for ALB/target-group health checks
+    # pointed at the frontend container).
+    location = /healthz {
+        proxy_pass ${BACKEND_UPSTREAM}/health;
+    }
+
+    # Hashed build assets — safe to cache aggressively.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # SPA history-mode fallback: unknown paths return index.html.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

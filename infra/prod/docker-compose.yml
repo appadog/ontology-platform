@@ -1,0 +1,78 @@
+# ---------------------------------------------------------------------------
+# Ontology Platform — production-style Docker Compose (single box / EC2).
+#
+#   frontend (nginx:80)  --/api/-->  backend (uvicorn:8000)  -->  postgres
+#
+# For AWS ECS/Fargate or RDS, build & push these same images to ECR and drop
+# the `postgres` service, pointing DATABASE_URL at your RDS endpoint (see
+# docs/DEPLOYMENT.md).
+#
+#   cd infra/prod
+#   cp .env.example .env      # then edit secrets
+#   docker compose up -d --build
+# ---------------------------------------------------------------------------
+name: ontology-platform-prod
+
+services:
+  backend:
+    build:
+      context: ../../apps/backend
+      dockerfile: Dockerfile
+    image: ontology-backend:latest
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      # Apply DB migrations on container start before serving.
+      RUN_MIGRATIONS: "true"
+      WEB_CONCURRENCY: "${WEB_CONCURRENCY:-2}"
+    # Prod command with worker count; entrypoint runs migrations first.
+    command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WEB_CONCURRENCY:-2}"
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../../apps/frontend
+      dockerfile: Dockerfile
+      # Private GitHub dep (hana-style-component) needs SSH at build time.
+      # Run with an ssh-agent holding a key that can read that repo.
+      ssh:
+        - default
+      args:
+        # Same-origin: SPA calls /api/v1/... which nginx proxies to backend.
+        VITE_API_BASE_URL: ""
+        VITE_USE_MOCK_API: "false"
+    image: ontology-frontend:latest
+    environment:
+      # Where nginx forwards /api/ and /healthz.
+      BACKEND_UPSTREAM: http://backend:8000
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Bundled DB for a self-contained single-box deploy. On AWS, prefer RDS:
+  # remove this service + the backend depends_on, and set DATABASE_URL to RDS.
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ontology_platform}
+      POSTGRES_USER: ${POSTGRES_USER:-ontology}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-ontology} -d $${POSTGRES_DB:-ontology_platform}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
