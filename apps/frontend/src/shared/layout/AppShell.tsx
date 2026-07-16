@@ -1,6 +1,6 @@
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Building2, ChevronDown, CircleUserRound, Menu, X } from "lucide-react";
+import { Building2, ChevronDown, ChevronLeft, ChevronRight, CircleUserRound, Menu, X } from "lucide-react";
 import styled from "styled-components";
 import { globalNavItems, projectNavGroups, resolveActiveSection, type NavItem } from "./navigation";
 import { useMyTenants, useProjects } from "../api/queries";
@@ -15,6 +15,10 @@ import { StatusBadge } from "../ui/platform/StatusBadge";
 const TENANT_SWITCHER_ACTOR_ID = "dev-user";
 
 const recentProjectStorageKey = "ontology-platform:recent-project-id";
+// Wave 59 (PM6-039) §5/P8 — desktop icon-rail collapse toggle state, persisted
+// across reloads. This is a DESKTOP-ONLY addition: the wave-058 mobile drawer
+// (`navOpen` below) keeps its own separate state and CSS path untouched.
+const sidebarCollapsedStorageKey = "ontology-platform:sidebar-collapsed";
 
 export function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
@@ -26,6 +30,15 @@ export function AppShell({ children }: PropsWithChildren) {
   useEffect(() => {
     setNavOpen(false);
   }, [location.pathname]);
+  // Wave 59: desktop-only icon-rail collapse. Read once at mount (SSR-safe
+  // guard) and persist on every change.
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(sidebarCollapsedStorageKey) === "true";
+  });
+  useEffect(() => {
+    window.localStorage.setItem(sidebarCollapsedStorageKey, collapsed ? "true" : "false");
+  }, [collapsed]);
   const { data: projects = [], isLoading: isProjectsLoading } = useProjects();
   const routeProjectId = useMemo(() => {
     const match = location.pathname.match(/^\/projects\/([^/]+)/);
@@ -66,15 +79,18 @@ export function AppShell({ children }: PropsWithChildren) {
         to={item.to(projectId)}
         aria-current={isActive ? "page" : undefined}
         className={isActive ? "active" : undefined}
+        // Wave 59: when the desktop rail is collapsed, labels are visually
+        // hidden (CSS) but `title` still surfaces them as a native tooltip.
+        title={collapsed ? item.label : undefined}
       >
         <item.icon aria-hidden="true" />
-        {item.label}
+        <span className="label">{item.label}</span>
       </Link>
     );
   };
 
   return (
-    <Shell>
+    <Shell $collapsed={collapsed}>
       <MobileBar>
         <MobileMenuButton
           type="button"
@@ -90,7 +106,7 @@ export function AppShell({ children }: PropsWithChildren) {
           <span>Data Platform</span>
         </MobileBrand>
       </MobileBar>
-      <Sidebar id="app-sidebar" data-open={navOpen ? "true" : "false"}>
+      <Sidebar id="app-sidebar" data-open={navOpen ? "true" : "false"} data-collapsed={collapsed ? "true" : "false"}>
         <Brand>
           <strong>Ontology</strong>
           <span>Data Platform</span>
@@ -108,6 +124,14 @@ export function AppShell({ children }: PropsWithChildren) {
             <ProjectHint role="note">프로젝트를 선택하면 작업 메뉴가 표시됩니다</ProjectHint>
           )}
         </Nav>
+        <CollapseToggle
+          type="button"
+          aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
+          title={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
+          onClick={() => setCollapsed((value) => !value)}
+        >
+          {collapsed ? <ChevronRight aria-hidden="true" /> : <ChevronLeft aria-hidden="true" />}
+        </CollapseToggle>
       </Sidebar>
       <MainArea>
         <Topbar>
@@ -214,42 +238,41 @@ function TenantSwitcher() {
   );
 }
 
-const Shell = styled.div`
+const Shell = styled.div<{ $collapsed: boolean }>`
   display: grid;
-  grid-template-columns: ${({ theme }) => theme.sidebarWidth} minmax(0, 1fr);
+  grid-template-columns: ${({ theme, $collapsed }) => ($collapsed ? theme.sidebarWidthCollapsed : theme.sidebarWidth)} minmax(0, 1fr);
   min-height: 100vh;
+  transition: grid-template-columns 160ms ease;
 
   @media (max-width: 860px) {
     grid-template-columns: 1fr;
   }
 `;
 
-const Sidebar = styled.aside`
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  border-right: 1px solid ${({ theme }) => theme.color.border};
-  background: ${({ theme }) => theme.color.surfaceRaised};
-  padding: 22px 16px;
+const CollapseToggle = styled.button`
+  display: none;
 
-  /* F4: under the mobile breakpoint the sidebar becomes a collapsible drawer
-     toggled from the mobile app bar. Closed by default (max-height 0) so page
-     content sits directly beneath the app bar and is visible first. */
-  @media (max-width: 860px) {
-    position: static;
-    height: auto;
-    max-height: 0;
-    overflow: hidden;
-    border-right: 0;
-    border-bottom: 0;
-    padding-top: 0;
-    padding-bottom: 0;
+  @media (min-width: 861px) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-top: auto;
+    border: 1px solid ${({ theme }) => theme.color.border};
+    border-radius: ${({ theme }) => theme.radius.sm};
+    background: ${({ theme }) => theme.color.surface};
+    color: ${({ theme }) => theme.color.textMuted};
+    cursor: pointer;
 
-    &[data-open="true"] {
-      max-height: none;
-      padding-top: 16px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid ${({ theme }) => theme.color.border};
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      color: ${({ theme }) => theme.color.text};
+      background: ${({ theme }) => theme.color.surfaceOverlay};
     }
   }
 `;
@@ -330,6 +353,19 @@ const MobileBrand = styled.div`
 const Nav = styled.nav`
   display: grid;
   gap: 6px;
+  align-content: start;
+
+  /* Wave 59 (PM6-039) §5: on desktop the sidebar is a fixed-height sticky
+     column (100vh) with the collapse toggle pinned below it via margin-top:
+     auto on Sidebar's flex layout. Without its own scroll region, a tall nav
+     (many project groups) would overflow past the viewport and push the
+     toggle button out of reach. Scoped to the desktop breakpoint only - the
+     mobile drawer keeps its non-scrolling grid layout. */
+  @media (min-width: 861px) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
 
   a {
     display: flex;
@@ -433,6 +469,76 @@ const ProjectHint = styled.p`
 
   @media (max-width: 860px) {
     grid-column: 1 / -1;
+  }
+`;
+
+// Wave 59 (PM6-039) §5/P8: Sidebar is declared here (after Brand/Nav/
+// GroupLabel above) so it can reference them by styled-components selector
+// for the desktop-only icon-rail collapse rules.
+const Sidebar = styled.aside`
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  border-right: 1px solid ${({ theme }) => theme.color.border};
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  padding: 22px 16px;
+
+  /* Wave 59 (PM6-039) §5/P8: desktop icon-rail collapse. Labels are hidden and
+     the nav/brand center on the icon; the toggle button flips its icon. This
+     rule is scoped to widths ABOVE the mobile breakpoint so it never touches
+     the wave-058 mobile drawer behavior below. */
+  @media (min-width: 861px) {
+    &[data-collapsed="true"] {
+      padding-left: 12px;
+      padding-right: 12px;
+
+      ${Brand} {
+        display: none;
+      }
+
+      ${Nav} a {
+        justify-content: center;
+        padding: 0;
+
+        .label {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+        }
+      }
+
+      ${GroupLabel} {
+        display: none;
+      }
+    }
+  }
+
+  /* F4: under the mobile breakpoint the sidebar becomes a collapsible drawer
+     toggled from the mobile app bar. Closed by default (max-height 0) so page
+     content sits directly beneath the app bar and is visible first. This
+     behavior is unaffected by the desktop-only data-collapsed rules above. */
+  @media (max-width: 860px) {
+    position: static;
+    height: auto;
+    max-height: 0;
+    overflow: hidden;
+    border-right: 0;
+    border-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+
+    &[data-open="true"] {
+      max-height: none;
+      padding-top: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid ${({ theme }) => theme.color.border};
+    }
   }
 `;
 

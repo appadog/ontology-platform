@@ -1,7 +1,9 @@
 import styled from "styled-components";
 import { PageHeader } from "../shared/layout/PageHeader";
+import { PageContainer } from "../shared/layout/PageContainer";
 import { useDashboardSummary, useProjects } from "../shared/api/queries";
 import { PageState } from "../shared/ui/platform/PageState";
+import { Skeleton, useDelayedVisible } from "../shared/ui/platform/Skeleton";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
@@ -29,12 +31,23 @@ const heroValuePoints = [
 export function DashboardPage() {
   const { data, isLoading, isError, refetch } = useDashboardSummary();
   const { data: projects = [] } = useProjects();
+  // Wave 59 (PM6-039) §4/P7 showcase: only paint a skeleton once the load has
+  // actually taken >300ms (NN/g), so fast responses never flash a placeholder.
+  const showLoadingSkeleton = useDelayedVisible(300);
 
   const recentProjectId = typeof window === "undefined" ? "" : window.localStorage.getItem(recentProjectStorageKey) ?? "";
   const recentProject = projects.find((project) => project.id === recentProjectId) ?? projects[0];
 
   if (isLoading) {
-    return <PageState kind="loading" title="대시보드를 불러오는 중" description="프로젝트와 최근 작업 상태를 준비하고 있습니다." />;
+    if (!showLoadingSkeleton) {
+      return null;
+    }
+    return (
+      <PageContainer width="default">
+        <Skeleton variant="card" count={4} />
+        <Skeleton variant="table-row" count={4} columns={2} />
+      </PageContainer>
+    );
   }
 
   if (isError || !data) {
@@ -50,7 +63,7 @@ export function DashboardPage() {
   }
 
   return (
-    <>
+    <PageContainer width="default">
       <PageHeader title="대시보드" description="오늘 무엇을 검수하고 게시할지 한눈에 파악하고, 바로 다음 작업으로 이동합니다." />
       <Hero aria-label="제품 소개">
         <HeroHeadline>문서에서 추출한 지식을 검수·게시하고, 품질을 추적하는 온톨로지 운영 플랫폼</HeroHeadline>
@@ -113,7 +126,7 @@ export function DashboardPage() {
         <span>새 작업 공간이 필요하신가요?</span>
         <SecondaryActionLink to="/projects">프로젝트 만들기 또는 선택</SecondaryActionLink>
       </Notice>
-    </>
+    </PageContainer>
   );
 }
 

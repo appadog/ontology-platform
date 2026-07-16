@@ -4,9 +4,9 @@
 
 ## Latest Wave
 
-- Current wave: `wave-058`
-- Overall status: `UI/UX REVIEW + REMEDIATION (F1–F6) PASS + END-TO-END USER GUIDE — full surface still GREEN`
-- 기준일: 2026-07-14
+- Current wave: `wave-059`
+- Overall status: `AI SaaS 레퍼런스 기반 디자인 시스템 업그레이드 PASS (토큰/프리미티브 레벨, additive) — 전 기능 유지 확인`
+- 기준일: 2026-07-15
 
 ## Latest Decisions
 
@@ -415,8 +415,12 @@ MVP6.12 Advanced Visualization is closed (Wave55 planning + Wave56 implementatio
 - `mvp3:actual` — the legacy "Candidates/Validation/Review/Publish" cards render inside a default-collapsed `<details>` in `QualityDashboardPage.tsx` (`LegacyQualitySummary`); the smoke's final `role=heading "Candidates"` assertion never expands the section. Fix = expand the `<summary>` in the smoke (or make the section default-open).
 - `mvp5:actual` — FE defaults org id to mock `org-ontology-demo` while the real seed creates `org-corp-knowledge` (needs `VITE_MVP5_ORGANIZATION_ID=org-corp-knowledge`); and the `/admin` console 404s on self-seeded mvp6/mvp2 projects lacking admin records → must run on an isolated mvp5-only DB. Passes when isolated + org-env set.
 
+**✅ Wave58 = UI/UX 리뷰(F1-F6) + 프론트 수정 + 사용자 가이드.** 실제 앱 리뷰로 6건 발견(P1 2·P2 2·P3 2), 전부 Frontend-only로 수정 완료(한/영 혼용 제거, 모바일 내비 드로어, 개발용어/raw ISO 제거, 카디널리티 라벨, 업로드 버튼) — 커맨더가 런타임 재검증. `docs/USER_GUIDE.md` 신규(온보딩~활용 전체 흐름).
+
+**✅ Wave59 = AI SaaS 레퍼런스 기반 디자인 시스템 업그레이드.** `/deep-research`(108 서브에이전트, Vercel/Linear/shadcn/Supabase/PatternFly/NN-g 검증 근거)로 8원칙 확정 → `docs/pm/DESIGN_DIRECTION_AI_SAAS_UPGRADE.md` 동결 → wave-037과 동일한 토큰/공용 프리미티브 전략으로 구현(라우트/API 변경 없음). Inter 폰트 self-host 실로드, radius/서페이스/콘텐츠폭 토큰 additive 추가, 데스크톱 사이드바 아이콘 레일 collapse(localStorage 유지, 모바일 드로어 그대로), PageState size / Skeleton / PageContainer 신규. 116 tests + build PASS, 커맨더가 실제 화면에서 collapse·새로고침 유지·폰트 로딩·모바일 0-overflow·다중 라우트 렌더를 재검증. **P3 팔로업**: 메인 JS 청크가 759KB로 650KB 경고 임계 초과(신규 폰트/컴포넌트 포함) — `manualChunks` 조정 또는 `chunkSizeWarningLimit` 재검토 필요.
+
 Next candidate gates (no active user directive — await instruction):
-1. Sweep the accumulated P1/P2/P3 follow-ups in one hardening wave: the two Wave57 smoke-harness gaps above; `smoke:mvp6:graphviz:actual` + packs actual smoke; stale `openapi-mvp2-draft.json` regen; SQLite smoke-boot doc; strict-required field promotion; divergent-run seed; shared error-envelope unwrap helper (wave-052 P1).
+1. Sweep the accumulated P1/P2/P3 follow-ups in one hardening wave: the two Wave57 smoke-harness gaps above; `smoke:mvp6:graphviz:actual` + packs actual smoke; stale `openapi-mvp2-draft.json` regen; SQLite smoke-boot doc; strict-required field promotion; divergent-run seed; shared error-envelope unwrap helper (wave-052 P1); Wave59 bundle-size follow-up above; wave-058에서 남긴 게시 큐/품질 대시보드 잔여 영문 카피(F1 확장).
 2. Resume the paused Wave27 release/demo packaging (full-product demo script + release notes across MVP1–MVP6.12).
 
 ## Latest Role Reports
@@ -638,6 +642,9 @@ Next candidate gates (no active user directive — await instruction):
 | Review | wave-058 | `PASS / UI-UX REVIEW — 6 findings (2×P1, 2×P2, 2×P3)` | live-app review (desktop+mobile) per `ui_ux_reviewer_long.md`: F1 한/영 혼용(핵심 저니), F4 모바일 내비 첫화면 점유, F2 개발용어 노출, F3 raw ISO 타임스탬프, F5 잘린 카디널리티, F6 업로드 진입점; all Frontend-only; `docs/pm/UIUX_REVIEW_WAVE058.md` |
 | Frontend | wave-058 | `PASS / F1–F6 ALL DONE (commander-verified)` | 8 files (5 pages + mvp3/mvp4Shared + AppShell); F1 핵심 저니 한국어화(영어 잔존 0), F4 모바일 앱바+햄버거 드로어(0-overflow, H1 above-fold), F2 용어/내부명 제거, F3 formatDateTime, F5 카디널리티 라벨, F6 업로드 버튼; 116 tests + build + graphviz mock PASS; runtime-verified via live preview |
 | Docs | wave-058 | `DONE / END-TO-END USER GUIDE` | `docs/USER_GUIDE.md` — 처음부터 끝까지(개요→화면구조→온톨로지→소스→추출→후보/근거→검수→게시→품질→거버넌스→활용→관리) + 전체흐름 다이어그램 + 자주 막히는 지점 |
+| Research | wave-059 | `DONE / deep-research 108-agent` | Vercel/Linear/shadcn/Supabase/PatternFly/NN-g 등 검증된 8원칙(서페이스 레이어링·단일 accent·radius 스케일·콘텐츠 폭 3단·Inter 로드·빈상태 4변형·대기시간별 로딩·사이드바 collapse); 반박 항목(고정폭 단정 등) 제외 |
+| PM/Design | wave-059 | `FROZEN / PM6-039` | `docs/pm/DESIGN_DIRECTION_AI_SAAS_UPGRADE.md` — wave-037과 동일 전략(토큰+공용 프리미티브만 교체, 50라우트 개별 재작성 없음, additive) |
+| Frontend | wave-059 | `PASS / 디자인 업그레이드 (commander-verified)` | theme.ts(surface/radius base-lg-xl/contentWidth/sidebarWidthCollapsed 추가) + GlobalStyle(Inter self-host, heading letter-spacing) + HanaCard lg + PageState size prop + 신규 Skeleton/PageContainer + AppShell 데스크톱 아이콘 레일 collapse(localStorage 유지, 모바일 드로어 그대로); 세션 중 API 연결 끊김으로 1회 중단→재개 완료, 중단 중 발견한 sidebar 스크롤 회귀도 자체 수정; 116 tests + build PASS; 커맨더가 재검증: collapse+새로고침 유지·Inter 실제 로드(woff2 200)·모바일 0-overflow·다중 라우트(Copilot/Learning Insights 등) 정상 렌더 확인 |
 
 ## Report Index
 
@@ -701,3 +708,4 @@ Next candidate gates (no active user directive — await instruction):
 | wave-056 | `wave-056/PM_REPORT.md` | `wave-056/BACKEND_REPORT.md` | `wave-056/FRONTEND_REPORT.md` | `wave-056/QA_REPORT.md` | `wave-056/NEXT_ORDERS.md` |
 | wave-057 | — | — | — | `wave-057/QA_REPORT.md` | — (regression/closeout wave — QA only) |
 | wave-058 | `docs/pm/UIUX_REVIEW_WAVE058.md` (review) | — | `wave-058/FRONTEND_REPORT.md` | — | `docs/USER_GUIDE.md` (guide) |
+| wave-059 | `docs/pm/DESIGN_DIRECTION_AI_SAAS_UPGRADE.md` (design direction) | — | `wave-059/FRONTEND_REPORT.md` | — | — (deep-research 108-agent 결과 인용) |

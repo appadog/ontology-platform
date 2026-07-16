@@ -6,6 +6,7 @@ import { useProject, usePublishedGraphExplore } from "../shared/api/queries";
 import { GraphExploreState } from "../shared/api/types";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
+import { PageContainer } from "../shared/layout/PageContainer";
 import { HanaBadge, HanaButton, HanaCard } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
 import { CardBody, KeyValue, Mvp3ActionLink, Muted, Mvp3Workflow, Stack } from "./mvp3Shared";
@@ -51,7 +52,10 @@ export function PublishedGraphExplorerPage() {
   }
 
   return (
-    <>
+    // Wave 59 (PM6-039) §4/P4 showcase: the published graph is a "graph/code"
+    // surface — per the design doc, these get the `full` content width
+    // (no max-width cap) rather than the default 1200px list/table width.
+    <PageContainer width="full">
       <Breadcrumbs
         items={[
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
@@ -99,7 +103,7 @@ export function PublishedGraphExplorerPage() {
       ) : (
         <ExplorerView projectId={projectId} />
       )}
-    </>
+    </PageContainer>
   );
 }
 

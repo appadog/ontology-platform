@@ -15,14 +15,20 @@ interface HanaCardProps extends PropsWithChildren {
   action?: ReactNode;
   /** Visual weight / state surface. Defaults to the previous summary look. */
   emphasis?: HanaCardEmphasis;
+  /**
+   * Wave 59 (PM6-039) §4 ADD — corner-radius variant. `md` (default) keeps the
+   * exact prior radius (no regression on any existing call site); `lg` opts a
+   * card into the new large-panel radius rung (theme.radius.lg).
+   */
+  radius?: "md" | "lg";
   className?: string;
 }
 
-export function HanaCard({ title, description, eyebrow, action, emphasis = "summary", children, className }: HanaCardProps) {
+export function HanaCard({ title, description, eyebrow, action, emphasis = "summary", radius = "md", children, className }: HanaCardProps) {
   const hasHeader = Boolean(title || description || eyebrow || action);
 
   return (
-    <Card className={className} data-emphasis={emphasis}>
+    <Card className={className} data-emphasis={emphasis} data-radius={radius}>
       {hasHeader && (
         <CardHeader>
           <CardHeading>
@@ -69,6 +75,11 @@ const Card = styled.section`
   &[data-emphasis="danger"] {
     background: ${({ theme }) => theme.color.surfaceDanger};
     box-shadow: ${({ theme }) => theme.shadow.card};
+  }
+
+  /* Wave 59 (PM6-039) §4: opt-in large-panel radius rung. */
+  &[data-radius="lg"] {
+    border-radius: ${({ theme }) => theme.radius.lg};
   }
 `;
 

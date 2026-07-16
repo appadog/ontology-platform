@@ -32,6 +32,12 @@ export const theme = {
     surfaceSelected: "#fff7ed", // selected row / card background
     surfaceStrong: "#0f172a", // ONE dark summary / primary CTA area per screen
     textOnStrong: "#f8fafc", // text on surfaceStrong
+    // Wave 59 (PM6-039) ADD — P1 surface layering (Supabase surface-100~400
+    // idea, additive aliases only; no existing key renamed/removed).
+    surfaceBase: "#f7f9fb", // alias of `surface`
+    surfaceCard: "#ffffff", // alias of `surfaceRaised`
+    surfaceOverlay: "#eef2f7", // hover/modal background, alias of `surfaceMuted`
+    surfaceAccentPanel: "#eef4ff", // accent-tinted panel, tone-matched to `primary`/`accent`
   },
   shadow: {
     // Wave 37 (FE6-038): keep `soft` for hero/summary; ADD `card` (flat rest
@@ -41,8 +47,14 @@ export const theme = {
     card: "0 1px 2px rgba(23, 32, 51, 0.06)",
   },
   radius: {
+    // Wave 59 (PM6-039): base-derived scale (shadcn/ui `--radius` idea). `sm`
+    // and `md` KEEP their existing px values (no regression); `lg`/`xl` are new
+    // rungs derived from `base` (10px * 1.4 / * 1.8) for large panels/modals.
+    base: "10px",
     sm: "6px",
     md: "8px",
+    lg: "14px",
+    xl: "18px",
   },
   spacing: {
     xs: "4px",
@@ -90,4 +102,14 @@ export const theme = {
     },
   },
   sidebarWidth: "248px",
+  // Wave 59 (PM6-039) ADD — desktop icon-rail collapse width + per-purpose
+  // content-width scale (Supabase idea: forms=small, lists=default, graphs=full).
+  sidebarWidthCollapsed: "72px",
+  layout: {
+    contentWidth: {
+      small: "720px",
+      default: "1200px",
+      full: "none",
+    },
+  },
 };

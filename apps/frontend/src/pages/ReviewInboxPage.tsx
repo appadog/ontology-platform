@@ -5,8 +5,10 @@ import { useProject, useReviewTasks } from "../shared/api/queries";
 import { CandidateReviewStatus, ReviewTaskListFilters, ValidationStatus } from "../shared/api/types";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
+import { PageContainer } from "../shared/layout/PageContainer";
 import { HanaBadge, HanaCard, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
+import { Skeleton, useDelayedVisible } from "../shared/ui/platform/Skeleton";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
 import {
@@ -38,9 +40,19 @@ export function ReviewInboxPage() {
     [assignment, confidence, status, validationStatus],
   );
   const reviewTasksQuery = useReviewTasks(projectId, filters);
+  // Wave 59 (PM6-039) §4/P7 showcase: gate the table skeleton behind a 300ms
+  // delay (NN/g) so quick responses never flash a placeholder.
+  const showLoadingSkeleton = useDelayedVisible(300);
 
   if (projectQuery.isLoading || reviewTasksQuery.isLoading) {
-    return <PageState kind="loading" title="검수 인박스를 불러오는 중" description="검수 대상과 우선순위를 정리하고 있습니다." />;
+    if (!showLoadingSkeleton) {
+      return null;
+    }
+    return (
+      <PageContainer width="default">
+        <Skeleton variant="table-row" count={6} columns={6} />
+      </PageContainer>
+    );
   }
 
   if (projectQuery.isError || reviewTasksQuery.isError || !projectQuery.data || !reviewTasksQuery.data) {
@@ -62,7 +74,7 @@ export function ReviewInboxPage() {
   const assignedElsewhereCount = tasks.filter((task) => task.assignee_id && !task.is_assigned_to_me).length;
 
   return (
-    <>
+    <PageContainer width="default">
       <Breadcrumbs
         items={[
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
@@ -218,7 +230,7 @@ export function ReviewInboxPage() {
           </Muted>
         </CardBody>
       </HanaCard>
-    </>
+    </PageContainer>
   );
 }
 
