@@ -210,9 +210,24 @@ export const FieldLabel = styled.label`
   }
 `;
 
-export const CompactTable = styled.div`
+// Wave 60 (PM6-040, table-design deep-research): additive readability upgrade
+// shared by every CompactTable consumer (~15 pages) — no per-page changes
+// needed. New behavior is opt-in via transient props so all existing call
+// sites keep their exact current layout unless a page opts in:
+//   - `$stickyHeader` + `$maxHeight`: bounds the table to a scrollable region
+//     with a sticky header (confirmed pattern: position:sticky + top:0).
+//   - cells/headers can add `data-align="right"` for numeric columns
+//     (confirmed: right-align numeric, left-align text).
+// Always-on additive changes (safe for every existing consumer): row hover
+// highlight (previously NONE — the single biggest readability gap), a subtle
+// header background tint + semibold weight, and a comfortable ~44px row
+// height (Supabase Data Grid reference value).
+export const CompactTable = styled.div<{ $stickyHeader?: boolean; $maxHeight?: string }>`
   width: 100%;
   overflow-x: auto;
+  overflow-y: ${({ $maxHeight }) => ($maxHeight ? "auto" : "visible")};
+  max-height: ${({ $maxHeight }) => $maxHeight ?? "none"};
+  border-radius: ${({ theme }) => theme.radius.md};
 
   table {
     width: 100%;
@@ -222,16 +237,31 @@ export const CompactTable = styled.div`
 
   th,
   td {
-    padding: 13px 16px;
+    padding: 14px 16px;
     border-bottom: 1px solid ${({ theme }) => theme.color.border};
     text-align: left;
     vertical-align: top;
   }
 
+  th[data-align="right"],
+  td[data-align="right"] {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
   th {
+    background: ${({ theme }) => theme.color.surfaceOverlay};
     color: ${({ theme }) => theme.color.textMuted};
     font-size: ${({ theme }) => theme.typography.fontSize.xs};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
     text-transform: uppercase;
+    position: ${({ $stickyHeader }) => ($stickyHeader ? "sticky" : "static")};
+    top: 0;
+    z-index: 2;
+  }
+
+  tbody tr:hover td {
+    background: ${({ theme }) => theme.color.surfaceOverlay};
   }
 
   tr:last-child td {

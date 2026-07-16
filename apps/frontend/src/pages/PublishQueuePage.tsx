@@ -108,7 +108,7 @@ export function PublishQueuePage() {
               </HanaButton>
               <Muted>{selectedIds.length} selected</Muted>
             </QueueActions>
-            <CompactTable>
+            <CompactTable $stickyHeader $maxHeight="640px">
               <table>
                 <thead>
                   <tr>

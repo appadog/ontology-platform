@@ -119,8 +119,8 @@ export function QualityDashboardPage() {
                 <tr>
                   <th>Dimension</th>
                   <th>Label</th>
-                  <th>Value</th>
-                  <th>Rate</th>
+                  <th data-align="right">Value</th>
+                  <th data-align="right">Rate</th>
                 </tr>
               </thead>
               <tbody>
@@ -128,8 +128,8 @@ export function QualityDashboardPage() {
                   <tr key={`${row.dimension}-${row.label}`}>
                     <td>{row.dimension}</td>
                     <td>{row.label}</td>
-                    <td>{row.value}</td>
-                    <td>{row.rate === null || row.rate === undefined ? "Unavailable" : pct(row.rate)}</td>
+                    <td data-align="right">{row.value}</td>
+                    <td data-align="right">{row.rate === null || row.rate === undefined ? "Unavailable" : pct(row.rate)}</td>
                   </tr>
                 ))}
               </tbody>

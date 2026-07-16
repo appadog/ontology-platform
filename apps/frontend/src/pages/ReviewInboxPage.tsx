@@ -134,7 +134,7 @@ export function ReviewInboxPage() {
         <PageState kind="empty" title="이 조건에 해당하는 검수 대상이 없습니다" description="담당 또는 검증 필터를 바꿔 검수 큐 범위를 넓혀 보세요." />
       ) : (
         <HanaCard title={`검수 대상 ${reviewTasksQuery.data.total_count}건`} description="워크벤치를 열기 전에 우선순위와 사유가 먼저 보입니다.">
-          <CompactTable>
+          <CompactTable $stickyHeader $maxHeight="640px">
             <table>
               <thead>
                 <tr>
