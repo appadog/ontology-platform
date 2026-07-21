@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import styled from "styled-components";
 import { HanaBadge } from "../shared/ui/hana";
 import { AuditEventRef, ProjectAdminSummary } from "../shared/api/types";
+import { CompactTable } from "./mvp3Shared";
 
 export const MVP5_DEFAULT_PROJECT_ID = "project-corp-knowledge";
 export const MVP5_DEFAULT_ORGANIZATION_ID = import.meta.env.VITE_MVP5_ORGANIZATION_ID ?? "org-ontology-demo";
@@ -125,33 +126,22 @@ export const AdminPanel = styled.section`
   }
 `;
 
-export const AdminTable = styled.div`
-  min-width: 0;
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+// Wave 61 (PM6-040 follow-up): AdminTable now composes the shared
+// CompactTable (mvp3Shared) so all 7 admin-console tables inherit its row
+// hover highlight, tinted+semibold header, radius, and sticky/align opt-ins.
+// The bordered container + cell overflow-wrap are AdminTable's own genuine
+// customizations (distinct from CompactTable's other ~15 consumers) and are
+// preserved here rather than dropped.
+export const AdminTable = styled(CompactTable)`
   border: 1px solid ${({ theme }) => theme.color.border};
-  border-radius: ${({ theme }) => theme.radius.sm};
 
   table {
-    width: 100%;
-    min-width: 760px;
-    border-collapse: collapse;
     background: ${({ theme }) => theme.color.surface};
   }
 
   th,
   td {
-    padding: 12px;
-    border-bottom: 1px solid ${({ theme }) => theme.color.border};
-    text-align: left;
-    vertical-align: top;
     overflow-wrap: anywhere;
-  }
-
-  th {
-    color: ${({ theme }) => theme.color.textMuted};
-    font-size: ${({ theme }) => theme.typography.fontSize.sm};
   }
 `;
 

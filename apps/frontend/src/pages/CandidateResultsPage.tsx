@@ -9,7 +9,8 @@ import { HanaBadge, HanaButton, HanaCard, HanaSelect, statusToTone } from "../sh
 import { PageState } from "../shared/ui/platform/PageState";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
-import { DataLink, Field, FormGrid, InlineList, KeyValueGrid, Mono, MutedText, TableWrap, WorkflowStage, formatPercent } from "./mvp2Shared";
+import { DataLink, Field, FormGrid, InlineList, KeyValueGrid, Mono, MutedText, WorkflowStage, formatPercent } from "./mvp2Shared";
+import { CompactTable } from "./mvp3Shared";
 
 type EvidenceFilter = "ALL" | "WITH_EVIDENCE" | "MISSING_EVIDENCE";
 type ValidationFilter = "ALL" | ValidationStatus;
@@ -214,7 +215,7 @@ export function CandidateResultsPage() {
             {filteredEntities.length === 0 ? (
               <PageState kind="empty" title="Entity candidate가 없습니다" description="현재 filter 조건에 맞는 entity candidate가 없습니다." />
             ) : (
-              <TableWrap>
+              <CompactTable>
                 <table>
                   <thead>
                     <tr>
@@ -264,7 +265,7 @@ export function CandidateResultsPage() {
                     ))}
                   </tbody>
                 </table>
-              </TableWrap>
+              </CompactTable>
             )}
           </CandidateTableCard>
           )}
@@ -273,7 +274,7 @@ export function CandidateResultsPage() {
             {filteredRelations.length === 0 ? (
               <PageState kind="empty" title="Relation candidate가 없습니다" description="현재 filter 조건에 맞는 relation candidate가 없습니다." />
             ) : (
-              <TableWrap>
+              <CompactTable>
                 <table>
                   <thead>
                     <tr>
@@ -326,7 +327,7 @@ export function CandidateResultsPage() {
                     ))}
                   </tbody>
                 </table>
-              </TableWrap>
+              </CompactTable>
             )}
           </CandidateTableCard>
           )}

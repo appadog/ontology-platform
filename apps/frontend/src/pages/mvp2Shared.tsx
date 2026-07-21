@@ -41,48 +41,6 @@ export function formatPercent(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
-export const TableWrap = styled.div`
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-  border-radius: ${({ theme }) => theme.radius.sm};
-
-  table {
-    width: 100%;
-    min-width: 760px;
-    border-collapse: collapse;
-  }
-
-  th,
-  td {
-    padding: 14px 18px;
-    border-bottom: 1px solid ${({ theme }) => theme.color.border};
-    text-align: left;
-    vertical-align: top;
-  }
-
-  th {
-    color: ${({ theme }) => theme.color.textMuted};
-    font-size: ${({ theme }) => theme.typography.fontSize.xs};
-    text-transform: uppercase;
-  }
-
-  tr:last-child td {
-    border-bottom: 0;
-  }
-
-  @media (max-width: 760px) {
-    th,
-    td {
-      padding: 12px 14px;
-    }
-  }
-`;
-
 export const PanelGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

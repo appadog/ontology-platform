@@ -8,6 +8,7 @@ import { HanaBadge, HanaButton, HanaCard, HanaInput, statusToTone } from "../sha
 import { PageState } from "../shared/ui/platform/PageState";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
+import { CompactTable } from "./mvp3Shared";
 
 export function ProjectListPage() {
   const { data: projects, isLoading, isError, refetch } = useProjects();
@@ -89,14 +90,14 @@ export function ProjectListPage() {
         <PageState kind="empty" title="프로젝트가 없습니다" description="새 프로젝트를 만들면 Ontology와 Source 작업을 시작할 수 있습니다." />
       ) : (
         <HanaCard>
-          <TableWrap>
+          <CompactTable>
             <table>
               <thead>
                 <tr>
                   <th>Name</th>
                   <th>Status</th>
-                  <th>Sources</th>
-                  <th>Ontology Versions</th>
+                  <th data-align="right">Sources</th>
+                  <th data-align="right">Ontology Versions</th>
                   <th>Updated</th>
                 </tr>
               </thead>
@@ -112,47 +113,19 @@ export function ProjectListPage() {
                     <td>
                       <StatusBadge token={project.status} tone={statusToTone(project.status)} />
                     </td>
-                    <td>{project.source_count}</td>
-                    <td>{project.ontology_version_count}</td>
+                    <td data-align="right">{project.source_count}</td>
+                    <td data-align="right">{project.ontology_version_count}</td>
                     <td>{formatDateTime(project.updated_at)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </TableWrap>
+          </CompactTable>
         </HanaCard>
       )}
     </>
   );
 }
-
-const TableWrap = styled.div`
-  overflow-x: auto;
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  th,
-  td {
-    padding: 16px 18px;
-    border-bottom: 1px solid ${({ theme }) => theme.color.border};
-    text-align: left;
-    vertical-align: middle;
-  }
-
-  th {
-    color: ${({ theme }) => theme.color.textMuted};
-    font-size: 12px;
-    letter-spacing: 0;
-    text-transform: uppercase;
-  }
-
-  tr:last-child td {
-    border-bottom: 0;
-  }
-`;
 
 const ProjectLink = styled(Link)`
   display: grid;

@@ -9,7 +9,8 @@ import { HanaBadge, HanaButton, HanaCard, statusToTone } from "../shared/ui/hana
 import { PageState } from "../shared/ui/platform/PageState";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
-import { ButtonSlot, DataLink, KeyValueGrid, Mono, SecondaryActionLink, TableWrap, WorkflowStage } from "./mvp2Shared";
+import { ButtonSlot, DataLink, KeyValueGrid, Mono, SecondaryActionLink, WorkflowStage } from "./mvp2Shared";
+import { CompactTable } from "./mvp3Shared";
 
 export function ExtractionJobMonitorPage() {
   const { projectId = "", jobId = "" } = useParams();
@@ -117,7 +118,7 @@ export function ExtractionJobMonitorPage() {
           {modelRunsQuery.data.length === 0 ? (
             <PageState kind="empty" title="실행 기록이 없습니다" description="실행을 시작하면 기록이 표시됩니다." />
           ) : (
-            <TableWrap>
+            <CompactTable>
               <table>
                 <thead>
                   <tr>
@@ -148,7 +149,7 @@ export function ExtractionJobMonitorPage() {
                   ))}
                 </tbody>
               </table>
-            </TableWrap>
+            </CompactTable>
           )}
         </HanaCard>
       </>
@@ -209,7 +210,7 @@ export function ExtractionJobMonitorPage() {
         />
       ) : (
         <HanaCard title="추출 작업 목록">
-          <TableWrap>
+          <CompactTable>
             <table>
               <thead>
                 <tr>
@@ -246,7 +247,7 @@ export function ExtractionJobMonitorPage() {
                 ))}
               </tbody>
             </table>
-          </TableWrap>
+          </CompactTable>
         </HanaCard>
       )}
     </>

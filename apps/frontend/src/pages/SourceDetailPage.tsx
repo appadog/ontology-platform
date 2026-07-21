@@ -9,6 +9,7 @@ import { PageState } from "../shared/ui/platform/PageState";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatBytes, formatDateTime } from "../shared/lib/format";
 import { WorkflowStage } from "./mvp2Shared";
+import { CompactTable } from "./mvp3Shared";
 
 export function SourceDetailPage() {
   const { sourceId = "" } = useParams();
@@ -166,7 +167,7 @@ export function SourceDetailPage() {
               </ColumnPill>
             ))}
           </ColumnList>
-          <PreviewTable>
+          <CompactTable>
             <table>
               <thead>
                 <tr>
@@ -185,7 +186,7 @@ export function SourceDetailPage() {
                 ))}
               </tbody>
             </table>
-          </PreviewTable>
+          </CompactTable>
           {(preview.warnings?.length ?? 0) > 0 && (
             <WarningList>
               {preview.warnings?.map((warning) => (
@@ -334,28 +335,6 @@ const MetaList = styled.dl`
     margin: 0;
     min-width: 0;
     overflow-wrap: anywhere;
-  }
-`;
-
-const PreviewTable = styled.div`
-  overflow-x: auto;
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  th,
-  td {
-    padding: 14px 18px;
-    border-bottom: 1px solid ${({ theme }) => theme.color.border};
-    text-align: left;
-  }
-
-  th {
-    color: ${({ theme }) => theme.color.textMuted};
-    font-size: 12px;
-    text-transform: uppercase;
   }
 `;
 

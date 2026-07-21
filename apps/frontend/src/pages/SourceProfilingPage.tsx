@@ -7,7 +7,8 @@ import { HanaBadge, HanaButton, HanaCard } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
 import { formatDateTime } from "../shared/lib/format";
-import { formatPercent, InlineList, MutedText, PanelGrid, TableWrap } from "./mvp2Shared";
+import { formatPercent, InlineList, MutedText, PanelGrid } from "./mvp2Shared";
+import { CompactTable } from "./mvp3Shared";
 
 export function SourceProfilingPage() {
   const { sourceId = "" } = useParams();
@@ -84,7 +85,7 @@ export function SourceProfilingPage() {
         <PageState kind="empty" title="프로파일 컬럼이 없습니다" description="비어 있거나 컬럼이 없는 Source는 warning과 함께 빈 프로파일로 표시됩니다." />
       ) : (
         <HanaCard title="Column profile" description="컬럼 타입, null 비율, 샘플 값을 확인합니다.">
-          <TableWrap>
+          <CompactTable>
             <table>
               <thead>
                 <tr>
@@ -117,7 +118,7 @@ export function SourceProfilingPage() {
                 ))}
               </tbody>
             </table>
-          </TableWrap>
+          </CompactTable>
         </HanaCard>
       )}
     </>

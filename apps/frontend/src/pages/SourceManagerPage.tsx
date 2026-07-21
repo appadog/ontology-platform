@@ -10,6 +10,7 @@ import { PageState } from "../shared/ui/platform/PageState";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatBytes, formatDateTime } from "../shared/lib/format";
 import { SourceType } from "../shared/api/types";
+import { CompactTable } from "./mvp3Shared";
 
 export function SourceManagerPage() {
   const { projectId = "" } = useParams();
@@ -137,7 +138,7 @@ export function SourceManagerPage() {
         />
       ) : (
         <HanaCard emphasis="default" eyebrow="업로드된 원천 데이터" title="원천 데이터 목록">
-          <TableWrap>
+          <CompactTable>
             <table>
               <thead>
                 <tr>
@@ -179,39 +180,12 @@ export function SourceManagerPage() {
                 ))}
               </tbody>
             </table>
-          </TableWrap>
+          </CompactTable>
         </HanaCard>
       )}
     </>
   );
 }
-
-const TableWrap = styled.div`
-  overflow-x: auto;
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  th,
-  td {
-    padding: ${({ theme }) => theme.spacing.lg};
-    border-bottom: 1px solid ${({ theme }) => theme.color.border};
-    text-align: left;
-    vertical-align: middle;
-  }
-
-  th {
-    color: ${({ theme }) => theme.color.textMuted};
-    font-size: ${({ theme }) => theme.typography.fontSize.xs};
-    text-transform: uppercase;
-  }
-
-  tr:last-child td {
-    border-bottom: 0;
-  }
-`;
 
 const SourceLink = styled(Link)`
   display: grid;

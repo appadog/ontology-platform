@@ -4,8 +4,8 @@
 
 ## Latest Wave
 
-- Current wave: `wave-060`
-- Overall status: `테이블 디자인 개선 PASS (CompactTable 공용 프리미티브 업그레이드, 15페이지·40+ 사용처 일괄 반영, additive) — 전 기능 유지 확인`
+- Current wave: `wave-061`
+- Overall status: `CompactTable 이관 완료 (raw <table> 13파일 전부 처리 — 12곳 마이그레이션 + 1곳 의도적 스킵) — 전 기능 유지 확인`
 - 기준일: 2026-07-15
 
 ## Latest Decisions
@@ -419,8 +419,12 @@ MVP6.12 Advanced Visualization is closed (Wave55 planning + Wave56 implementatio
 
 **✅ Wave59 = AI SaaS 레퍼런스 기반 디자인 시스템 업그레이드.** `/deep-research`(108 서브에이전트, Vercel/Linear/shadcn/Supabase/PatternFly/NN-g 검증 근거)로 8원칙 확정 → `docs/pm/DESIGN_DIRECTION_AI_SAAS_UPGRADE.md` 동결 → wave-037과 동일한 토큰/공용 프리미티브 전략으로 구현(라우트/API 변경 없음). Inter 폰트 self-host 실로드, radius/서페이스/콘텐츠폭 토큰 additive 추가, 데스크톱 사이드바 아이콘 레일 collapse(localStorage 유지, 모바일 드로어 그대로), PageState size / Skeleton / PageContainer 신규. 116 tests + build PASS, 커맨더가 실제 화면에서 collapse·새로고침 유지·폰트 로딩·모바일 0-overflow·다중 라우트 렌더를 재검증. **P3 팔로업**: 메인 JS 청크가 759KB로 650KB 경고 임계 초과(신규 폰트/컴포넌트 포함) — `manualChunks` 조정 또는 `chunkSizeWarningLimit` 재검토 필요.
 
+**✅ Wave60 = 테이블 디자인 개선.** `/deep-research` 확정 근거로 `CompactTable`(15페이지·40+ 사용처 공용) 업그레이드 — 행 hover, 헤더 톤+sticky, 우측정렬 opt-in. `docs/pm/DESIGN_DIRECTION_TABLE_UPGRADE.md`.
+
+**✅ Wave61 = CompactTable 이관 완료.** Wave60에서 남긴 나머지 raw `<table>` 13파일 처리: 12곳 마이그레이션(6곳 직접 + admin 7페이지는 공용 `AdminTable`을 `styled(CompactTable)`로 재정의해 일괄 반영) + `EvidenceViewerPage` 1곳은 구조가 달라 의도적 스킵. 이제 사실상 전체 데이터 테이블이 `CompactTable` 기반으로 통일됨.
+
 Next candidate gates (no active user directive — await instruction):
-1. Sweep the accumulated P1/P2/P3 follow-ups in one hardening wave: the two Wave57 smoke-harness gaps above; `smoke:mvp6:graphviz:actual` + packs actual smoke; stale `openapi-mvp2-draft.json` regen; SQLite smoke-boot doc; strict-required field promotion; divergent-run seed; shared error-envelope unwrap helper (wave-052 P1); Wave59 bundle-size follow-up above; wave-058에서 남긴 게시 큐/품질 대시보드 잔여 영문 카피(F1 확장); Wave60에서 남긴 나머지 raw `<table>` 페이지(`CompactTable` 미사용, 예: `SourceManagerPage`/일부 admin 페이지)의 `CompactTable` 이관.
+1. Sweep the accumulated P1/P2/P3 follow-ups in one hardening wave: the two Wave57 smoke-harness gaps above; `smoke:mvp6:graphviz:actual` + packs actual smoke; stale `openapi-mvp2-draft.json` regen; SQLite smoke-boot doc; strict-required field promotion; divergent-run seed; shared error-envelope unwrap helper (wave-052 P1); Wave59 bundle-size follow-up above; wave-058에서 남긴 게시 큐/품질 대시보드 잔여 영문 카피(F1 확장).
 2. Resume the paused Wave27 release/demo packaging (full-product demo script + release notes across MVP1–MVP6.12).
 
 ## Latest Role Reports
@@ -646,6 +650,7 @@ Next candidate gates (no active user directive — await instruction):
 | PM/Design | wave-059 | `FROZEN / PM6-039` | `docs/pm/DESIGN_DIRECTION_AI_SAAS_UPGRADE.md` — wave-037과 동일 전략(토큰+공용 프리미티브만 교체, 50라우트 개별 재작성 없음, additive) |
 | Frontend | wave-059 | `PASS / 디자인 업그레이드 (commander-verified)` | theme.ts(surface/radius base-lg-xl/contentWidth/sidebarWidthCollapsed 추가) + GlobalStyle(Inter self-host, heading letter-spacing) + HanaCard lg + PageState size prop + 신규 Skeleton/PageContainer + AppShell 데스크톱 아이콘 레일 collapse(localStorage 유지, 모바일 드로어 그대로); 세션 중 API 연결 끊김으로 1회 중단→재개 완료, 중단 중 발견한 sidebar 스크롤 회귀도 자체 수정; 116 tests + build PASS; 커맨더가 재검증: collapse+새로고침 유지·Inter 실제 로드(woff2 200)·모바일 0-overflow·다중 라우트(Copilot/Learning Insights 등) 정상 렌더 확인 |
 | Research/Design/Frontend | wave-060 | `PASS / 테이블 디자인 개선 (commander 직접 구현+검증)` | `/deep-research`(세션 한도로 일부 실패, synthesize 전 확정 10건으로 진행) → `docs/pm/DESIGN_DIRECTION_TABLE_UPGRADE.md`; `CompactTable`(mvp3Shared.tsx, 15페이지·40+ 사용처 공용) 업그레이드 — 행 hover(이전 전무), 헤더 톤+semibold+sticky, radius, `data-align="right"` opt-in, `$stickyHeader`/`$maxHeight` opt-in(기존 40개 사용처 100% 회귀 없음); 쇼케이스 3페이지(Review inbox/Publish queue sticky, Quality 우측정렬) 적용; 116 tests+build PASS; 라이브 프리뷰로 sticky/hover/정렬/무영향 페이지(Governance) 렌더 실측 확인, 모바일 0-overflow 유지 |
+| Frontend | wave-061 | `PASS / CompactTable 이관 (commander-verified)` | 나머지 raw `<table>` 13파일 처리: 6개 직접 이관(CandidateResults/ExtractionJobMonitor/ProjectList/SourceDetail/SourceManager/SourceProfiling, 구식 bespoke wrapper 삭제·mvp2Shared의 죽은 TableWrap도 제거) + admin 7페이지는 공용 `AdminTable`(mvp5Shared.tsx) 발견 → `styled(CompactTable)`로 재정의(테두리 박스+overflow-wrap 커스터마이징 보존)해 페이지별 수정 없이 일괄 반영; `EvidenceViewerPage`는 구조가 다른 하이라이트 위젯이라 의도적 스킵(사유 기록); 116 tests+build PASS; 커맨더가 admin/projects·projects 페이지에서 헤더 톤(rgb(238,242,247)/600)+테두리 보존 실측 확인 |
 
 ## Report Index
 
@@ -711,3 +716,4 @@ Next candidate gates (no active user directive — await instruction):
 | wave-058 | `docs/pm/UIUX_REVIEW_WAVE058.md` (review) | — | `wave-058/FRONTEND_REPORT.md` | — | `docs/USER_GUIDE.md` (guide) |
 | wave-059 | `docs/pm/DESIGN_DIRECTION_AI_SAAS_UPGRADE.md` (design direction) | — | `wave-059/FRONTEND_REPORT.md` | — | — (deep-research 108-agent 결과 인용) |
 | wave-060 | `docs/pm/DESIGN_DIRECTION_TABLE_UPGRADE.md` (design direction) | — | — (commander 직접 구현, 별도 리포트 없음) | — | — |
+| wave-061 | — | — | `wave-061/FRONTEND_REPORT.md` | — | — |
