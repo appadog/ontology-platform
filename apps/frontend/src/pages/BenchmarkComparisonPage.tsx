@@ -327,7 +327,17 @@ function PriorComparisons({
       </SectionTitle>
       <Mvp4Grid>
         {items.map((item) => (
-          <HanaCard key={item.id} title={item.id} description={`${item.run_count} runs · grouped by ${item.group_by}`}>
+          // Wave 65 (PM6-042 follow-up): whole-card click (hover lift +
+          // keyboard), matching the treatment already applied to the
+          // Ontology Packs / Connectors catalog cards. The nested button
+          // keeps its own independent onClick (stopping propagation so it
+          // doesn't double-fire the same select through the card handler).
+          <HanaCard
+            key={item.id}
+            title={item.id}
+            description={`${item.run_count} runs · grouped by ${item.group_by}`}
+            onClick={() => onSelect(item.id)}
+          >
             <CardBody>
               <Muted>Baseline {item.baseline_run_id}</Muted>
               <FlagRow>
@@ -338,7 +348,10 @@ function PriorComparisons({
               <HanaButton
                 type="button"
                 variant={item.id === activeComparisonId ? "primary" : "secondary"}
-                onClick={() => onSelect(item.id)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect(item.id);
+                }}
               >
                 {item.id === activeComparisonId ? "Viewing" : "Open comparison"}
               </HanaButton>

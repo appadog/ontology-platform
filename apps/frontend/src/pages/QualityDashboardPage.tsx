@@ -21,8 +21,8 @@ export function QualityDashboardPage() {
     return (
       <PageState
         kind="loading"
-        title="Quality metrics are loading"
-        description="Metric groups and formula metadata are being prepared for the selected project."
+        title="품질 지표를 불러오는 중"
+        description="선택한 프로젝트의 지표 그룹과 계산식 메타데이터를 준비하고 있습니다."
       />
     );
   }
@@ -31,9 +31,9 @@ export function QualityDashboardPage() {
     return (
       <PageState
         kind="error"
-        title="Quality metrics could not load"
-        description="Keep the project selected and retry the metrics request."
-        actionLabel="Retry"
+        title="품질 지표를 불러오지 못했습니다"
+        description="프로젝트 선택을 유지한 채 지표 조회를 다시 시도하세요."
+        actionLabel="다시 시도"
         onAction={() => {
           void projectQuery.refetch();
           void metricsQuery.refetch();
@@ -53,15 +53,15 @@ export function QualityDashboardPage() {
       <Breadcrumbs
         items={[
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Quality" },
+          { label: "품질" },
         ]}
       />
       <PageHeader title="품질 대시보드" description={`${versionLabel(metrics.published_graph_version_ref)} · ${formatDateTime(metrics.generated_at)}`}>
         <PageActions>
-          <HanaBadge tone="success">METRIC GROUPS</HanaBadge>
-          <HanaBadge tone="muted">NO COMPOSITE SCORE</HanaBadge>
-          <Mvp3ActionLink to={`/projects/${projectId}/published-graph`}>Published graph</Mvp3ActionLink>
-          <Mvp3ActionLink to={`/projects/${projectId}/search`}>Search</Mvp3ActionLink>
+          <HanaBadge tone="success">METRIC GROUPS · 지표 그룹</HanaBadge>
+          <HanaBadge tone="muted">NO COMPOSITE SCORE · 종합 점수 없음</HanaBadge>
+          <Mvp3ActionLink to={`/projects/${projectId}/published-graph`}>게시 그래프</Mvp3ActionLink>
+          <Mvp3ActionLink to={`/projects/${projectId}/search`}>검색</Mvp3ActionLink>
         </PageActions>
       </PageHeader>
 
@@ -70,36 +70,36 @@ export function QualityDashboardPage() {
       <QualitySummaryStrip summary={summaryQuery.data} metrics={metrics} />
 
       <QualityContext>
-        <Mvp4StatePanel title="Project context">
-          {projectQuery.data.name} stays in scope for every metric, drilldown, and version selector.
+        <Mvp4StatePanel title="프로젝트 맥락">
+          {projectQuery.data.name}은(는) 모든 지표·드릴다운·버전 선택기에서 범위로 유지됩니다.
         </Mvp4StatePanel>
-        <Mvp4StatePanel title="Published graph version context">
-          {historicalMetric ? `A non-current row is visible through ${versionLabel(historicalMetric.published_graph_version_ref)}.` : versionLabel(metrics.published_graph_version_ref)}
+        <Mvp4StatePanel title="게시 그래프 버전 맥락">
+          {historicalMetric ? `현재가 아닌 행이 ${versionLabel(historicalMetric.published_graph_version_ref)}를 통해 표시됩니다.` : versionLabel(metrics.published_graph_version_ref)}
         </Mvp4StatePanel>
-        <Mvp4StatePanel title="Partial metric state">
-          {partialMetric ? `${partialMetric.label} keeps formula and drilldown visible while one value is partial.` : "All fixture metrics include current values."}
+        <Mvp4StatePanel title="부분 지표 상태">
+          {partialMetric ? `${partialMetric.label} 지표는 값 일부가 부분적이어도 수식과 드릴다운을 계속 표시합니다.` : "모든 기준 지표가 현재 값을 포함하고 있습니다."}
         </Mvp4StatePanel>
       </QualityContext>
 
       {metrics.metric_groups.length === 0 ? (
-        <PageState kind="empty" title="No quality metrics" description="Reset filters or publish graph facts before reading advanced quality metrics." />
+        <PageState kind="empty" title="품질 지표가 없습니다" description="고급 품질 지표를 확인하려면 필터를 초기화하거나 그래프 사실을 게시하세요." />
       ) : (
         <Mvp4Grid>
           {metrics.metric_groups.map((group) => (
-            <HanaCard key={group.group} title={advancedMetricGroupTitle(group.label)} description={group.description ?? "Explainable metric group"}>
+            <HanaCard key={group.group} title={advancedMetricGroupTitle(group.label)} description={group.description ?? "설명 가능한 지표 그룹"}>
               <MetricList>
                 {group.metrics.map((metric) => (
                   <MetricItem key={metric.metric_id}>
                     <strong>{valueLabel(metric.value, metric.rate)}</strong>
                     <span>{metric.label}</span>
-                    <small>{metric.trend === null || metric.trend === undefined ? "Trend unavailable" : `Trend ${pct(metric.trend)}`}</small>
-                    {metric.published_graph_version_ref?.is_current === false ? <HanaBadge tone="warning">SELECTED VERSION</HanaBadge> : null}
+                    <small>{metric.trend === null || metric.trend === undefined ? "추이 정보 없음" : `추이 ${pct(metric.trend)}`}</small>
+                    {metric.published_graph_version_ref?.is_current === false ? <HanaBadge tone="warning">SELECTED VERSION · 선택된 버전</HanaBadge> : null}
                     {/* D5: per-metric numerator/denominator/formula trust
                         context — the explainable evidence the product promotes.
                         Kept visible beneath the always-visible summary strip;
                         the strip is the at-a-glance layer above it. */}
                     <MetricTrustContext metric={metric} />
-                    {metric.drilldown ? <DrilldownLink to={drilldownPath(projectId, metric.drilldown.target)}>{metric.drilldown.label ?? "Open drilldown"}</DrilldownLink> : null}
+                    {metric.drilldown ? <DrilldownLink to={drilldownPath(projectId, metric.drilldown.target)}>{metric.drilldown.label ?? "드릴다운 열기"}</DrilldownLink> : null}
                   </MetricItem>
                 ))}
               </MetricList>
@@ -109,18 +109,18 @@ export function QualityDashboardPage() {
       )}
 
       <FormulaGrid>
-        <HanaCard title="Formula explainer" description={formulaMetric?.label ?? "Select a metric"}>
-          <CardBody>{formulaMetric ? <FormulaMetadata metric={formulaMetric} /> : <Muted>No formula selected.</Muted>}</CardBody>
+        <HanaCard title="계산식 설명" description={formulaMetric?.label ?? "지표를 선택하세요"}>
+          <CardBody>{formulaMetric ? <FormulaMetadata metric={formulaMetric} /> : <Muted>선택된 계산식이 없습니다.</Muted>}</CardBody>
         </HanaCard>
-        <HanaCard title="Drilldown rows" description="Breakdowns keep the active version and project context.">
+        <HanaCard title="드릴다운 행" description="분석 항목은 현재 활성 버전과 프로젝트 맥락을 유지합니다.">
           <CompactTable>
             <table>
               <thead>
                 <tr>
-                  <th>Dimension</th>
-                  <th>Label</th>
-                  <th data-align="right">Value</th>
-                  <th data-align="right">Rate</th>
+                  <th>차원</th>
+                  <th>라벨</th>
+                  <th data-align="right">값</th>
+                  <th data-align="right">비율</th>
                 </tr>
               </thead>
               <tbody>
@@ -129,7 +129,7 @@ export function QualityDashboardPage() {
                     <td>{row.dimension}</td>
                     <td>{row.label}</td>
                     <td data-align="right">{row.value}</td>
-                    <td data-align="right">{row.rate === null || row.rate === undefined ? "Unavailable" : pct(row.rate)}</td>
+                    <td data-align="right">{row.rate === null || row.rate === undefined ? "확인 불가" : pct(row.rate)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -139,7 +139,7 @@ export function QualityDashboardPage() {
       </FormulaGrid>
 
       <CollapseSection>
-        <summary>MVP3 candidate / validation / review / publish summary</summary>
+        <summary>후보 / 검증 / 검수 / 게시 요약 (MVP3)</summary>
         <LegacyQualitySummary summary={summaryQuery.data} />
       </CollapseSection>
     </>
@@ -203,43 +203,43 @@ function QualitySummaryStrip({ summary, metrics }: { summary: QualitySummary; me
 function LegacyQualitySummary({ summary }: { summary: QualitySummary }) {
   return (
     <LegacySummaryGrid aria-label="MVP3 quality summary">
-      <HanaCard title="Candidates" description="Typed candidate metrics remain visible for MVP3 regression and MVP4 drilldown context.">
+      <HanaCard title="후보" description="후보 지표는 MVP3 회귀 확인과 MVP4 드릴다운 맥락을 위해 계속 표시됩니다.">
         <CardBody>
           <KeyValue>
-            <dt>Total</dt>
+            <dt>전체</dt>
             <dd>{summary.candidate_counts.total.value}</dd>
-            <dt>Missing evidence</dt>
+            <dt>근거 없음</dt>
             <dd>{summary.candidate_counts.missing_evidence.value}</dd>
           </KeyValue>
         </CardBody>
       </HanaCard>
-      <HanaCard title="Validation" description="Validation status counts stay separate from advanced quality groups.">
+      <HanaCard title="검증" description="검증 상태 수치는 고급 품질 그룹과 별도로 유지됩니다.">
         <CardBody>
           <KeyValue>
-            <dt>Passed</dt>
+            <dt>통과</dt>
             <dd>{summary.validation_counts.passed.value}</dd>
-            <dt>Failed</dt>
+            <dt>실패</dt>
             <dd>{summary.validation_counts.failed.value}</dd>
           </KeyValue>
         </CardBody>
       </HanaCard>
-      <HanaCard title="Review" description="Reviewer outcomes remain tied to the review inbox and workbench.">
+      <HanaCard title="검수" description="검수자 결과는 검수 인박스·워크벤치와 연결되어 유지됩니다.">
         <CardBody>
           <KeyValue>
-            <dt>Approved</dt>
+            <dt>승인됨</dt>
             <dd>{summary.review_counts.approved.value}</dd>
-            <dt>Needs discussion</dt>
+            <dt>논의 필요</dt>
             <dd>{summary.review_counts.needs_discussion.value}</dd>
           </KeyValue>
         </CardBody>
       </HanaCard>
-      <HanaCard title="Publish" description="Published graph ratios are still visible beside MVP4 metric groups.">
+      <HanaCard title="게시" description="게시 비율은 MVP4 지표 그룹 옆에 계속 표시됩니다.">
         <CardBody>
           <strong>
-            Published ratio · {summary.rates.published_ratio.numerator}/{summary.rates.published_ratio.denominator}
+            게시 비율 · {summary.rates.published_ratio.numerator}/{summary.rates.published_ratio.denominator}
           </strong>
           <Muted>
-            {summary.publish_counts.published.value} published candidates · current graph v{summary.publish_counts.current_version ?? "-"}
+            게시된 후보 {summary.publish_counts.published.value}건 · 현재 그래프 v{summary.publish_counts.current_version ?? "-"}
           </Muted>
         </CardBody>
       </HanaCard>
@@ -251,19 +251,19 @@ function MetricTrustContext({ metric }: { metric: QualityMetric }) {
   return (
     <TrustPanel aria-label={`${metric.label} recomputation context`}>
       <KeyValue>
-        <dt>Rate context</dt>
+        <dt>비율 맥락</dt>
         <dd>
           {metric.unit} · {valueLabel(metric.value, metric.rate)}
         </dd>
-        <dt>Numerator</dt>
+        <dt>분자</dt>
         <dd>{metric.formula.numerator}</dd>
-        <dt>Denominator</dt>
+        <dt>분모</dt>
         <dd>{metric.formula.denominator}</dd>
-        <dt>Formula ID</dt>
+        <dt>계산식 ID</dt>
         <dd>{metric.formula.formula_id}</dd>
-        <dt>Drilldown target</dt>
+        <dt>드릴다운 대상</dt>
         <dd>{metric.formula.drilldown_target}</dd>
-        <dt>Published version</dt>
+        <dt>게시 버전</dt>
         <dd>{versionLabel(metric.published_graph_version_ref)}</dd>
       </KeyValue>
     </TrustPanel>
@@ -274,26 +274,26 @@ function FormulaMetadata({ metric }: { metric: QualityMetric }) {
   return (
     <Stack>
       <KeyValue>
-        <dt>Formula ID</dt>
+        <dt>계산식 ID</dt>
         <dd>{metric.formula.formula_id}</dd>
-        <dt>Numerator</dt>
+        <dt>분자</dt>
         <dd>{metric.formula.numerator}</dd>
-        <dt>Denominator</dt>
+        <dt>분모</dt>
         <dd>{metric.formula.denominator}</dd>
-        <dt>Scope</dt>
+        <dt>범위</dt>
         <dd>{metric.formula.scope}</dd>
-        <dt>Window</dt>
+        <dt>기간</dt>
         <dd>{metric.formula.time_window}</dd>
-        <dt>Breakdown</dt>
+        <dt>세분화 기준</dt>
         <dd>{metric.formula.breakdown_dimension}</dd>
-        <dt>Drilldown target</dt>
+        <dt>드릴다운 대상</dt>
         <dd>{metric.formula.drilldown_target}</dd>
-        <dt>Published version</dt>
+        <dt>게시 버전</dt>
         <dd>{versionLabel(metric.published_graph_version_ref)}</dd>
       </KeyValue>
       <Mvp4Panel>
-        <strong>{metric.formula.description ?? "Formula metadata"}</strong>
-        <span>{metric.formula.notes ?? "Metric values remain separate by group for MVP4 P0; frontend displays trust context only."}</span>
+        <strong>{metric.formula.description ?? "계산식 메타데이터"}</strong>
+        <span>{metric.formula.notes ?? "지표 값은 MVP4 P0 기준 그룹별로 분리되어 있으며, 프론트엔드는 신뢰 맥락만 표시합니다."}</span>
       </Mvp4Panel>
     </Stack>
   );
@@ -301,7 +301,7 @@ function FormulaMetadata({ metric }: { metric: QualityMetric }) {
 
 function advancedMetricGroupTitle(label: string) {
   if (label === "Validation" || label === "Review") {
-    return `${label} metrics`;
+    return `${label} 지표`;
   }
 
   return label;

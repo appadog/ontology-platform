@@ -144,7 +144,7 @@ async function assertFrontendRoute(page, path, name, assertions) {
     throw new Error(`Frontend route ${path} failed: ${response?.status() ?? "no response"}`);
   }
 
-  await page.getByText("Review to published facts").waitFor();
+  await page.getByText("검수에서 게시된 사실까지").waitFor();
 
   const passedAssertions = [];
 
@@ -174,19 +174,19 @@ async function runBrowserSmoke(seed, apiState) {
     await assertFrontendRoute(page, reviewRoute, "review-inbox", [
       // Wave36 D3: page H1 Koreanized (UIUX_REMEDIATION_DECISIONS §3.2). 1:1 swap.
       { name: "review inbox title", run: () => page.getByRole("heading", { name: "검수 인박스" }).waitFor() },
-      { name: "review task queue marker", run: () => page.getByText("review tasks").first().waitFor() },
-      { name: "wrapped queue response", run: () => page.getByText("Queue response").waitFor() },
+      { name: "review task queue marker", run: () => page.getByText(/검수 대상 \d+건/).first().waitFor() },
+      { name: "wrapped queue response", run: () => page.getByText("큐 응답").waitFor() },
     ]);
 
     await assertFrontendRoute(page, workbenchRoute, "review-workbench", [
       { name: "workbench title", run: () => page.getByRole("heading", { name: "검수 워크벤치" }).waitFor() },
       { name: "seeded task candidate", run: () => page.getByText(apiState.reviewTask.candidate_display_name).first().waitFor() },
-      { name: "decision actions", run: () => page.getByText("Decision actions").waitFor() },
+      { name: "decision actions", run: () => page.getByText("검수 결정 액션").waitFor() },
     ]);
 
     await assertFrontendRoute(page, publishRoute, "publish-queue", [
       { name: "publish queue title", run: () => page.getByRole("heading", { name: "게시 대기열" }).waitFor() },
-      { name: "candidate eligibility", run: () => page.getByText("Candidate eligibility").waitFor() },
+      { name: "candidate eligibility", run: () => page.getByText("후보 게시 자격").waitFor() },
       ...apiState.reasonCodes.map((reason) => ({
         name: `reason code ${reason}`,
         run: () => page.getByText(reason, { exact: true }).first().waitFor(),
@@ -195,28 +195,35 @@ async function runBrowserSmoke(seed, apiState) {
 
     await assertFrontendRoute(page, publishedGraphRoute, "published-graph", [
       { name: "published graph title", run: () => page.getByRole("heading", { name: "게시 그래프 탐색기" }).waitFor() },
-      { name: "published facts marker", run: () => page.getByText("PUBLISHED FACTS", { exact: true }).waitFor() },
-      { name: "current snapshot", run: () => page.getByRole("heading", { name: "Current snapshot" }).waitFor() },
-      { name: "published facts list", run: () => page.getByText("Published entities and relations").waitFor() },
+      { name: "published facts marker", run: () => page.getByText("PUBLISHED FACTS · 게시된 사실", { exact: true }).waitFor() },
+      { name: "current snapshot", run: () => page.getByRole("heading", { name: "현재 스냅샷" }).waitFor() },
+      { name: "published facts list", run: () => page.getByText("선택한 게시 그래프 버전의 게시된 엔티티와 관계를 표시합니다.").waitFor() },
       {
         name: "seeded published fact",
-        run: () => page.getByText(apiState.publishedGraph.entities[0]?.canonical_name ?? "Published entities and relations").first().waitFor(),
+        run: () => page.getByText(apiState.publishedGraph.entities[0]?.canonical_name ?? "현재 스냅샷").first().waitFor(),
       },
     ]);
 
     await assertFrontendRoute(page, qualityRoute, "quality-dashboard", [
       { name: "quality title", run: () => page.getByRole("heading", { name: "품질 대시보드" }).waitFor() },
-      { name: "typed candidate metrics", run: () => page.getByRole("heading", { name: "Candidates", exact: true }).waitFor() },
-      { name: "typed validation metrics", run: () => page.getByRole("heading", { name: "Validation", exact: true }).waitFor() },
-      { name: "typed review metrics", run: () => page.getByRole("heading", { name: "Review", exact: true }).waitFor() },
-      { name: "typed publish metrics", run: () => page.getByRole("heading", { name: "Publish", exact: true }).waitFor() },
-      { name: "published ratio", run: () => page.getByText("Published ratio").waitFor() },
+      // The legacy MVP3 candidate/validation/review/publish summary lives inside
+      // a <details> that is collapsed by default (Wave57 harness gap) — expand
+      // it before asserting on headings inside it.
+      {
+        name: "expand legacy quality summary",
+        run: () => page.getByText("후보 / 검증 / 검수 / 게시 요약 (MVP3)").click(),
+      },
+      { name: "typed candidate metrics", run: () => page.getByRole("heading", { name: "후보", exact: true }).waitFor() },
+      { name: "typed validation metrics", run: () => page.getByRole("heading", { name: "검증", exact: true }).waitFor() },
+      { name: "typed review metrics", run: () => page.getByRole("heading", { name: "검수", exact: true }).waitFor() },
+      { name: "typed publish metrics", run: () => page.getByRole("heading", { name: "게시", exact: true }).waitFor() },
+      { name: "published ratio", run: () => page.getByText("게시 비율").first().waitFor() },
       {
         name: "seeded published ratio value",
         run: () =>
           page
             .getByText(
-              `Published ratio · ${apiState.quality.rates.published_ratio.numerator}/${apiState.quality.rates.published_ratio.denominator}`,
+              `게시 비율 · ${apiState.quality.rates.published_ratio.numerator}/${apiState.quality.rates.published_ratio.denominator}`,
             )
             .waitFor(),
       },

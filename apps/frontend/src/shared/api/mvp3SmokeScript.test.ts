@@ -17,7 +17,11 @@ describe("MVP3 actual API smoke command", () => {
     expect(script).toContain("MVP3_SEED_JSON");
     expect(script).toContain("MVP3_SMOKE_ARTIFACT_DIR");
     expect(script).toContain("/tmp/ontology-wave17-mvp3-seed.json");
-    expect(script).toContain("Review to published facts");
-    expect(script).toContain("Published ratio");
+    // Wave 65 (follow-up): the actual UI copy on these pages was Koreanized in
+    // Wave58 (Review inbox/Published Graph) and this wave (Publish
+    // queue/Quality dashboard); the smoke's text assertions were updated to
+    // match, so this contract test tracks the current literal strings.
+    expect(script).toContain("검수에서 게시된 사실까지");
+    expect(script).toContain("게시 비율");
   });
 });

@@ -66,6 +66,9 @@ export function DashboardPage() {
     <PageContainer width="default">
       <PageHeader title="대시보드" description="오늘 무엇을 검수하고 게시할지 한눈에 파악하고, 바로 다음 작업으로 이동합니다." />
       <Hero aria-label="제품 소개">
+        {/* Wave 64 (PM6-042 §2.2): eyebrow text is the existing headline's own
+            closing phrase ("온톨로지 운영 플랫폼") — reused verbatim, not new copy. */}
+        <HeroEyebrow>온톨로지 운영 플랫폼</HeroEyebrow>
         <HeroHeadline>문서에서 추출한 지식을 검수·게시하고, 품질을 추적하는 온톨로지 운영 플랫폼</HeroHeadline>
         <HeroSubline>
           LLM 추출 결과를 바로 쓰지 않고 후보 단계에서 검증한 뒤 게시해, 근거가 남는 신뢰할 수 있는 지식 그래프를 만듭니다.
@@ -79,8 +82,8 @@ export function DashboardPage() {
           ))}
         </ValuePoints>
         <HeroActions>
-          <ActionLink to="/projects">프로젝트 시작하기</ActionLink>
-          {recentProject ? <SecondaryActionLink to={`/projects/${recentProject.id}`}>최근 프로젝트 열기</SecondaryActionLink> : null}
+          <HeroPrimaryLink to="/projects">프로젝트 시작하기</HeroPrimaryLink>
+          {recentProject ? <HeroSecondaryLink to={`/projects/${recentProject.id}`}>최근 프로젝트 열기</HeroSecondaryLink> : null}
         </HeroActions>
       </Hero>
       <MetricGrid>
@@ -130,39 +133,72 @@ export function DashboardPage() {
   );
 }
 
+// Wave 64 (PM6-042 §2.2): hero becomes a dark gradient card (mock treatment);
+// exact copy is unchanged, only the container/CTA visuals change.
 const Hero = styled.section`
   display: grid;
   gap: ${({ theme }) => theme.spacing.lg};
-  padding: ${({ theme }) => theme.spacing.xl};
-  border: 1px solid ${({ theme }) => theme.color.border};
-  border-radius: ${({ theme }) => theme.radius.md};
-  background: ${({ theme }) => theme.color.surfaceRaised};
-  box-shadow: ${({ theme }) => theme.shadow.soft};
+  padding: 48px;
+  border: none;
+  border-radius: ${({ theme }) => theme.radius.xl};
+  background: linear-gradient(135deg, ${({ theme }) => theme.color.text} 0%, #27272a 100%);
+  box-shadow: ${({ theme }) => theme.shadow.md};
+  color: #f8fafc;
 
   @media (max-width: 760px) {
     padding: ${({ theme }) => theme.spacing.lg};
   }
 `;
 
+const HeroEyebrow = styled.span`
+  color: #d4d4d8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+`;
+
 const HeroHeadline = styled.h2`
   margin: 0;
   max-width: 880px;
-  font-size: 26px;
-  line-height: 1.3;
+  color: #ffffff;
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
   overflow-wrap: anywhere;
 
   @media (max-width: 760px) {
-    font-size: 22px;
+    font-size: 26px;
   }
 `;
 
 const HeroSubline = styled.p`
   margin: 0;
   max-width: 880px;
-  color: ${({ theme }) => theme.color.textMuted};
+  color: #d4d4d8;
   font-size: ${({ theme }) => theme.typography.fontSize.md};
   line-height: 1.6;
   overflow-wrap: anywhere;
+`;
+
+const HeroPrimaryLink = styled(ActionLink)`
+  background: #ffffff;
+  color: ${({ theme }) => theme.color.text};
+
+  &:hover {
+    background: #f4f4f5;
+  }
+`;
+
+const HeroSecondaryLink = styled(SecondaryActionLink)`
+  border: 1px solid #52525b;
+  background: transparent;
+  color: #ffffff;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
 `;
 
 const ValuePoints = styled.div`
@@ -176,14 +212,17 @@ const ValuePoints = styled.div`
   }
 `;
 
+// Wave 64 (PM6-042 §2.2): mock's plain-card treatment — 22px padding, lg
+// radius, surface-0 (white) background, subtle border, flat rest shadow.
 const ValuePoint = styled.div`
   display: grid;
   gap: ${({ theme }) => theme.spacing.xs};
   min-width: 0;
-  padding: ${({ theme }) => theme.spacing.lg};
-  border: 1px solid ${({ theme }) => theme.color.border};
-  border-radius: ${({ theme }) => theme.radius.md};
-  background: ${({ theme }) => theme.color.surface};
+  padding: 22px;
+  border: 1px solid ${({ theme }) => theme.color.borderSubtle};
+  border-radius: ${({ theme }) => theme.radius.lg};
+  background: ${({ theme }) => theme.color.surfaceRaised};
+  box-shadow: ${({ theme }) => theme.shadow.card};
 
   strong {
     color: ${({ theme }) => theme.color.text};
@@ -231,8 +270,14 @@ const ActivityList = styled.ul`
     align-items: center;
     justify-content: space-between;
     gap: ${({ theme }) => theme.spacing.lg};
-    padding: ${({ theme }) => theme.spacing.md} 0;
+    padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.sm};
     border-bottom: 1px solid ${({ theme }) => theme.color.border};
+    border-radius: ${({ theme }) => theme.radius.sm};
+
+    /* Wave 64 (PM6-042 §2.2): mock's .op-row:hover treatment. */
+    &:hover {
+      background: ${({ theme }) => theme.color.surface};
+    }
 
     &:last-child {
       border-bottom: 0;

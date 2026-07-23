@@ -26,6 +26,7 @@ import { MetricCard } from "../shared/ui/platform/MetricCard";
 import { formatDateTime } from "../shared/lib/format";
 import { ProjectStatus } from "../shared/api/types";
 import { WorkflowStage, WorkSurface } from "./mvp2Shared";
+import { ProjectOnboardingChecklist } from "./ProjectOnboardingChecklist";
 
 export function ProjectDetailPage() {
   const { projectId = "" } = useParams();
@@ -82,6 +83,7 @@ export function ProjectDetailPage() {
           마지막 변경 시각
         </MetricCard>
       </MetricGrid>
+      <ProjectOnboardingChecklist projectId={project.id} sourceCount={project.source_count} />
       <WorkSurface>
         <WorkflowStage current="Project" action={<StageAction to={`/projects/${project.id}/ontology`}>Ontology 열기</StageAction>} />
         <NextActionRow>

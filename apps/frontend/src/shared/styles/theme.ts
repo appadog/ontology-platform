@@ -1,22 +1,35 @@
 export const theme = {
   color: {
-    surface: "#f7f9fb",
+    // Wave 64 (PM6-042, Claude Design import — docs/pm/DESIGN_DIRECTION_CLAUDE_DESIGN_IMPORT.md
+    // §1): value-only shift from blue-tinted neutrals to true zinc neutrals,
+    // plus a slightly brighter accent blue. No key renamed/removed.
+    surface: "#fafafa",
     surfaceRaised: "#ffffff",
-    surfaceMuted: "#eef2f7",
-    border: "#d8e0ea",
-    borderStrong: "#aab7c8",
-    text: "#172033",
-    textMuted: "#65748b",
-    primary: "#1d4ed8",
+    surfaceMuted: "#f4f4f5",
+    border: "#e4e4e7",
+    borderStrong: "#a1a1aa",
+    text: "#18181b",
+    textMuted: "#71717a",
+    primary: "#2563eb",
     primarySoft: "#dbeafe",
-    positive: "#047857",
-    positiveSoft: "#d1fae5",
+    // Wave 64 ADD — hover/active steps for the single accent (old primary
+    // value conveniently becomes the hover step).
+    primaryHover: "#1d4ed8",
+    primaryActive: "#1e40af",
+    positive: "#15803d",
+    positiveSoft: "#dcfce7",
     warning: "#b45309",
     warningSoft: "#fef3c7",
-    danger: "#b91c1c",
+    danger: "#dc2626",
     dangerSoft: "#fee2e2",
     progress: "#0f766e",
     progressSoft: "#ccfbf1",
+    // Wave 64 ADD — faintest divider tone (sidebar/topbar borders) and the
+    // one new mid-tier neutral surface (skeleton track / border-strong-ish
+    // fill), plus the new middle text tone (e.g. topbar user-chip label).
+    surface3: "#e4e4e7",
+    borderSubtle: "#f4f4f5",
+    textSecondary: "#3f3f46",
     draft: "#475569",
     draftSoft: "#e2e8f0",
     graphNode: "#1f5f8b",
@@ -43,8 +56,12 @@ export const theme = {
     // Wave 37 (FE6-038): keep `soft` for hero/summary; ADD `card` (flat rest
     // shadow for repeated list cards) + `none` so hierarchy P1 can vary weight.
     none: "none",
-    soft: "0 14px 34px rgba(23, 32, 51, 0.08)",
-    card: "0 1px 2px rgba(23, 32, 51, 0.06)",
+    // Wave 64: rgba tint moved from blue-tinted (23,32,51) to zinc (24,24,27)
+    // to match the new neutral scale.
+    soft: "0 14px 34px rgba(24, 24, 27, 0.08)",
+    card: "0 1px 2px rgba(24, 24, 27, 0.06)",
+    // Wave 64 ADD — mid-tier shadow (mock's shadow-lg) for the dashboard hero.
+    md: "0 12px 24px rgba(24, 24, 27, 0.16)",
   },
   radius: {
     // Wave 59 (PM6-039): base-derived scale (shadcn/ui `--radius` idea). `sm`

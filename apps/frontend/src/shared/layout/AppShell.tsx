@@ -1,18 +1,41 @@
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Building2, ChevronDown, ChevronLeft, ChevronRight, CircleUserRound, Menu, X } from "lucide-react";
+import { Building2, ChevronDown, ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 import styled from "styled-components";
+// Wave 64 (PM6-042 §2.1): self-hosted Newsreader italic 600, scoped ONLY to the
+// sidebar "Ontology" wordmark below (never applied to body text). Same
+// self-hosted pattern as wave-59's Inter choice (docs/DEPLOYMENT.md — no
+// Google Fonts CDN link anywhere).
+import "@fontsource/newsreader/600-italic.css";
 import { globalNavItems, projectNavGroups, resolveActiveSection, type NavItem } from "./navigation";
 import { useMyTenants, useProjects } from "../api/queries";
 import { useActiveTenantId } from "../lib/activeTenant";
 import { HanaBadge, HanaSelect, statusToTone } from "../ui/hana";
 import { StatusBadge } from "../ui/platform/StatusBadge";
+import { CommandPalette } from "./CommandPalette";
 
 // MVP6.10 (FE6-095): the acting actor is a dev-only default in the header switcher
 // (never a real auth/JWT claim, never a production control). The dropdown lists
 // ONLY this actor's ACTIVE visibility set (GET /tenants) — cross-tenant selection
 // is unreachable by construction (isolation-by-construction; ADR 0017 §2.1).
 const TENANT_SWITCHER_ACTOR_ID = "dev-user";
+
+// Wave 64 (PM6-042 §2.1): the dev-only acting actor's display name for the
+// topbar user chip. Kept as a named constant (not hardcoded inline) so the
+// avatar-initials computation below stays visibly derived, not hardcoded.
+const ACTING_ACTOR_NAME = "dev-admin";
+
+// Wave 64: derive avatar initials programmatically from a hyphen-separated
+// actor name ("dev-admin" -> "DA") instead of hardcoding "DA", so this still
+// makes sense if the dev-actor name ever changes.
+function actorInitials(name: string): string {
+  const initials = name
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((segment) => segment[0]?.toUpperCase() ?? "")
+    .join("");
+  return initials.slice(0, 2) || "?";
+}
 
 const recentProjectStorageKey = "ontology-platform:recent-project-id";
 // Wave 59 (PM6-039) §5/P8 — desktop icon-rail collapse toggle state, persisted
@@ -102,13 +125,13 @@ export function AppShell({ children }: PropsWithChildren) {
           {navOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
         </MobileMenuButton>
         <MobileBrand>
-          <strong>Ontology</strong>
+          <Wordmark>Ontology</Wordmark>
           <span>Data Platform</span>
         </MobileBrand>
       </MobileBar>
       <Sidebar id="app-sidebar" data-open={navOpen ? "true" : "false"} data-collapsed={collapsed ? "true" : "false"}>
         <Brand>
-          <strong>Ontology</strong>
+          <Wordmark>Ontology</Wordmark>
           <span>Data Platform</span>
         </Brand>
         <Nav aria-label="Application navigation">
@@ -165,10 +188,11 @@ export function AppShell({ children }: PropsWithChildren) {
             </ProjectSelector>
           </TopbarLeft>
           <TopbarRight>
+            <CommandPalette />
             {selectedProject ? <HanaBadge tone={statusToTone(selectedProject.status)}>{selectedProject.status}</HanaBadge> : <HanaBadge tone="neutral">NO_PROJECT</HanaBadge>}
             <UserChip>
-              <CircleUserRound aria-hidden="true" />
-              dev-admin
+              <AvatarInitials aria-hidden="true">{actorInitials(ACTING_ACTOR_NAME)}</AvatarInitials>
+              {ACTING_ACTOR_NAME}
             </UserChip>
           </TopbarRight>
         </Topbar>
@@ -277,20 +301,28 @@ const CollapseToggle = styled.button`
   }
 `;
 
+// Wave 64 (PM6-042 §2.1): sidebar wordmark treatment — Newsreader italic 600,
+// ~21px, tightened tracking. Scoped to this one element only.
+const Wordmark = styled.strong`
+  font-family: "Newsreader", serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 21px;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+`;
+
 const Brand = styled.div`
   display: grid;
   gap: 2px;
   padding: 0 8px 20px;
 
-  strong {
-    font-size: 20px;
-    line-height: 1.2;
-  }
-
   span {
     color: ${({ theme }) => theme.color.textMuted};
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   /* The brand shows in the mobile app bar instead, so hide the in-drawer copy. */
@@ -376,15 +408,25 @@ const Nav = styled.nav`
     border-radius: ${({ theme }) => theme.radius.sm};
     color: ${({ theme }) => theme.color.textMuted};
     font-weight: 800;
+    transition: background 120ms ease, color 120ms ease;
 
     svg {
       width: 18px;
       height: 18px;
     }
 
+    /* Wave 64 (PM6-042 §2.1): mock's .op-navlink hover/active treatment —
+       hover tints the row with surface-2, active is a solid surface-2 fill
+       with primary-text color (not the accent color) so the active state
+       reads as "current location", not "call to action". */
+    &:hover {
+      background: ${({ theme }) => theme.color.surfaceMuted};
+      color: ${({ theme }) => theme.color.text};
+    }
+
     &.active {
-      background: ${({ theme }) => theme.color.primarySoft};
-      color: ${({ theme }) => theme.color.primary};
+      background: ${({ theme }) => theme.color.surfaceMuted};
+      color: ${({ theme }) => theme.color.text};
     }
   }
 
@@ -419,15 +461,25 @@ const NavGroupBlock = styled.div`
     border-radius: ${({ theme }) => theme.radius.sm};
     color: ${({ theme }) => theme.color.textMuted};
     font-weight: 800;
+    transition: background 120ms ease, color 120ms ease;
 
     svg {
       width: 18px;
       height: 18px;
     }
 
+    /* Wave 64 (PM6-042 §2.1): mock's .op-navlink hover/active treatment —
+       hover tints the row with surface-2, active is a solid surface-2 fill
+       with primary-text color (not the accent color) so the active state
+       reads as "current location", not "call to action". */
+    &:hover {
+      background: ${({ theme }) => theme.color.surfaceMuted};
+      color: ${({ theme }) => theme.color.text};
+    }
+
     &.active {
-      background: ${({ theme }) => theme.color.primarySoft};
-      color: ${({ theme }) => theme.color.primary};
+      background: ${({ theme }) => theme.color.surfaceMuted};
+      color: ${({ theme }) => theme.color.text};
     }
   }
 
@@ -446,12 +498,14 @@ const NavGroupBlock = styled.div`
   }
 `;
 
+// Wave 64 (PM6-042 §2.1): mock's group-header micro-typography — 11px/700,
+// wider 0.08em tracking (replacing the previous 12px/800/0.04em).
 const GroupLabel = styled.span`
   padding: 6px 12px 2px;
   color: ${({ theme }) => theme.color.textMuted};
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 
   @media (max-width: 860px) {
@@ -556,8 +610,9 @@ const Topbar = styled.header`
   gap: 16px;
   min-height: 72px;
   padding: 14px 28px;
-  border-bottom: 1px solid ${({ theme }) => theme.color.border};
-  background: rgba(247, 249, 251, 0.92);
+  /* Wave 64 (PM6-042 §2.1): mock's sticky translucent-blur topbar treatment. */
+  border-bottom: 1px solid ${({ theme }) => theme.color.borderSubtle};
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(10px);
 
   /* F4: the mobile app bar is the sticky top element on mobile; keep the topbar
@@ -676,18 +731,33 @@ const TopbarRight = styled.div`
   }
 `;
 
+// Wave 64 (PM6-042 §2.1): mock's avatar-initials pill user chip — a rounded
+// surface-2 pill wrapping a circular accent-filled initials badge + name.
 const UserChip = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  color: ${({ theme }) => theme.color.textMuted};
+  padding: 4px 14px 4px 4px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.color.surfaceMuted};
+  color: ${({ theme }) => theme.color.textSecondary};
   font-weight: 800;
+`;
 
-  svg {
-    width: 20px;
-    height: 20px;
-  }
+const AvatarInitials = styled.span`
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.color.primary};
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
 `;
 
 const Content = styled.main`

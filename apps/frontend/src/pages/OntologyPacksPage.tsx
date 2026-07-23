@@ -236,7 +236,11 @@ function PackCatalog({
 function CatalogCard({ item, onOpen }: { item: OntologyPackCatalogItem; onOpen: () => void }) {
   const c = item.element_counts;
   return (
-    <HanaCard title={item.name} eyebrow={`${item.pack_id}`} emphasis="default">
+    // Wave 65 (PM6-042 follow-up): whole-card click (hover lift + keyboard),
+    // matching the card-list feel already applied to Projects/Review. The
+    // nested button keeps its own independent onClick (stopping propagation
+    // so it doesn't double-fire the same navigate through the card handler).
+    <HanaCard title={item.name} eyebrow={`${item.pack_id}`} emphasis="default" onClick={onOpen}>
       <CardBody>
         <BadgeRow>
           <DomainChip domain={item.domain} />
@@ -248,7 +252,13 @@ function CatalogCard({ item, onOpen }: { item: OntologyPackCatalogItem; onOpen: 
           클래스 {c.class_count} · 속성 {c.property_count} · 관계 {c.relation_count} · 총 {c.element_count}
         </CountRow>
         <CardActions>
-          <HanaButton type="button" onClick={onOpen}>
+          <HanaButton
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpen();
+            }}
+          >
             상세 보기 <ArrowRight aria-hidden="true" size={14} />
           </HanaButton>
         </CardActions>

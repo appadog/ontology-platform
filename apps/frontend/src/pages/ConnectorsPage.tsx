@@ -246,7 +246,11 @@ function ConnectorCatalog({
 
 function CatalogCard({ item, onOpen }: { item: ConnectorCatalogItem; onOpen: () => void }) {
   return (
-    <HanaCard title={item.display_name} eyebrow={`${item.connector_kind} · ${kindKo[item.connector_kind]}`} emphasis="default">
+    // Wave 65 (PM6-042 follow-up): whole-card click (hover lift + keyboard),
+    // matching the card-list feel already applied to Projects/Review. The
+    // nested button keeps its own independent onClick (stopping propagation
+    // so it doesn't double-fire the same navigate through the card handler).
+    <HanaCard title={item.display_name} eyebrow={`${item.connector_kind} · ${kindKo[item.connector_kind]}`} emphasis="default" onClick={onOpen}>
       <CardBody>
         <BadgeRow>
           <StatusBadge token={item.connector_kind} koLabel={kindKo[item.connector_kind]} tone="muted" />
@@ -267,7 +271,13 @@ function CatalogCard({ item, onOpen }: { item: ConnectorCatalogItem; onOpen: () 
           </dd>
         </KeyValue>
         <CardActions>
-          <HanaButton type="button" onClick={onOpen}>
+          <HanaButton
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpen();
+            }}
+          >
             설정 및 미리보기 <ArrowRight aria-hidden="true" size={14} />
           </HanaButton>
         </CardActions>

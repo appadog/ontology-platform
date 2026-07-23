@@ -1,5 +1,5 @@
 import { ChangeEvent, useState } from "react";
-import { Upload } from "lucide-react";
+import { Upload, UploadCloud } from "lucide-react";
 import styled from "styled-components";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useProject, useSources, useUploadSource } from "../shared/api/queries";
@@ -103,29 +103,38 @@ export function SourceManagerPage() {
         title="원천 데이터 업로드"
         description="파일 유형과 표시 이름을 정한 뒤 원천 데이터를 업로드하면 컬럼 프로파일 또는 구간 보기로 이어집니다."
       >
-        <UploadGrid>
-          <Field>
-            <span>파일</span>
-            <FileInput type="file" onChange={(event: ChangeEvent<HTMLInputElement>) => setFile(event.target.files?.[0] ?? null)} />
-          </Field>
-          <Field>
-            <span>소스 유형</span>
-            <HanaSelect value={sourceType} onChange={(event) => setSourceType(event.target.value as SourceType)}>
-              <option value="CSV">CSV</option>
-              <option value="EXCEL">EXCEL</option>
-              <option value="TXT">TXT</option>
-              <option value="PDF">PDF</option>
-            </HanaSelect>
-          </Field>
-          <Field>
-            <span>표시 이름</span>
-            <HanaInput
-              value={displayName}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => setDisplayName(event.target.value)}
-              placeholder={file?.name ?? "선택 사항"}
-            />
-          </Field>
-        </UploadGrid>
+        {/* Wave 64 (PM6-042 §2.5): mock's dashed-border dropzone visual treatment,
+            wrapping the existing (unchanged) upload wiring from wave-058 F6. */}
+        <Dropzone>
+          <DropzoneIcon aria-hidden="true">
+            <UploadCloud />
+          </DropzoneIcon>
+          <DropzoneHint>파일을 끌어다 놓거나 선택하세요</DropzoneHint>
+          <DropzoneCaption>지원 형식: CSV, EXCEL, TXT, PDF</DropzoneCaption>
+          <UploadGrid>
+            <Field>
+              <span>파일</span>
+              <FileInput type="file" onChange={(event: ChangeEvent<HTMLInputElement>) => setFile(event.target.files?.[0] ?? null)} />
+            </Field>
+            <Field>
+              <span>소스 유형</span>
+              <HanaSelect value={sourceType} onChange={(event) => setSourceType(event.target.value as SourceType)}>
+                <option value="CSV">CSV</option>
+                <option value="EXCEL">EXCEL</option>
+                <option value="TXT">TXT</option>
+                <option value="PDF">PDF</option>
+              </HanaSelect>
+            </Field>
+            <Field>
+              <span>표시 이름</span>
+              <HanaInput
+                value={displayName}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => setDisplayName(event.target.value)}
+                placeholder={file?.name ?? "선택 사항"}
+              />
+            </Field>
+          </UploadGrid>
+        </Dropzone>
         {uploadSource.isError && <InlineError>업로드에 실패했습니다. 파일 유형과 크기를 확인한 뒤 다시 시도하세요.</InlineError>}
       </HanaCard>
       {sources.length === 0 ? (
@@ -201,7 +210,46 @@ const SourceLink = styled(Link)`
   }
 `;
 
+const Dropzone = styled.div`
+  display: grid;
+  justify-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  margin: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+  padding: ${({ theme }) => theme.spacing.xl} ${({ theme }) => theme.spacing.lg};
+  border: 1.5px dashed ${({ theme }) => theme.color.border};
+  border-radius: ${({ theme }) => theme.radius.lg};
+  text-align: center;
+`;
+
+const DropzoneIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: ${({ theme }) => theme.radius.lg};
+  background: ${({ theme }) => theme.color.primarySoft};
+  color: ${({ theme }) => theme.color.primary};
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+`;
+
+const DropzoneHint = styled.p`
+  margin: 0;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+`;
+
+const DropzoneCaption = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.color.textMuted};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+`;
+
 const UploadGrid = styled.div`
+  width: 100%;
   display: grid;
   grid-template-columns: minmax(220px, 2fr) 160px minmax(180px, 1fr);
   gap: ${({ theme }) => theme.spacing.md};

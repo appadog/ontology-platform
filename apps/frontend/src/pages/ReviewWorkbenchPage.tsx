@@ -106,15 +106,15 @@ export function ReviewWorkbenchPage() {
   }, [reason, taskQuery.data]);
 
   if (projectQuery.isLoading || taskQuery.isLoading) {
-    return <PageState kind="loading" title="Workbench를 불러오는 중" description="Evidence, correction, validation, decision history를 준비하고 있습니다." />;
+    return <PageState kind="loading" title="워크벤치를 불러오는 중" description="근거, 수정 내역, 검증, 결정 이력을 준비하고 있습니다." />;
   }
 
   if (projectQuery.isError || taskQuery.isError || !projectQuery.data || !taskQuery.data) {
     return (
       <PageState
         kind="error"
-        title="Review workbench를 열지 못했습니다"
-        description="Review inbox에서 task 상태를 새로고침한 뒤 다시 선택하세요."
+        title="검수 워크벤치를 열지 못했습니다"
+        description="검수 인박스에서 태스크 상태를 새로고침한 뒤 다시 선택하세요."
         actionLabel="다시 시도"
         onAction={() => {
           void projectQuery.refetch();
@@ -174,16 +174,16 @@ export function ReviewWorkbenchPage() {
       <Breadcrumbs
         items={[
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Review", to: `/projects/${projectId}/review` },
+          { label: "검수", to: `/projects/${projectId}/review` },
           { label: task.candidate_display_name },
         ]}
       />
       <PageHeader title="검수 워크벤치" description={task.candidate_display_name}>
         <StatusBadge token={reviewStatus} tone={statusToTone(reviewStatus)} />
         <StatusBadge token={publishStatus} tone={statusToTone(publishStatus)} />
-        <Mvp3ActionLink to={`/projects/${projectId}/publish`}>Publish queue</Mvp3ActionLink>
+        <Mvp3ActionLink to={`/projects/${projectId}/publish`}>게시 큐</Mvp3ActionLink>
       </PageHeader>
-      <Mvp3Workflow current="Workbench" action={<Mvp3ActionLink to={`/projects/${projectId}/review`}>Back to inbox</Mvp3ActionLink>} />
+      <Mvp3Workflow current="Workbench" action={<Mvp3ActionLink to={`/projects/${projectId}/review`}>인박스로 돌아가기</Mvp3ActionLink>} />
       {!canDecide ? (
         <PageState kind="permission" title="읽기 전용 검수" description={taskAny.read_only_reason ?? "결정 권한 없이 열람만 가능한 항목입니다."} />
       ) : null}
@@ -203,28 +203,28 @@ export function ReviewWorkbenchPage() {
       </HanaCard>
       <ScreenGrid>
         <Stack>
-          <HanaCard title="Evidence and source" description={taskAny.source_locator ?? task.source_id ?? "Actual API source context"}>
+          <HanaCard title="근거와 소스" description={taskAny.source_locator ?? task.source_id ?? "소스 맥락 정보 없음"}>
             <EvidencePanel data-state={evidenceState}>
               {evidenceState === "PRESENT" ? (
-                <blockquote>{taskAny.source_excerpt ?? "Evidence is linked in the actual API response."}</blockquote>
+                <blockquote>{taskAny.source_excerpt ?? "근거가 연결되어 있습니다."}</blockquote>
               ) : (
-                <Muted>Evidence is not available for this candidate.</Muted>
+                <Muted>이 후보에는 근거를 확인할 수 없습니다.</Muted>
               )}
               <KeyValue>
-                <dt>Source</dt>
-                <dd>{taskAny.source_display_name ?? task.source_id ?? "Source unavailable"}</dd>
-                <dt>Job</dt>
-                <dd>{taskAny.job_display_label ?? task.extraction_job_id ?? "Job unavailable"}</dd>
-                <dt>Context</dt>
-                <dd>{taskAny.source_context_label ?? "Actual API task context"}</dd>
-                <dt>Evidence state</dt>
+                <dt>소스</dt>
+                <dd>{taskAny.source_display_name ?? task.source_id ?? "소스 정보 없음"}</dd>
+                <dt>작업</dt>
+                <dd>{taskAny.job_display_label ?? task.extraction_job_id ?? "작업 정보 없음"}</dd>
+                <dt>맥락</dt>
+                <dd>{taskAny.source_context_label ?? "작업 맥락 정보 없음"}</dd>
+                <dt>근거 상태</dt>
                 <dd>
                   <StatusBadge token={evidenceState} tone={evidenceState === "PRESENT" ? "success" : "danger"} />
                 </dd>
               </KeyValue>
             </EvidencePanel>
           </HanaCard>
-          <HanaCard title="Candidate context" description="Candidate graph remains separate from published graph.">
+          <HanaCard title="후보 맥락" description="후보 그래프는 게시 그래프와 분리되어 유지됩니다.">
             <CardBody>
               <CandidateMiniGraph>
                 <GraphNode>{task.candidate_kind}</GraphNode>
@@ -232,12 +232,12 @@ export function ReviewWorkbenchPage() {
                 <GraphNode>{task.validation_status}</GraphNode>
               </CandidateMiniGraph>
               <KeyValue>
-                <dt>Candidate</dt>
+                <dt>후보</dt>
                 <dd>{task.candidate_id}</dd>
-                <dt>Priority</dt>
+                <dt>우선순위</dt>
                 <dd>{task.priority_reason ?? task.priority}</dd>
-                <dt>Confidence</dt>
-                <dd>{typeof taskAny.confidence === "number" ? `${Math.round(taskAny.confidence * 100)}%` : "Not reported"}</dd>
+                <dt>신뢰도</dt>
+                <dd>{typeof taskAny.confidence === "number" ? `${Math.round(taskAny.confidence * 100)}%` : "보고되지 않음"}</dd>
               </KeyValue>
             </CardBody>
           </HanaCard>
@@ -272,9 +272,9 @@ export function ReviewWorkbenchPage() {
           </HanaCard>
         </Stack>
         <Stack>
-          <HanaCard title="Decision actions" description="Buttons expose the current blocking reason before submit.">
+          <HanaCard title="검수 결정 액션" description="제출 전에 각 버튼이 현재 막힌 사유를 보여줍니다.">
             <CardBody>
-              <HanaInput value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Reason for warning, rejection, discussion, or correction" />
+              <HanaInput value={reason} onChange={(event) => setReason(event.target.value)} placeholder="경고, 반려, 논의, 수정에 대한 사유" />
               <ActionGrid>
                 {decisionStates.map((state) => (
                   <DecisionAction key={state.decision}>
@@ -292,7 +292,7 @@ export function ReviewWorkbenchPage() {
               <ReasonBadges reasons={publishReasonCodes} />
             </CardBody>
           </HanaCard>
-          <HanaCard title="Validation results">
+          <HanaCard title="검증 결과">
             <CardBody>
               {task.validation_results.map((result) => (
                 <ValidationItem key={result.id}>
@@ -302,7 +302,7 @@ export function ReviewWorkbenchPage() {
                       <HanaBadge tone={severityTone(result.severity)}>{result.severity}</HanaBadge>
                       <HanaBadge tone={result.blocking ? "danger" : "neutral"}>{result.rule_code}</HanaBadge>
                     </BadgeRow>
-                    <strong>{result.field_path || "candidate"}</strong>
+                    <strong>{result.field_path || "후보"}</strong>
                     <p>{result.message}</p>
                     {result.suggested_fix ? <Muted>{result.suggested_fix}</Muted> : null}
                   </div>

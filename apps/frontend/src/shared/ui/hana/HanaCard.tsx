@@ -21,14 +21,44 @@ interface HanaCardProps extends PropsWithChildren {
    * card into the new large-panel radius rung (theme.radius.lg).
    */
   radius?: "md" | "lg";
+  /**
+   * Wave 65 (PM6-042 follow-up) ADD — opt-in whole-card interactivity for
+   * catalog/grid cards whose only click target today is a nested button
+   * (e.g. Ontology Packs / Connectors catalog cards). Omitted (the default
+   * for all ~38 existing call sites): renders exactly as before, a plain
+   * `<section>`, zero behavior change. Passed: adds the mock's card-hover
+   * treatment (box-shadow lift + border-strong), keyboard access (Enter/Space
+   * trigger the same handler), and `role="button"` — the nested button (if
+   * any) keeps working unchanged since this only adds a handler on the card
+   * itself, it doesn't remove or alter existing click targets.
+   */
+  onClick?: () => void;
   className?: string;
 }
 
-export function HanaCard({ title, description, eyebrow, action, emphasis = "summary", radius = "md", children, className }: HanaCardProps) {
+export function HanaCard({ title, description, eyebrow, action, emphasis = "summary", radius = "md", onClick, children, className }: HanaCardProps) {
   const hasHeader = Boolean(title || description || eyebrow || action);
 
   return (
-    <Card className={className} data-emphasis={emphasis} data-radius={radius}>
+    <Card
+      className={className}
+      data-emphasis={emphasis}
+      data-radius={radius}
+      data-interactive={onClick ? "true" : undefined}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+    >
       {hasHeader && (
         <CardHeader>
           <CardHeading>
@@ -80,6 +110,24 @@ const Card = styled.section`
   /* Wave 59 (PM6-039) §4: opt-in large-panel radius rung. */
   &[data-radius="lg"] {
     border-radius: ${({ theme }) => theme.radius.lg};
+  }
+
+  /* Wave 65 (PM6-042 follow-up): opt-in whole-card interactivity. */
+  &[data-interactive="true"] {
+    cursor: pointer;
+    transition: box-shadow 120ms ease, border-color 120ms ease;
+    text-align: left;
+  }
+
+  &[data-interactive="true"]:hover,
+  &[data-interactive="true"]:focus-visible {
+    box-shadow: ${({ theme }) => theme.shadow.md ?? theme.shadow.soft};
+    border-color: ${({ theme }) => theme.color.borderStrong};
+  }
+
+  &[data-interactive="true"]:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.color.primary};
+    outline-offset: 2px;
   }
 `;
 

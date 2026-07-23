@@ -260,8 +260,21 @@ export const CompactTable = styled.div<{ $stickyHeader?: boolean; $maxHeight?: s
     z-index: 2;
   }
 
+  tbody tr {
+    transition: box-shadow 120ms ease;
+  }
+
   tbody tr:hover td {
     background: ${({ theme }) => theme.color.surfaceOverlay};
+  }
+
+  // Wave 65 (PM6-042 follow-up): the card-row hover outline introduced as a
+  // one-off in ReviewInboxPage (wave-064) is genuinely useful on every
+  // CompactTable consumer, so it moves here — every one of the ~15+ pages
+  // that already use CompactTable (and the 7 admin pages via AdminTable)
+  // inherit it for free, no per-page change needed.
+  tbody tr:hover {
+    box-shadow: inset 0 0 0 1px ${({ theme }) => theme.color.borderStrong};
   }
 
   tr:last-child td {

@@ -103,7 +103,7 @@ export function EvidenceViewerPage() {
           {evidence.source_segment_id ? <ActionLink to={sourceChunksPath(evidence.source_id, context.projectId)}>구간 보기</ActionLink> : null}
         </FallbackActions>
       </HanaCard>
-      <HanaCard title="Technical details" description="QA 재현에 필요한 위치 정보와 ID입니다.">
+      <HanaCard title="기술 세부정보" description="QA 재현에 필요한 위치 정보와 ID입니다.">
         <KeyValueGrid>
           <dt>ID</dt>
           <dd>

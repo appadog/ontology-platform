@@ -71,6 +71,33 @@ async function readSeedJson() {
   return seed;
 }
 
+// Wave 65 (follow-up on the Wave57 QA report's mvp5:actual harness gap): the
+// frontend's admin console reads its organization id from the BUILD-TIME
+// `VITE_MVP5_ORGANIZATION_ID` env var (defaults to the mock fixture id
+// "org-ontology-demo" — see `src/pages/mvp5Shared.tsx`). If the running dev
+// server wasn't started with that env var set to the SEEDED org id, every
+// admin-console assertion below fails with an opaque 30s Playwright timeout.
+// Fail fast with an actionable message instead. (The frontend env is baked in
+// at dev-server start, so this script cannot fix a mismatch itself — it can
+// only detect one early.) The seed should also be run against an ISOLATED
+// mvp5-only DB: the admin console fetches a per-project summary for every
+// project in the tenant, and self-seeded projects from other MVP6 actual
+// smokes (sharing a DB) have no admin record, which 404s.
+function assertFrontendOrgEnvMatchesSeed(seed) {
+  const organizationId = seed.organization_id ?? "org-ontology-demo";
+  const configured = process.env.VITE_MVP5_ORGANIZATION_ID ?? "org-ontology-demo";
+  if (configured !== organizationId) {
+    throw new Error(
+      `Frontend org-id mismatch: the seed created organization_id="${organizationId}", but the running frontend ` +
+        `dev server was started with VITE_MVP5_ORGANIZATION_ID="${configured}" (or unset, defaulting to the mock ` +
+        `fixture "org-ontology-demo"). Restart the frontend dev server with ` +
+        `VITE_MVP5_ORGANIZATION_ID=${organizationId} before re-running this smoke, and run it against an isolated ` +
+        `mvp5-only DB (not shared with other MVP6 actual-smoke self-seeded data) to avoid admin-console 404s on ` +
+        `projects lacking admin records.`,
+    );
+  }
+}
+
 function recordApiCheck(name, details) {
   result.apiChecks.push({ name, ...details });
 }
@@ -297,6 +324,7 @@ async function assertRoute(page, path, name, assertions) {
 
 const seed = await readSeedJson();
 const projectId = seed.project_id;
+assertFrontendOrgEnvMatchesSeed(seed);
 await assertSeededApi(seed);
 
 const browser = await chromium.launch({ headless: true });

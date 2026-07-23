@@ -1,48 +1,63 @@
+import { ComponentType, lazy } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { App } from "./App";
-import {
-  AdminConsolePage,
-  AdminProjectsPage,
-  ProjectAdminApprovalPolicyPage,
-  ProjectAdminCredentialsPage,
-  ProjectAdminImportExportPage,
-  ProjectAdminOperationsPage,
-  ProjectAdminPage,
-  ProjectAdminRetentionBackupPage,
-  ProjectAdminRolesPage,
-} from "../pages/AdminPages";
-import { BenchmarkComparisonPage } from "../pages/BenchmarkComparisonPage";
-import { ConnectorsPage } from "../pages/ConnectorsPage";
-import { CopilotPage } from "../pages/CopilotPage";
-import { CandidateResultsPage } from "../pages/CandidateResultsPage";
-import { DashboardPage } from "../pages/DashboardPage";
-import { DocumentChunkViewerPage } from "../pages/DocumentChunkViewerPage";
-import { EvaluationDatasetsPage } from "../pages/EvaluationDatasetsPage";
-import { EvidenceViewerPage } from "../pages/EvidenceViewerPage";
-import { ExternalApiDocsPage } from "../pages/ExternalApiDocsPage";
-import { ExtractionJobCreatePage } from "../pages/ExtractionJobCreatePage";
-import { GoldSetManagerPage } from "../pages/GoldSetManagerPage";
-import { GovernanceBoardPage } from "../pages/GovernanceBoardPage";
-import { GovernanceProposePage } from "../pages/GovernanceProposePage";
-import { GovernanceDetailPage } from "../pages/GovernanceDetailPage";
-import { ExtractionJobMonitorPage } from "../pages/ExtractionJobMonitorPage";
-import { IntegratedSearchPage } from "../pages/IntegratedSearchPage";
-import { LearningInsightsPage } from "../pages/LearningInsightsPage";
-import { OntologyModelerPage } from "../pages/OntologyModelerPage";
-import { OntologyPacksPage } from "../pages/OntologyPacksPage";
-import { PromptPerformancePage } from "../pages/PromptPerformancePage";
-import { PublishedGraphExplorerPage } from "../pages/PublishedGraphExplorerPage";
-import { PublishQueuePage } from "../pages/PublishQueuePage";
-import { ProjectDetailPage } from "../pages/ProjectDetailPage";
-import { ProjectListPage } from "../pages/ProjectListPage";
-import { QualityDashboardPage } from "../pages/QualityDashboardPage";
-import { RagAnswerWorkspacePage } from "../pages/RagAnswerWorkspacePage";
-import { ReviewInboxPage } from "../pages/ReviewInboxPage";
-import { ReviewWorkbenchPage } from "../pages/ReviewWorkbenchPage";
-import { SourceDetailPage } from "../pages/SourceDetailPage";
-import { SourceManagerPage } from "../pages/SourceManagerPage";
-import { SourceProfilingPage } from "../pages/SourceProfilingPage";
-import { TenantContextPage } from "../pages/TenantContextPage";
+
+// Wave 65 (PM6-042 follow-up): route-level code-splitting. The single main
+// JS chunk had grown past Vite's 650kB warning (all ~50 pages bundled
+// together); `lazy()` + this per-named-export helper defers every page to
+// its own chunk, fetched on first navigation. Each call site below still
+// writes a literal `import("../pages/X")` (required for bundlers to
+// statically split it) — the helper only picks the named export out of the
+// resolved module. Files with multiple named exports (AdminPages.tsx) share
+// one chunk across their `lazy()` calls since it's the same import specifier.
+function lazyNamed<M extends Record<string, ComponentType>, K extends keyof M>(
+  loader: () => Promise<M>,
+  name: K,
+) {
+  return lazy(() => loader().then((module) => ({ default: module[name] })));
+}
+
+const AdminConsolePage = lazyNamed(() => import("../pages/AdminPages"), "AdminConsolePage");
+const AdminProjectsPage = lazyNamed(() => import("../pages/AdminPages"), "AdminProjectsPage");
+const ProjectAdminApprovalPolicyPage = lazyNamed(() => import("../pages/AdminPages"), "ProjectAdminApprovalPolicyPage");
+const ProjectAdminCredentialsPage = lazyNamed(() => import("../pages/AdminPages"), "ProjectAdminCredentialsPage");
+const ProjectAdminImportExportPage = lazyNamed(() => import("../pages/AdminPages"), "ProjectAdminImportExportPage");
+const ProjectAdminOperationsPage = lazyNamed(() => import("../pages/AdminPages"), "ProjectAdminOperationsPage");
+const ProjectAdminPage = lazyNamed(() => import("../pages/AdminPages"), "ProjectAdminPage");
+const ProjectAdminRetentionBackupPage = lazyNamed(() => import("../pages/AdminPages"), "ProjectAdminRetentionBackupPage");
+const ProjectAdminRolesPage = lazyNamed(() => import("../pages/AdminPages"), "ProjectAdminRolesPage");
+const BenchmarkComparisonPage = lazyNamed(() => import("../pages/BenchmarkComparisonPage"), "BenchmarkComparisonPage");
+const ConnectorsPage = lazyNamed(() => import("../pages/ConnectorsPage"), "ConnectorsPage");
+const CopilotPage = lazyNamed(() => import("../pages/CopilotPage"), "CopilotPage");
+const CandidateResultsPage = lazyNamed(() => import("../pages/CandidateResultsPage"), "CandidateResultsPage");
+const DashboardPage = lazyNamed(() => import("../pages/DashboardPage"), "DashboardPage");
+const DocumentChunkViewerPage = lazyNamed(() => import("../pages/DocumentChunkViewerPage"), "DocumentChunkViewerPage");
+const EvaluationDatasetsPage = lazyNamed(() => import("../pages/EvaluationDatasetsPage"), "EvaluationDatasetsPage");
+const EvidenceViewerPage = lazyNamed(() => import("../pages/EvidenceViewerPage"), "EvidenceViewerPage");
+const ExternalApiDocsPage = lazyNamed(() => import("../pages/ExternalApiDocsPage"), "ExternalApiDocsPage");
+const ExtractionJobCreatePage = lazyNamed(() => import("../pages/ExtractionJobCreatePage"), "ExtractionJobCreatePage");
+const GoldSetManagerPage = lazyNamed(() => import("../pages/GoldSetManagerPage"), "GoldSetManagerPage");
+const GovernanceBoardPage = lazyNamed(() => import("../pages/GovernanceBoardPage"), "GovernanceBoardPage");
+const GovernanceProposePage = lazyNamed(() => import("../pages/GovernanceProposePage"), "GovernanceProposePage");
+const GovernanceDetailPage = lazyNamed(() => import("../pages/GovernanceDetailPage"), "GovernanceDetailPage");
+const ExtractionJobMonitorPage = lazyNamed(() => import("../pages/ExtractionJobMonitorPage"), "ExtractionJobMonitorPage");
+const IntegratedSearchPage = lazyNamed(() => import("../pages/IntegratedSearchPage"), "IntegratedSearchPage");
+const LearningInsightsPage = lazyNamed(() => import("../pages/LearningInsightsPage"), "LearningInsightsPage");
+const OntologyModelerPage = lazyNamed(() => import("../pages/OntologyModelerPage"), "OntologyModelerPage");
+const OntologyPacksPage = lazyNamed(() => import("../pages/OntologyPacksPage"), "OntologyPacksPage");
+const PromptPerformancePage = lazyNamed(() => import("../pages/PromptPerformancePage"), "PromptPerformancePage");
+const PublishedGraphExplorerPage = lazyNamed(() => import("../pages/PublishedGraphExplorerPage"), "PublishedGraphExplorerPage");
+const PublishQueuePage = lazyNamed(() => import("../pages/PublishQueuePage"), "PublishQueuePage");
+const ProjectDetailPage = lazyNamed(() => import("../pages/ProjectDetailPage"), "ProjectDetailPage");
+const ProjectListPage = lazyNamed(() => import("../pages/ProjectListPage"), "ProjectListPage");
+const QualityDashboardPage = lazyNamed(() => import("../pages/QualityDashboardPage"), "QualityDashboardPage");
+const RagAnswerWorkspacePage = lazyNamed(() => import("../pages/RagAnswerWorkspacePage"), "RagAnswerWorkspacePage");
+const ReviewInboxPage = lazyNamed(() => import("../pages/ReviewInboxPage"), "ReviewInboxPage");
+const ReviewWorkbenchPage = lazyNamed(() => import("../pages/ReviewWorkbenchPage"), "ReviewWorkbenchPage");
+const SourceDetailPage = lazyNamed(() => import("../pages/SourceDetailPage"), "SourceDetailPage");
+const SourceManagerPage = lazyNamed(() => import("../pages/SourceManagerPage"), "SourceManagerPage");
+const SourceProfilingPage = lazyNamed(() => import("../pages/SourceProfilingPage"), "SourceProfilingPage");
+const TenantContextPage = lazyNamed(() => import("../pages/TenantContextPage"), "TenantContextPage");
 
 export const router = createBrowserRouter([
   {

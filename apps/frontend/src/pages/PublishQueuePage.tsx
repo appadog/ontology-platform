@@ -48,15 +48,15 @@ export function PublishQueuePage() {
   );
 
   if (projectQuery.isLoading || candidatesQuery.isLoading || jobsQuery.isLoading) {
-    return <PageState kind="loading" title="Publish queue를 불러오는 중" description="검수 완료 후보와 publish job 상태를 조회하고 있습니다." />;
+    return <PageState kind="loading" title="게시 큐를 불러오는 중" description="검수 완료 후보와 게시 작업 상태를 조회하고 있습니다." />;
   }
 
   if (projectQuery.isError || candidatesQuery.isError || jobsQuery.isError || !projectQuery.data || !candidatesQuery.data || !jobsQuery.data) {
     return (
       <PageState
         kind="error"
-        title="Publish queue를 불러오지 못했습니다"
-        description="검수 상태와 publish job 목록을 다시 조회하세요."
+        title="게시 큐를 불러오지 못했습니다"
+        description="검수 상태와 게시 작업 목록을 다시 조회하세요."
         actionLabel="다시 시도"
         onAction={() => {
           void projectQuery.refetch();
@@ -80,22 +80,22 @@ export function PublishQueuePage() {
       <Breadcrumbs
         items={[
           { label: projectQuery.data.name, to: `/projects/${projectId}` },
-          { label: "Publish" },
+          { label: "게시" },
         ]}
       />
-      <PageHeader title="게시 대기열" description="Only eligible approved or modified candidates move into the published graph snapshot.">
-        <Mvp3ActionLink to={`/projects/${projectId}/published-graph`}>Published graph</Mvp3ActionLink>
+      <PageHeader title="게시 대기열" description="승인되었거나 수정 승인된, 게시 자격을 갖춘 후보만 게시 그래프 스냅샷으로 반영됩니다.">
+        <Mvp3ActionLink to={`/projects/${projectId}/published-graph`}>게시 그래프</Mvp3ActionLink>
       </PageHeader>
-      <Mvp3Workflow current="Publish queue" action={<Mvp3ActionLink to={`/projects/${projectId}/review`}>Review inbox</Mvp3ActionLink>} />
+      <Mvp3Workflow current="Publish queue" action={<Mvp3ActionLink to={`/projects/${projectId}/review`}>검수 인박스</Mvp3ActionLink>} />
       {eligibleCandidates.length === 0 ? (
-        <PageState kind="empty" title="No eligible candidates" description="Review decisions and eligibility reasons must clear before a publish job can run." />
+        <PageState kind="empty" title="게시 가능한 후보가 없습니다" description="게시 작업을 실행하려면 먼저 검수 결정과 게시 자격 사유를 해소해야 합니다." />
       ) : null}
       <ScreenGrid>
         <Stack>
-          <HanaCard title="Candidate eligibility" description="Frozen reason codes come from the publish eligibility contract.">
+          <HanaCard title="후보 게시 자격" description="게시 자격 사유 코드는 게시 자격 계약에서 고정되어 옵니다.">
             <QueueActions>
               <HanaButton type="button" variant="secondary" onClick={() => setSelectedIds(eligibleIds)}>
-                Select eligible
+                게시 가능 항목 선택
               </HanaButton>
               <HanaButton
                 type="button"
@@ -104,21 +104,21 @@ export function PublishQueuePage() {
                 onClick={() => createPublishJob.mutate(selectedCandidates)}
               >
                 <Send aria-hidden="true" />
-                Prepare publish
+                게시 준비
               </HanaButton>
-              <Muted>{selectedIds.length} selected</Muted>
+              <Muted>{selectedIds.length}개 선택됨</Muted>
             </QueueActions>
             <CompactTable $stickyHeader $maxHeight="640px">
               <table>
                 <thead>
                   <tr>
-                    <th>Select</th>
-                    <th>Candidate</th>
-                    <th>Review</th>
-                    <th>Validation</th>
-                    <th>Evidence</th>
-                    <th>Eligibility</th>
-                    <th>Context</th>
+                    <th>선택</th>
+                    <th>후보</th>
+                    <th>검수</th>
+                    <th>검증</th>
+                    <th>근거</th>
+                    <th>게시 자격</th>
+                    <th>맥락</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -126,7 +126,7 @@ export function PublishQueuePage() {
                     <tr key={candidate.candidate_id}>
                       <td>
                         <input
-                          aria-label={`Select ${candidate.candidate_kind} ${candidate.candidate_id}`}
+                          aria-label={`${candidate.candidate_kind} ${candidate.candidate_id} 선택`}
                           type="checkbox"
                           checked={selectedIds.includes(candidate.candidate_id)}
                           disabled={!candidate.eligible}
@@ -137,7 +137,7 @@ export function PublishQueuePage() {
                         <CandidateCell>
                           <strong>{candidate.candidate_id}</strong>
                           <span>{candidate.candidate_kind}</span>
-                          <HanaBadge tone={candidate.eligible ? "success" : "warning"}>{candidate.eligible ? "ELIGIBLE" : "BLOCKED"}</HanaBadge>
+                          <HanaBadge tone={candidate.eligible ? "success" : "warning"}>{candidate.eligible ? "ELIGIBLE · 게시 가능" : "BLOCKED · 차단됨"}</HanaBadge>
                         </CandidateCell>
                       </td>
                       <td>
@@ -152,7 +152,7 @@ export function PublishQueuePage() {
                       <td>
                         <BadgeRow>
                           <StatusBadge token={candidate.has_evidence ? "PRESENT" : "MISSING"} tone={candidate.has_evidence ? "success" : "danger"} />
-                          <span>{candidate.has_warning_reason ? "warning reason" : "no warning reason"}</span>
+                          <span>{candidate.has_warning_reason ? "경고 사유 있음" : "경고 사유 없음"}</span>
                         </BadgeRow>
                       </td>
                       <td>
@@ -160,8 +160,8 @@ export function PublishQueuePage() {
                       </td>
                       <td>
                         <CandidateCell>
-                          <span>{candidate.eligible ? "Ready for publish job" : "Blocked by eligibility policy"}</span>
-                          <span>{candidate.has_warning_reason ? "Reviewer warning reason present" : "No reviewer warning reason"}</span>
+                          <span>{candidate.eligible ? "게시 작업 준비 완료" : "게시 자격 정책에 의해 차단됨"}</span>
+                          <span>{candidate.has_warning_reason ? "검수자 경고 사유 있음" : "검수자 경고 사유 없음"}</span>
                         </CandidateCell>
                       </td>
                     </tr>
@@ -172,9 +172,9 @@ export function PublishQueuePage() {
           </HanaCard>
         </Stack>
         <Stack>
-          <HanaCard title="Publish job">
+          <HanaCard title="게시 작업">
             {!selectedJob ? (
-              <PageState kind="empty" title="No publish job yet" description="Select eligible candidates to create the first job." />
+              <PageState kind="empty" title="아직 게시 작업이 없습니다" description="게시 가능한 후보를 선택해 첫 작업을 만드세요." />
             ) : (
               <CardBody>
                 {(() => {
@@ -191,19 +191,19 @@ export function PublishQueuePage() {
                       <JobStats>
                         <Metric>
                           <strong>{jobView.selectedCandidateCount}</strong>
-                          <span>Selected</span>
+                          <span>선택됨</span>
                         </Metric>
                         <Metric>
                           <strong>{selectedJob.published_entity_count}</strong>
-                          <span>Entities</span>
+                          <span>엔티티</span>
                         </Metric>
                         <Metric>
                           <strong>{selectedJob.published_relation_count}</strong>
-                          <span>Relations</span>
+                          <span>관계</span>
                         </Metric>
                         <Metric>
                           <strong>{selectedJob.skipped_count}</strong>
-                          <span>Skipped</span>
+                          <span>건너뜀</span>
                         </Metric>
                       </JobStats>
                       <BadgeRow>
@@ -220,10 +220,10 @@ export function PublishQueuePage() {
                         onClick={() => runPublishJob.mutate(selectedJob.id)}
                       >
                         <Play aria-hidden="true" />
-                        Run job
+                        작업 실행
                       </HanaButton>
                       {jobView.resultVersionId ? (
-                        <Mvp3PrimaryLink to={`/projects/${projectId}/published-graph`}>Open snapshot {jobView.resultVersionId}</Mvp3PrimaryLink>
+                        <Mvp3PrimaryLink to={`/projects/${projectId}/published-graph`}>스냅샷 열기 {jobView.resultVersionId}</Mvp3PrimaryLink>
                       ) : null}
                     </>
                   );
@@ -231,7 +231,7 @@ export function PublishQueuePage() {
               </CardBody>
             )}
           </HanaCard>
-          <HanaCard title="Reason summary">
+          <HanaCard title="사유 요약">
             <CardBody>
               {selectedJob ? (
                 Object.entries(toPublishJobView(selectedJob).eligibilitySummary)
@@ -243,7 +243,7 @@ export function PublishQueuePage() {
                     </SummaryRow>
                   ))
               ) : (
-                <Muted>No summary yet.</Muted>
+                <Muted>아직 요약이 없습니다.</Muted>
               )}
             </CardBody>
           </HanaCard>

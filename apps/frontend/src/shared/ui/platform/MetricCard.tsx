@@ -16,13 +16,15 @@ export function MetricCard({ label, value, children }: MetricCardProps) {
   );
 }
 
+// Wave 64 (PM6-042 §2.2): mock's flat metric-card style — 24px padding, lg
+// radius, subtle border, larger/heavier value type.
 const Metric = styled.article`
   display: grid;
   gap: ${({ theme }) => theme.spacing.sm};
   min-width: 0;
-  padding: ${({ theme }) => theme.spacing.lg};
-  border: 1px solid ${({ theme }) => theme.color.border};
-  border-radius: ${({ theme }) => theme.radius.md};
+  padding: 24px;
+  border: 1px solid ${({ theme }) => theme.color.borderSubtle};
+  border-radius: ${({ theme }) => theme.radius.lg};
   background: ${({ theme }) => theme.color.surfaceRaised};
   box-shadow: ${({ theme }) => theme.shadow.card};
 
@@ -33,7 +35,9 @@ const Metric = styled.article`
   }
 
   strong {
-    font-size: 30px;
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     line-height: 1;
   }
 
