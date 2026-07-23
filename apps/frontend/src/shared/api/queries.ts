@@ -464,7 +464,8 @@ export function useCreatePublishJob(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (candidates: PublishCandidate[]) => apiClient.createPublishJob(projectId, candidates),
+    mutationFn: ({ candidates, notifyWebhookUrl }: { candidates: PublishCandidate[]; notifyWebhookUrl?: string | null }) =>
+      apiClient.createPublishJob(projectId, candidates, notifyWebhookUrl),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "publish-jobs"] });
       void queryClient.invalidateQueries({ queryKey: ["projects", projectId, "publish-candidates"] });

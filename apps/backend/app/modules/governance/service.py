@@ -29,6 +29,7 @@ from .schemas import (
     OntologyChangeRequestListResponse,
     OntologyChangeRequestStatus,
     OntologyChangeRequestUpdateRequest,
+    RecommendedApprover,
 )
 
 # ---------------------------------------------------------------------------
@@ -58,6 +59,16 @@ _KNOWN_CLASS_IDS = {"class-clause", "class-company", "class-extra", "class-isola
 _KNOWN_PROPERTY_IDS = {"property-claim-deadline", "property-name", "property-extra"}
 _KNOWN_RELATION_IDS = {"relation-has-clause", "relation-extra"}
 _KNOWN_ONTOLOGY_VERSION_IDS = {"ontology-v7", "ontology-v1"}
+
+# Point-of-contact (SME) assigned to each known demo class, mirroring the real
+# OntologyClass.owner_id/owner_display_name fields (app/modules/ontology/models.py).
+# Governance is a self-contained in-memory mock (see _KNOWN_CLASS_IDS above) that
+# is not wired to the real ontology DB, so recommendations are looked up here
+# rather than via a cross-module DB join.
+_CLASS_OWNERS: dict[str, tuple[str, str]] = {
+    "class-clause": ("user-ontology-manager-1", "온톨로지 매니저"),
+    "class-company": ("user-ontology-manager-1", "온톨로지 매니저"),
+}
 
 
 def utc_now() -> datetime:
@@ -348,6 +359,27 @@ def _refresh_item_count(request: OntologyChangeRequest) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _recommended_approvers_for_items(
+    items: list[OntologyChangeItemRequest],
+) -> list[RecommendedApprover]:
+    class_ids = {item.ontology_class_id for item in items if item.ontology_class_id}
+    seen_owner_ids: set[str] = set()
+    recommended: list[RecommendedApprover] = []
+    for class_id in class_ids:
+        owner = _CLASS_OWNERS.get(class_id)
+        if owner is None or owner[0] in seen_owner_ids:
+            continue
+        seen_owner_ids.add(owner[0])
+        recommended.append(
+            RecommendedApprover(
+                ontology_class_id=class_id,
+                owner_id=owner[0],
+                owner_display_name=owner[1],
+            )
+        )
+    return recommended
+
+
 def propose_change_request(
     project_id: str,
     payload: OntologyChangeRequestCreateRequest,
@@ -369,6 +401,7 @@ def propose_change_request(
         proposer_id=actor_id,
         item_count=0,
         ontology_version_id=payload.ontology_version_id,
+        recommended_approvers=_recommended_approvers_for_items(payload.items),
         created_at=now,
         updated_at=now,
     )

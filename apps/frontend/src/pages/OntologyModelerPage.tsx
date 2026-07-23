@@ -78,7 +78,7 @@ export function OntologyModelerPage() {
   const [relationName, setRelationName] = useState("RELATED_TO");
   const [relationCardinality, setRelationCardinality] = useState<Cardinality>("MANY_TO_MANY");
   const [relationTargetClassId, setRelationTargetClassId] = useState("");
-  const [classForm, setClassForm] = useState({ name: "", label: "", description: "", x: "0", y: "0" });
+  const [classForm, setClassForm] = useState({ name: "", label: "", description: "", ownerDisplayName: "", x: "0", y: "0" });
   const [propertyForm, setPropertyForm] = useState({
     label: "",
     description: "",
@@ -124,6 +124,8 @@ export function OntologyModelerPage() {
         description: null,
         status: node.status,
         position: node.position,
+        owner_id: null,
+        owner_display_name: null,
         created_at: "",
         updated_at: "",
       }))
@@ -248,6 +250,7 @@ export function OntologyModelerPage() {
       name: selectedClass.name,
       label: selectedClass.label,
       description: selectedClass.description ?? "",
+      ownerDisplayName: selectedClass.owner_display_name ?? "",
       x: String(selectedClass.position.x),
       y: String(selectedClass.position.y),
     });
@@ -487,12 +490,15 @@ export function OntologyModelerPage() {
       return;
     }
 
+    const ownerDisplayName = nullableText(classForm.ownerDisplayName);
     updateClass.mutate({
       classId: selectedClass.id,
       payload: {
         name: classForm.name.trim(),
         label: classForm.label.trim() || classForm.name.trim(),
         description: nullableText(classForm.description),
+        owner_id: ownerDisplayName,
+        owner_display_name: ownerDisplayName,
         position: {
           x: toNumber(classForm.x, selectedClass.position.x),
           y: toNumber(classForm.y, selectedClass.position.y),
@@ -835,6 +841,15 @@ export function OntologyModelerPage() {
                   value={classForm.description}
                   disabled={!isDraftVersion}
                   onChange={(event) => setClassForm((form) => ({ ...form, description: event.target.value }))}
+                />
+              </Field>
+              <Field>
+                <span>Owner (SME)</span>
+                <HanaInput
+                  value={classForm.ownerDisplayName}
+                  disabled={!isDraftVersion}
+                  placeholder="Point of contact for this class"
+                  onChange={(event) => setClassForm((form) => ({ ...form, ownerDisplayName: event.target.value }))}
                 />
               </Field>
               <CoordinateRow>

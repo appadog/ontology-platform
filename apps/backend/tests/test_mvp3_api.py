@@ -327,6 +327,77 @@ def test_mvp3_publish_rules_published_graph_and_quality_summary() -> None:
     assert "PUBLISHED_GRAPH_VERSION_CREATED" in event_types
 
 
+def test_mvp3_publish_job_webhook_delivered(monkeypatch: Any) -> None:
+    import app.modules.publish.service as publish_service
+
+    class _FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+    monkeypatch.setattr(publish_service.httpx, "post", lambda *args, **kwargs: _FakeResponse())
+
+    ctx = _create_extraction_context("MVP3 Publish Webhook Delivered", "default")
+    _validate_candidates(ctx)
+    _review_candidates(ctx, [("ENTITY", ctx["entity_ids"][0], "APPROVE", None, None)])
+
+    job_response = client.post(
+        f"/api/v1/projects/{ctx['project_id']}/publish-jobs",
+        json={
+            "ontology_version_id": ctx["ontology_version_id"],
+            "candidate_refs": [{"candidate_kind": "ENTITY", "candidate_id": ctx["entity_ids"][0]}],
+            "notify_webhook_url": "https://example.test/hooks/publish",
+        },
+    )
+    assert job_response.status_code == 201
+    assert job_response.json()["notify_webhook_url"] == "https://example.test/hooks/publish"
+
+    run_response = client.post(f"/api/v1/publish-jobs/{job_response.json()['id']}/run")
+    assert run_response.status_code == 200
+    run = run_response.json()
+    assert run["webhook_delivery_status"] == "DELIVERED"
+    assert run["webhook_delivered_at"]
+    assert run["webhook_error_message"] is None
+
+    audit = client.get(f"/api/v1/projects/{ctx['project_id']}/audit-logs")
+    event_types = [event["event_type"] for event in audit.json()]
+    assert "PUBLISH_JOB_WEBHOOK_DELIVERED" in event_types
+
+
+def test_mvp3_publish_job_webhook_failure_does_not_break_publish(monkeypatch: Any) -> None:
+    import app.modules.publish.service as publish_service
+
+    def _raise(*args: Any, **kwargs: Any) -> None:
+        raise publish_service.httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr(publish_service.httpx, "post", _raise)
+
+    ctx = _create_extraction_context("MVP3 Publish Webhook Failed", "default")
+    _validate_candidates(ctx)
+    _review_candidates(ctx, [("ENTITY", ctx["entity_ids"][0], "APPROVE", None, None)])
+
+    job_response = client.post(
+        f"/api/v1/projects/{ctx['project_id']}/publish-jobs",
+        json={
+            "ontology_version_id": ctx["ontology_version_id"],
+            "candidate_refs": [{"candidate_kind": "ENTITY", "candidate_id": ctx["entity_ids"][0]}],
+            "notify_webhook_url": "https://unreachable.test/hooks/publish",
+        },
+    )
+    assert job_response.status_code == 201
+
+    run_response = client.post(f"/api/v1/publish-jobs/{job_response.json()['id']}/run")
+    assert run_response.status_code == 200
+    run = run_response.json()
+    assert run["status"] == "SUCCESS"
+    assert run["published_entity_count"] == 1
+    assert run["webhook_delivery_status"] == "FAILED"
+    assert run["webhook_error_message"]
+
+    audit = client.get(f"/api/v1/projects/{ctx['project_id']}/audit-logs")
+    event_types = [event["event_type"] for event in audit.json()]
+    assert "PUBLISH_JOB_WEBHOOK_FAILED" in event_types
+
+
 def test_mvp3_seed_helper_outputs_frontend_smoke_fixture() -> None:
     from scripts.seed_mvp3 import seed_mvp3
 

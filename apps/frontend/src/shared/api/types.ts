@@ -168,6 +168,8 @@ export interface OntologyClass {
   description: string | null;
   status: OntologyElementStatus;
   position: Position;
+  owner_id: string | null;
+  owner_display_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -177,6 +179,8 @@ export interface OntologyClassCreateRequest {
   label?: string | null;
   description?: string | null;
   position?: Position;
+  owner_id?: string | null;
+  owner_display_name?: string | null;
 }
 
 export interface OntologyClassUpdateRequest {
@@ -185,6 +189,8 @@ export interface OntologyClassUpdateRequest {
   description?: string | null;
   status?: OntologyElementStatus | null;
   position?: Position | null;
+  owner_id?: string | null;
+  owner_display_name?: string | null;
 }
 
 export interface OntologyRelation {
@@ -654,6 +660,10 @@ export interface PublishJob {
   ended_at: string | null;
   error_code: string | null;
   error_message: string | null;
+  notify_webhook_url: string | null;
+  webhook_delivery_status: "NOT_CONFIGURED" | "DELIVERED" | "FAILED";
+  webhook_delivered_at: string | null;
+  webhook_error_message: string | null;
 }
 
 export interface PublishedGraphVersion {
@@ -3135,6 +3145,12 @@ export interface OntologyChangeItemRequest {
 }
 
 /** A proposal record in the governance/decision layer. application_state is QUEUED iff status==APPROVED. */
+export interface RecommendedApprover {
+  ontology_class_id: string;
+  owner_id: string;
+  owner_display_name?: string | null;
+}
+
 export interface OntologyChangeRequest {
   id: string;
   project_id: string;
@@ -3145,6 +3161,7 @@ export interface OntologyChangeRequest {
   proposer_id: string;
   item_count: number;
   ontology_version_id?: string | null;
+  recommended_approvers: RecommendedApprover[];
   created_at: string;
   updated_at?: string | null;
   submitted_at?: string | null;

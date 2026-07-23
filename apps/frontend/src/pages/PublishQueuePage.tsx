@@ -12,7 +12,7 @@ import {
 } from "../shared/api/queries";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
-import { HanaBadge, HanaButton, HanaCard, statusToTone } from "../shared/ui/hana";
+import { HanaBadge, HanaButton, HanaCard, HanaInput, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
@@ -33,6 +33,7 @@ import {
 export function PublishQueuePage() {
   const { projectId = "", publishJobId = "" } = useParams();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [webhookUrl, setWebhookUrl] = useState("");
   const projectQuery = useProject(projectId);
   const candidatesQuery = usePublishCandidates(projectId);
   const jobsQuery = usePublishJobs(projectId);
@@ -101,12 +102,20 @@ export function PublishQueuePage() {
                 type="button"
                 variant="primary"
                 disabled={selectedIds.length === 0 || createPublishJob.isPending}
-                onClick={() => createPublishJob.mutate(selectedCandidates)}
+                onClick={() => createPublishJob.mutate({ candidates: selectedCandidates, notifyWebhookUrl: webhookUrl.trim() || null })}
               >
                 <Send aria-hidden="true" />
                 게시 준비
               </HanaButton>
               <Muted>{selectedIds.length}개 선택됨</Muted>
+            </QueueActions>
+            <QueueActions>
+              <HanaInput
+                value={webhookUrl}
+                onChange={(event) => setWebhookUrl(event.target.value)}
+                placeholder="게시 완료 알림 웹훅 URL (선택)"
+                aria-label="게시 완료 알림 웹훅 URL"
+              />
             </QueueActions>
             <CompactTable $stickyHeader $maxHeight="640px">
               <table>
@@ -213,6 +222,18 @@ export function PublishQueuePage() {
                         />
                         <span>{formatDateTime(selectedJob.created_at)}</span>
                       </BadgeRow>
+                      {selectedJob.notify_webhook_url ? (
+                        <BadgeRow>
+                          <HanaBadge tone={selectedJob.webhook_delivery_status === "DELIVERED" ? "success" : selectedJob.webhook_delivery_status === "FAILED" ? "danger" : "progress"}>
+                            {selectedJob.webhook_delivery_status === "DELIVERED"
+                              ? "웹훅 알림 전송됨"
+                              : selectedJob.webhook_delivery_status === "FAILED"
+                                ? "웹훅 알림 전송 실패"
+                                : "웹훅 알림 대기 중"}
+                          </HanaBadge>
+                          <span>{selectedJob.notify_webhook_url}</span>
+                        </BadgeRow>
+                      ) : null}
                       <HanaButton
                         type="button"
                         variant="primary"

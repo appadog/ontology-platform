@@ -1,5 +1,5 @@
 import { ChangeEvent, useState } from "react";
-import { Boxes, Database, FolderKanban, Inbox, Plus } from "lucide-react";
+import { Boxes, Database, FolderKanban, Inbox, Plus, Star } from "lucide-react";
 import styled from "styled-components";
 import { Link } from "react-router-dom";
 import { useCreateProject, useProjects } from "../shared/api/queries";
@@ -8,9 +8,8 @@ import { HanaBadge, HanaButton, HanaCard, HanaInput, statusToTone } from "../sha
 import { PageState } from "../shared/ui/platform/PageState";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
+import { getFavoriteProjectIds, getRecentProjectIds, toggleFavoriteProject } from "../shared/lib/recentProjects";
 import { CompactTable } from "./mvp3Shared";
-
-const recentProjectStorageKey = "ontology-platform:recent-project-id";
 
 export function ProjectListPage() {
   const { data: projects, isLoading, isError, refetch } = useProjects();
@@ -18,11 +17,16 @@ export function ProjectListPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [favoriteIds, setFavoriteIds] = useState<string[]>(() => getFavoriteProjectIds());
   // Wave 64 (PM6-042 §2.3): the contextual quick-links card below the list
   // targets the "selected" project — same recent/first-project resolution
   // AppShell already uses for its project selector, so the two stay in sync.
-  const recentProjectId = typeof window === "undefined" ? "" : window.localStorage.getItem(recentProjectStorageKey) ?? "";
+  const recentProjectId = getRecentProjectIds()[0] ?? "";
   const selectedProject = (projects ?? []).find((project) => project.id === recentProjectId) ?? (projects ?? [])[0];
+
+  function handleToggleFavorite(projectId: string) {
+    setFavoriteIds(toggleFavoriteProject(projectId));
+  }
 
   const canCreate = name.trim().length > 0 && !createProject.isPending;
 
@@ -114,6 +118,7 @@ export function ProjectListPage() {
               <table>
                 <thead>
                   <tr>
+                    <th aria-label="즐겨찾기" />
                     <th>Name</th>
                     <th>Status</th>
                     <th data-align="right">Sources</th>
@@ -124,6 +129,17 @@ export function ProjectListPage() {
                 <tbody>
                   {projects.map((project) => (
                     <tr key={project.id}>
+                      <td>
+                        <FavoriteButton
+                          type="button"
+                          data-active={favoriteIds.includes(project.id)}
+                          aria-label={favoriteIds.includes(project.id) ? `${project.name} 즐겨찾기 해제` : `${project.name} 즐겨찾기 추가`}
+                          aria-pressed={favoriteIds.includes(project.id)}
+                          onClick={() => handleToggleFavorite(project.id)}
+                        >
+                          <Star aria-hidden="true" fill={favoriteIds.includes(project.id) ? "currentColor" : "none"} />
+                        </FavoriteButton>
+                      </td>
                       <td>
                         <ProjectLink to={`/projects/${project.id}`}>
                           {/* Wave 64 (PM6-042 §2.3): mock's colored initial-letter
@@ -175,6 +191,32 @@ export function ProjectListPage() {
     </>
   );
 }
+
+const FavoriteButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: ${({ theme }) => theme.color.textMuted};
+  cursor: pointer;
+  border-radius: ${({ theme }) => theme.radius.sm};
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    background: ${({ theme }) => theme.color.surfaceMuted};
+  }
+
+  &[data-active="true"] {
+    color: #f59e0b;
+  }
+`;
 
 const ProjectLink = styled(Link)`
   display: flex;

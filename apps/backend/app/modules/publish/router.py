@@ -136,6 +136,7 @@ def create_publish_job(
         eligible_count=eligible_count,
         skipped_count=len(skip_reasons),
         skip_reasons=[reason.model_dump(mode="json") for reason in skip_reasons],
+        notify_webhook_url=payload.notify_webhook_url,
     )
     db.add(job)
     db.flush()

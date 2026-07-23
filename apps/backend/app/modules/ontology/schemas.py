@@ -38,6 +38,8 @@ class OntologyClassCreateRequest(BaseModel):
     label: str | None = Field(default=None, max_length=200)
     description: str | None = None
     position: Position = Field(default_factory=Position)
+    owner_id: str | None = Field(default=None, max_length=100)
+    owner_display_name: str | None = Field(default=None, max_length=200)
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -57,6 +59,8 @@ class OntologyClassUpdateRequest(BaseModel):
     description: str | None = None
     status: OntologyElementStatus | None = None
     position: Position | None = None
+    owner_id: str | None = Field(default=None, max_length=100)
+    owner_display_name: str | None = Field(default=None, max_length=200)
 
 
 class OntologyClass(BaseModel):
@@ -67,6 +71,8 @@ class OntologyClass(BaseModel):
     description: str | None
     status: OntologyElementStatus
     position: Position
+    owner_id: str | None = None
+    owner_display_name: str | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -94,6 +94,7 @@ function buildRequest(
     proposer_id: MVP6_GOVERNANCE_PROPOSER_ID,
     item_count: 1,
     ontology_version_id: MVP6_GOVERNANCE_ONTOLOGY_VERSION_ID,
+    recommended_approvers: [],
     created_at: NOW,
     updated_at: NOW,
     submitted_at: null,
@@ -113,6 +114,9 @@ export const mockGovernanceRequests: OntologyChangeRequest[] = [
     application_state: "NOT_APPLICABLE",
     item_count: 2,
     submitted_at: "2026-07-01T10:00:00.000Z",
+    recommended_approvers: [
+      { ontology_class_id: "class-customer", owner_id: "user-ontology-manager-1", owner_display_name: "온톨로지 매니저" },
+    ],
   }),
   buildRequest({
     id: MVP6_GOVERNANCE_DRAFT_ID,

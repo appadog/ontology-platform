@@ -61,6 +61,8 @@ class OntologyClass(Base):
         index=True,
     )
     position: Mapped[dict[str, float]] = mapped_column(JSON, nullable=False, default=dict)
+    owner_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    owner_display_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now
     )

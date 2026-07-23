@@ -488,6 +488,10 @@ export const mockPublishJobs: PublishJob[] = [
     ended_at: publishedAt,
     error_code: null,
     error_message: null,
+    notify_webhook_url: null,
+    webhook_delivery_status: "NOT_CONFIGURED",
+    webhook_delivered_at: null,
+    webhook_error_message: null,
   },
 ];
 

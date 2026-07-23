@@ -4,12 +4,12 @@ import { FolderPlus, Search, type LucideIcon } from "lucide-react";
 import styled from "styled-components";
 import { globalNavItems, projectNavGroups, type NavItem, type NavSection } from "./navigation";
 import { useProjects } from "../api/queries";
+import { getRecentProjectIds } from "../lib/recentProjects";
 
 // Wave 63 (PM6-041 §2.1 / design doc P4): universal launcher command palette.
 // Built ONLY from existing data sources (navigation.ts route table + the
-// existing `recentProjectStorageKey` localStorage convention already used by
-// AppShell/DashboardPage) -- no parallel route list, no new backend state.
-const recentProjectStorageKey = "ontology-platform:recent-project-id";
+// shared recents store also used by AppShell/DashboardPage) -- no parallel
+// route list, no new backend state.
 
 // Wave 65 (follow-up): the LNB label itself stays English per D3 copy policy,
 // but a Korean-speaking user typing the Korean word for a section (e.g.
@@ -84,7 +84,7 @@ export function CommandPalette() {
     return match?.[1] ?? "";
   }, [open]);
 
-  const recentProjectId = typeof window === "undefined" ? "" : window.localStorage.getItem(recentProjectStorageKey) ?? "";
+  const recentProjectId = getRecentProjectIds()[0] ?? "";
   const contextProjectId = routeProjectId || recentProjectId || projects[0]?.id || "";
 
   const actions = useMemo<PaletteAction[]>(() => {

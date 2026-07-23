@@ -11,6 +11,7 @@ from app.core.enums import (
     PublishStatus,
     ReviewDecisionType,
     ValidationStatus,
+    WebhookDeliveryStatus,
 )
 from app.modules.validation.schemas import CandidateRef
 
@@ -38,6 +39,7 @@ class PublishJobCreateRequest(BaseModel):
     ontology_version_id: str
     candidate_refs: list[CandidateRef]
     dry_run: bool = False
+    notify_webhook_url: str | None = None
 
 
 class PublishJob(BaseModel):
@@ -58,6 +60,10 @@ class PublishJob(BaseModel):
     ended_at: datetime | None = None
     error_code: str | None = None
     error_message: str | None = None
+    notify_webhook_url: str | None = None
+    webhook_delivery_status: WebhookDeliveryStatus = WebhookDeliveryStatus.NOT_CONFIGURED
+    webhook_delivered_at: datetime | None = None
+    webhook_error_message: str | None = None
 
 
 class PublishedGraphVersion(BaseModel):

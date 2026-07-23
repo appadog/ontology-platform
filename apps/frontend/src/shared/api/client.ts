@@ -268,6 +268,7 @@ import {
   OntologyChangeRequestListResponse,
   OntologyChangeRequestStatus,
   OntologyChangeRequestUpdateRequest,
+  RecommendedApprover,
   GraphExploreRequest,
   GraphExploreResponse,
   GraphVizRequest,
@@ -544,6 +545,30 @@ const mockGovernanceAuditStore: Record<string, GovernanceAuditListResponse["item
   Object.entries(mockGovernanceAudit).map(([id, entries]) => [id, entries.map((e) => ({ ...e }))]),
 );
 let mockGovernanceCounter = 0;
+
+// Mirrors the backend's governance _CLASS_OWNERS demo fixture (app/modules/governance/service.py).
+const MOCK_CLASS_OWNERS: Record<string, { owner_id: string; owner_display_name: string }> = {
+  "class-customer": { owner_id: "user-ontology-manager-1", owner_display_name: "온톨로지 매니저" },
+  "class-clause": { owner_id: "user-ontology-manager-1", owner_display_name: "온톨로지 매니저" },
+  "class-company": { owner_id: "user-ontology-manager-1", owner_display_name: "온톨로지 매니저" },
+};
+
+function recommendedApproversForItems(items: OntologyChangeItemRequest[]): RecommendedApprover[] {
+  const seenOwnerIds = new Set<string>();
+  const recommended: RecommendedApprover[] = [];
+  for (const item of items) {
+    if (!item.ontology_class_id) {
+      continue;
+    }
+    const owner = MOCK_CLASS_OWNERS[item.ontology_class_id];
+    if (!owner || seenOwnerIds.has(owner.owner_id)) {
+      continue;
+    }
+    seenOwnerIds.add(owner.owner_id);
+    recommended.push({ ontology_class_id: item.ontology_class_id, ...owner });
+  }
+  return recommended;
+}
 
 // MVP6.6 application-audit store (CHANGE_REQUEST_APPLIED / CHANGE_REQUEST_SUPERSEDED),
 // process-local, chronological ascending.
@@ -1916,6 +1941,8 @@ export const apiClient = {
         description: payload.description ?? null,
         status: "ACTIVE",
         position: payload.position ?? { x: 140 + graph.nodes.length * 180, y: 140 + graph.nodes.length * 40 },
+        owner_id: payload.owner_id ?? null,
+        owner_display_name: payload.owner_display_name ?? null,
         created_at: now,
         updated_at: now,
       };
@@ -1969,6 +1996,9 @@ export const apiClient = {
         description: payload.description === undefined ? currentClass.description : payload.description,
         status: payload.status ?? currentClass.status,
         position: payload.position ?? currentClass.position,
+        owner_id: payload.owner_id === undefined ? currentClass.owner_id : payload.owner_id,
+        owner_display_name:
+          payload.owner_display_name === undefined ? currentClass.owner_display_name : payload.owner_display_name,
         updated_at: now,
       };
 
@@ -2658,7 +2688,11 @@ export const apiClient = {
     return request<PublishJob[]>(`/api/v1/projects/${projectId}/publish-jobs`);
   },
 
-  async createPublishJob(projectId: string, candidates: PublishCandidate[]): Promise<PublishJob> {
+  async createPublishJob(
+    projectId: string,
+    candidates: PublishCandidate[],
+    notifyWebhookUrl?: string | null,
+  ): Promise<PublishJob> {
     const selectedCandidates = candidates;
     const candidateRefs = selectedCandidates.map((candidate) => ({
       candidate_kind: candidate.candidate_kind,
@@ -2687,6 +2721,10 @@ export const apiClient = {
         ended_at: null,
         error_code: null,
         error_message: null,
+        notify_webhook_url: notifyWebhookUrl ?? null,
+        webhook_delivery_status: "NOT_CONFIGURED",
+        webhook_delivered_at: null,
+        webhook_error_message: null,
       };
 
       mockPublishJobs.unshift(job);
@@ -2702,6 +2740,7 @@ export const apiClient = {
       body: JSON.stringify({
         ontology_version_id: ontologyVersionId,
         candidate_refs: candidateRefs,
+        notify_webhook_url: notifyWebhookUrl || null,
       }),
     });
   },
@@ -2714,14 +2753,17 @@ export const apiClient = {
         throw new Error("Publish job fixture not found");
       }
 
+      const previousJob = mockPublishJobs[jobIndex];
       const updatedJob: PublishJob = {
-        ...mockPublishJobs[jobIndex],
+        ...previousJob,
         status: "SUCCESS",
         published_entity_count: 1,
         published_relation_count: 1,
         published_graph_version_id: mockPublishedGraph.version.id,
-        started_at: mockPublishJobs[jobIndex].started_at ?? new Date().toISOString(),
+        started_at: previousJob.started_at ?? new Date().toISOString(),
         ended_at: new Date().toISOString(),
+        webhook_delivery_status: previousJob.notify_webhook_url ? "DELIVERED" : "NOT_CONFIGURED",
+        webhook_delivered_at: previousJob.notify_webhook_url ? new Date().toISOString() : null,
       };
 
       mockPublishJobs[jobIndex] = updatedJob;
@@ -4308,6 +4350,7 @@ export const apiClient = {
         proposer_id: MVP6_GOVERNANCE_PROPOSER_ID,
         item_count: payload.items?.length ?? 0,
         ontology_version_id: payload.ontology_version_id ?? MVP6_GOVERNANCE_ONTOLOGY_VERSION_ID,
+        recommended_approvers: recommendedApproversForItems(payload.items ?? []),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         submitted_at: null,

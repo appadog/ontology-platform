@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { Star } from "lucide-react";
 import styled from "styled-components";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { PageContainer } from "../shared/layout/PageContainer";
@@ -7,10 +9,10 @@ import { Skeleton, useDelayedVisible } from "../shared/ui/platform/Skeleton";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
 import { formatDateTime } from "../shared/lib/format";
+import { getFavoriteProjectIds, getRecentProjectIds } from "../shared/lib/recentProjects";
 import { HanaCard } from "../shared/ui/hana";
 import { ActionLink, SecondaryActionLink } from "./mvp2Shared";
-
-const recentProjectStorageKey = "ontology-platform:recent-project-id";
+import type { ProjectSummary } from "../shared/api/types";
 
 // D2 (docs/pm/UIUX_REMEDIATION_DECISIONS.md §2): frozen Hero copy.
 const heroValuePoints = [
@@ -35,8 +37,14 @@ export function DashboardPage() {
   // actually taken >300ms (NN/g), so fast responses never flash a placeholder.
   const showLoadingSkeleton = useDelayedVisible(300);
 
-  const recentProjectId = typeof window === "undefined" ? "" : window.localStorage.getItem(recentProjectStorageKey) ?? "";
-  const recentProject = projects.find((project) => project.id === recentProjectId) ?? projects[0];
+  const recentProjectIds = getRecentProjectIds();
+  const recentProject = projects.find((project) => project.id === recentProjectIds[0]) ?? projects[0];
+  const favoriteProjects = getFavoriteProjectIds()
+    .map((id) => projects.find((project) => project.id === id))
+    .filter((project): project is ProjectSummary => Boolean(project));
+  const recentProjects = recentProjectIds
+    .map((id) => projects.find((project) => project.id === id))
+    .filter((project): project is ProjectSummary => Boolean(project));
 
   if (isLoading) {
     if (!showLoadingSkeleton) {
@@ -86,6 +94,44 @@ export function DashboardPage() {
           {recentProject ? <HeroSecondaryLink to={`/projects/${recentProject.id}`}>최근 프로젝트 열기</HeroSecondaryLink> : null}
         </HeroActions>
       </Hero>
+      <PersonalizationGrid>
+        <HanaCard title="즐겨찾기 프로젝트" description="자주 찾는 프로젝트를 즐겨찾기에 등록해두면 여기서 바로 이동할 수 있습니다.">
+          {favoriteProjects.length === 0 ? (
+            <EmptyPersonalizationNotice>
+              <span>아직 즐겨찾기한 프로젝트가 없습니다.</span>
+              <SecondaryActionLink to="/projects">Projects에서 즐겨찾기 추가</SecondaryActionLink>
+            </EmptyPersonalizationNotice>
+          ) : (
+            <ProjectQuickList>
+              {favoriteProjects.map((project) => (
+                <li key={project.id}>
+                  <Link to={`/projects/${project.id}`}>
+                    <Star aria-hidden="true" size={14} fill="currentColor" />
+                    <span>{project.name}</span>
+                  </Link>
+                </li>
+              ))}
+            </ProjectQuickList>
+          )}
+        </HanaCard>
+        <HanaCard title="최근 방문" description="최근에 열어본 프로젝트 목록입니다.">
+          {recentProjects.length === 0 ? (
+            <EmptyPersonalizationNotice>
+              <span>아직 방문한 프로젝트가 없습니다.</span>
+            </EmptyPersonalizationNotice>
+          ) : (
+            <ProjectQuickList>
+              {recentProjects.map((project) => (
+                <li key={project.id}>
+                  <Link to={`/projects/${project.id}`}>
+                    <span>{project.name}</span>
+                  </Link>
+                </li>
+              ))}
+            </ProjectQuickList>
+          )}
+        </HanaCard>
+      </PersonalizationGrid>
       <MetricGrid>
         <MetricCard label="Active Projects" value={data.active_project_count}>
           운영 중인 작업 공간
@@ -242,6 +288,51 @@ const HeroActions = styled.div`
   flex-wrap: wrap;
   gap: ${({ theme }) => theme.spacing.sm};
   margin-top: ${({ theme }) => theme.spacing.xs};
+`;
+
+const PersonalizationGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: ${({ theme }) => theme.spacing.md};
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ProjectQuickList = styled.ul`
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+  list-style: none;
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: ${({ theme }) => theme.spacing.sm};
+    padding: ${({ theme }) => theme.spacing.sm};
+    border-radius: ${({ theme }) => theme.radius.sm};
+    color: ${({ theme }) => theme.color.primary};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+    overflow-wrap: anywhere;
+
+    &:hover {
+      background: ${({ theme }) => theme.color.surface};
+    }
+  }
+
+  svg {
+    flex-shrink: 0;
+    color: #f59e0b;
+  }
+`;
+
+const EmptyPersonalizationNotice = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+  color: ${({ theme }) => theme.color.textMuted};
 `;
 
 const MetricGrid = styled.div`

@@ -193,6 +193,20 @@ export function GovernanceDetailPage() {
               <dd>{changeRequest.item_count}</dd>
               <dt>온톨로지 버전</dt>
               <dd>{changeRequest.ontology_version_id ?? "미지정"}</dd>
+              <dt>추천 승인자</dt>
+              <dd>
+                {changeRequest.recommended_approvers.length > 0 ? (
+                  <RecommendedApproverList>
+                    {changeRequest.recommended_approvers.map((approver) => (
+                      <li key={approver.owner_id}>
+                        {approver.owner_display_name ?? approver.owner_id} · {approver.ontology_class_id} 담당자
+                      </li>
+                    ))}
+                  </RecommendedApproverList>
+                ) : (
+                  "해당 클래스에 지정된 담당자가 없습니다"
+                )}
+              </dd>
               <dt>생성</dt>
               <dd>{formatGovernanceDate(changeRequest.created_at)}</dd>
               {changeRequest.decided_by ? (
@@ -900,6 +914,14 @@ const ConflictBand = styled.div`
     min-width: 0;
     overflow-wrap: anywhere;
   }
+`;
+
+const RecommendedApproverList = styled.ul`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.xs};
+  margin: 0;
+  padding: 0;
+  list-style: none;
 `;
 
 const PermissionRow = styled.div`

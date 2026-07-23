@@ -107,6 +107,12 @@ class OntologyChangeItem(BaseModel):
     updated_at: datetime | None = None
 
 
+class RecommendedApprover(BaseModel):
+    ontology_class_id: str
+    owner_id: str
+    owner_display_name: str | None = None
+
+
 class OntologyChangeRequest(BaseModel):
     id: str
     project_id: str
@@ -117,6 +123,7 @@ class OntologyChangeRequest(BaseModel):
     proposer_id: str
     item_count: int = 0
     ontology_version_id: str | None = None
+    recommended_approvers: list[RecommendedApprover] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime | None = None
     submitted_at: datetime | None = None

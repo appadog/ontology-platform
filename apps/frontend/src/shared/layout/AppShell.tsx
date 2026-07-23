@@ -10,6 +10,7 @@ import "@fontsource/newsreader/600-italic.css";
 import { globalNavItems, projectNavGroups, resolveActiveSection, type NavItem } from "./navigation";
 import { useMyTenants, useProjects } from "../api/queries";
 import { useActiveTenantId } from "../lib/activeTenant";
+import { getRecentProjectIds, recordProjectVisit } from "../lib/recentProjects";
 import { HanaBadge, HanaSelect, statusToTone } from "../ui/hana";
 import { StatusBadge } from "../ui/platform/StatusBadge";
 import { CommandPalette } from "./CommandPalette";
@@ -37,7 +38,6 @@ function actorInitials(name: string): string {
   return initials.slice(0, 2) || "?";
 }
 
-const recentProjectStorageKey = "ontology-platform:recent-project-id";
 // Wave 59 (PM6-039) §5/P8 — desktop icon-rail collapse toggle state, persisted
 // across reloads. This is a DESKTOP-ONLY addition: the wave-058 mobile drawer
 // (`navOpen` below) keeps its own separate state and CSS path untouched.
@@ -67,7 +67,7 @@ export function AppShell({ children }: PropsWithChildren) {
     const match = location.pathname.match(/^\/projects\/([^/]+)/);
     return match?.[1] ?? "";
   }, [location.pathname]);
-  const recentProjectId = typeof window === "undefined" ? "" : window.localStorage.getItem(recentProjectStorageKey) ?? "";
+  const recentProjectId = getRecentProjectIds()[0] ?? "";
   const selectedProject =
     projects.find((project) => project.id === routeProjectId) ??
     projects.find((project) => project.id === recentProjectId) ??
@@ -75,12 +75,12 @@ export function AppShell({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (routeProjectId) {
-      window.localStorage.setItem(recentProjectStorageKey, routeProjectId);
+      recordProjectVisit(routeProjectId);
       return;
     }
 
     if (selectedProject?.id) {
-      window.localStorage.setItem(recentProjectStorageKey, selectedProject.id);
+      recordProjectVisit(selectedProject.id);
     }
   }, [routeProjectId, selectedProject?.id]);
 
@@ -172,7 +172,7 @@ export function AppShell({ children }: PropsWithChildren) {
                   if (!nextProjectId) {
                     return;
                   }
-                  window.localStorage.setItem(recentProjectStorageKey, nextProjectId);
+                  recordProjectVisit(nextProjectId);
                   navigate(`/projects/${nextProjectId}`);
                 }}
               >

@@ -117,6 +117,81 @@ def test_propose_creates_draft_with_items() -> None:
     _assert_guard(created)
 
 
+def _propose_with_items(items: list[dict]) -> dict:
+    body = {
+        "title": "클래스 변경 제안",
+        "summary": "담당자 추천 테스트",
+        "ontology_version_id": VERSION_ID,
+        "items": items,
+    }
+    resp = client.post(
+        f"{BASE}/projects/{PROJECT_ID}/ontology-change-requests"
+        f"?actor_id={PROPOSER}&actor_role={VIEWER_ROLE}",
+        json=body,
+    )
+    return _json(resp, 201)
+
+
+def test_propose_recommends_class_owner_as_approver() -> None:
+    _reset()
+    created = _propose_with_items(
+        [
+            _add_item_payload(
+                target_kind="CLASS",
+                change_type="MODIFY",
+                ontology_class_id="class-clause",
+                proposed_change={"label": "약관 조항"},
+            )
+        ]
+    )
+    approvers = created["change_request"]["recommended_approvers"]
+    assert approvers == [
+        {
+            "ontology_class_id": "class-clause",
+            "owner_id": "user-ontology-manager-1",
+            "owner_display_name": "온톨로지 매니저",
+        }
+    ]
+
+
+def test_propose_dedupes_recommended_approvers_across_items() -> None:
+    _reset()
+    created = _propose_with_items(
+        [
+            _add_item_payload(
+                target_kind="CLASS",
+                change_type="MODIFY",
+                ontology_class_id="class-clause",
+                proposed_change={"label": "약관 조항"},
+            ),
+            _add_item_payload(
+                target_kind="CLASS",
+                change_type="MODIFY",
+                ontology_class_id="class-company",
+                proposed_change={"label": "회사"},
+            ),
+        ]
+    )
+    approvers = created["change_request"]["recommended_approvers"]
+    assert len(approvers) == 1
+    assert approvers[0]["owner_id"] == "user-ontology-manager-1"
+
+
+def test_propose_no_recommended_approver_for_unowned_class() -> None:
+    _reset()
+    created = _propose_with_items(
+        [
+            _add_item_payload(
+                target_kind="CLASS",
+                change_type="MODIFY",
+                ontology_class_id="class-isolated",
+                proposed_change={"label": "격리 클래스"},
+            )
+        ]
+    )
+    assert created["change_request"]["recommended_approvers"] == []
+
+
 def test_add_edit_remove_item_and_get_detail() -> None:
     _reset()
     cr_id = _propose(with_item=False)["change_request"]["id"]

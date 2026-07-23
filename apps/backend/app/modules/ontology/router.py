@@ -261,6 +261,8 @@ def create_class(
         label=payload.label or payload.name,
         description=payload.description,
         position=payload.position.model_dump(),
+        owner_id=payload.owner_id,
+        owner_display_name=payload.owner_display_name,
         status=OntologyElementStatus.ACTIVE,
     )
     db.add(ontology_class)

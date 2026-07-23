@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from datetime import datetime, timezone
 
+import httpx
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
@@ -15,6 +16,7 @@ from app.core.enums import (
     ValidationResultSeverity,
     ValidationRuleCode,
     ValidationStatus,
+    WebhookDeliveryStatus,
 )
 from app.modules.audit.service import record_audit_event
 from app.modules.candidate.models import CandidateEntity, CandidateRelation
@@ -231,6 +233,10 @@ def to_publish_job(job: PublishJobModel) -> PublishJob:
         ended_at=job.ended_at,
         error_code=job.error_code,
         error_message=job.error_message,
+        notify_webhook_url=job.notify_webhook_url,
+        webhook_delivery_status=job.webhook_delivery_status,
+        webhook_delivered_at=job.webhook_delivered_at,
+        webhook_error_message=job.webhook_error_message,
     )
 
 
@@ -322,6 +328,49 @@ def graph_snapshot(db: Session, version: PublishedGraphVersionModel) -> Publishe
     )
 
 
+def deliver_publish_webhook(db: Session, job: PublishJobModel) -> None:
+    if not job.notify_webhook_url:
+        return
+
+    payload = {
+        "publish_job_id": job.id,
+        "project_id": job.project_id,
+        "status": job.status.value,
+        "eligible_count": job.eligible_count,
+        "published_entity_count": job.published_entity_count,
+        "published_relation_count": job.published_relation_count,
+        "skipped_count": job.skipped_count,
+        "published_graph_version_id": job.published_graph_version_id,
+        "ended_at": job.ended_at.isoformat() if job.ended_at else None,
+    }
+    try:
+        response = httpx.post(job.notify_webhook_url, json=payload, timeout=5.0)
+        response.raise_for_status()
+    except Exception as error:  # noqa: BLE001 - delivery to an external URL is best-effort and must never fail the publish job
+        job.webhook_delivery_status = WebhookDeliveryStatus.FAILED
+        job.webhook_error_message = str(error)[:500]
+        db.add(job)
+        record_audit_event(
+            db,
+            project_id=job.project_id,
+            event_type=AuditEventType.PUBLISH_JOB_WEBHOOK_FAILED,
+            publish_job_id=job.id,
+            metadata={"notify_webhook_url": job.notify_webhook_url, "error": job.webhook_error_message},
+        )
+        return
+
+    job.webhook_delivery_status = WebhookDeliveryStatus.DELIVERED
+    job.webhook_delivered_at = utc_now()
+    db.add(job)
+    record_audit_event(
+        db,
+        project_id=job.project_id,
+        event_type=AuditEventType.PUBLISH_JOB_WEBHOOK_DELIVERED,
+        publish_job_id=job.id,
+        metadata={"notify_webhook_url": job.notify_webhook_url},
+    )
+
+
 def run_publish_job(db: Session, job: PublishJobModel) -> PublishJobModel:
     if job.status != PublishJobStatus.PENDING:
         return job
@@ -366,6 +415,8 @@ def run_publish_job(db: Session, job: PublishJobModel) -> PublishJobModel:
         job.skip_reasons = [reason.model_dump(mode="json") for reason in skip_reasons]
         job.ended_at = utc_now()
         db.add(job)
+        db.flush()
+        deliver_publish_webhook(db, job)
         db.flush()
         return job
 
@@ -464,6 +515,8 @@ def run_publish_job(db: Session, job: PublishJobModel) -> PublishJobModel:
         published_graph_version_id=graph_version.id,
         metadata={"skip_reasons": job.skip_reasons},
     )
+    deliver_publish_webhook(db, job)
+    db.flush()
     return job
 
 

@@ -4,7 +4,7 @@ from uuid import uuid4
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, JSON, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.enums import PublishJobStatus
+from app.core.enums import PublishJobStatus, WebhookDeliveryStatus
 from app.db.base_class import Base
 
 
@@ -48,6 +48,14 @@ class PublishJob(Base):
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(120), nullable=True)
     error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    notify_webhook_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    webhook_delivery_status: Mapped[WebhookDeliveryStatus] = mapped_column(
+        Enum(WebhookDeliveryStatus, native_enum=False, length=32),
+        nullable=False,
+        default=WebhookDeliveryStatus.NOT_CONFIGURED,
+    )
+    webhook_delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    webhook_error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
 class PublishedGraphVersion(Base):
