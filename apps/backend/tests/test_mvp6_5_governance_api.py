@@ -9,9 +9,10 @@ os.environ["LOCAL_STORAGE_PATH"] = "/private/tmp/ontology-platform-backend-test-
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.db.base import Base  # noqa: E402
-from app.db.session import engine  # noqa: E402
+from app.db.session import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.modules.governance import service  # noqa: E402
+from app.modules.governance.fixtures import ensure_governance_ontology_fixtures  # noqa: E402
 from scripts.seed_mvp3 import seed_mvp3  # noqa: E402
 
 Base.metadata.create_all(bind=engine)
@@ -51,6 +52,8 @@ def _json(response: Any, expected_status: int = 200) -> Any:
 def _reset() -> None:
     service.reset_runtime_store()
     seed_mvp3(reset=True)
+    with SessionLocal() as db:
+        ensure_governance_ontology_fixtures(db)
 
 
 def _assert_guard(payload: dict) -> None:
@@ -190,6 +193,86 @@ def test_propose_no_recommended_approver_for_unowned_class() -> None:
         ]
     )
     assert created["change_request"]["recommended_approvers"] == []
+
+
+def test_propose_validates_and_recommends_against_a_freshly_created_real_class() -> None:
+    # Wave 73: governance ref validation and recommended-approver lookup now
+    # query the real ontology DB (app/modules/ontology) instead of a hardcoded
+    # fixture set. Prove this with a class that was never in that old fixture
+    # set — created live via the real ontology API in this test.
+    _reset()
+    version_id = _json(
+        client.post(f"{BASE}/projects/{PROJECT_ID}/ontology/versions"), expected_status=201
+    )["id"]
+    fresh_class = _json(
+        client.post(
+            f"{BASE}/ontology/versions/{version_id}/classes",
+            json={"name": "Invoice", "label": "Invoice", "position": {"x": 0, "y": 0}},
+        ),
+        expected_status=201,
+    )
+    client.patch(
+        f"{BASE}/ontology/classes/{fresh_class['id']}",
+        json={"owner_id": "user-finance-lead", "owner_display_name": "재무 담당자"},
+    )
+
+    created = _propose_with_items(
+        [
+            _add_item_payload(
+                target_kind="CLASS",
+                change_type="MODIFY",
+                ontology_class_id=fresh_class["id"],
+                ontology_version_id=version_id,
+                proposed_change={"label": "인보이스"},
+            )
+        ]
+    )
+    assert created["change_request"]["recommended_approvers"] == [
+        {
+            "ontology_class_id": fresh_class["id"],
+            "owner_id": "user-finance-lead",
+            "owner_display_name": "재무 담당자",
+        }
+    ]
+
+
+def test_propose_rejects_ref_to_a_class_deleted_from_the_real_db() -> None:
+    # Complements the unknown-ref-id test below: a ref that WAS once valid but
+    # whose real DB row is now soft-deleted (status=DELETED) is not treated as
+    # a live element by _element_ref_resolves, unlike the old fixed-set check
+    # which had no notion of deletion at all.
+    _reset()
+    version_id = _json(
+        client.post(f"{BASE}/projects/{PROJECT_ID}/ontology/versions"), expected_status=201
+    )["id"]
+    doomed_class = _json(
+        client.post(
+            f"{BASE}/ontology/versions/{version_id}/classes",
+            json={"name": "Doomed", "label": "Doomed", "position": {"x": 0, "y": 0}},
+        ),
+        expected_status=201,
+    )
+    client.delete(f"{BASE}/ontology/classes/{doomed_class['id']}")
+
+    resp = client.post(
+        f"{BASE}/projects/{PROJECT_ID}/ontology-change-requests"
+        f"?actor_id={PROPOSER}&actor_role={VIEWER_ROLE}",
+        json={
+            "title": "삭제된 클래스 참조",
+            "ontology_version_id": version_id,
+            "items": [
+                _add_item_payload(
+                    target_kind="CLASS",
+                    change_type="MODIFY",
+                    ontology_class_id=doomed_class["id"],
+                    ontology_version_id=version_id,
+                    proposed_change={"label": "무효"},
+                )
+            ],
+        },
+    )
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "ONTOLOGY_REF_INVALID"
 
 
 def test_add_edit_remove_item_and_get_detail() -> None:

@@ -144,6 +144,8 @@ def test_mvp6_openapi_exposes_thin_evaluation_contract() -> None:
     assert REQUIRED_CANDIDATE_REF_FIELDS.issubset(
         schemas["EvaluationCandidateRef"]["properties"]
     )
+    assert schemas["PipelineStage"]["enum"] == ["EXTRACTED", "VALIDATED", "REVIEWED", "PUBLISHED"]
+    assert "stage_funnel" in schemas["EvaluationRun"]["properties"]
 
 
 def test_mvp6_gold_set_to_deterministic_run_happy_path_preserves_published_graph() -> None:
@@ -325,6 +327,31 @@ def test_mvp6_gold_set_to_deterministic_run_happy_path_preserves_published_graph
     assert run["metric_summary"]["ENTITY_PRECISION"] == 0.6667
     assert run["metric_summary"]["RELATION_F1"] == 0.5
 
+    # Wave 72: intermediate pipeline-stage scoring (Wave67 research P0). Entity
+    # matches are Acme(idx 0) and Beta(idx 1); the stage cycle assigns
+    # PUBLISHED then REVIEWED, so entity recall falls from 2/3 down to 1/3 at
+    # the PUBLISHED stage while extraction/validation/review stay flat. The
+    # single relation match (idx 0) is assigned PUBLISHED, so relation recall
+    # stays flat at 1/2 across every stage.
+    funnel = {point["stage"]: point for point in run["stage_funnel"]}
+    assert [point["stage"] for point in run["stage_funnel"]] == [
+        "EXTRACTED",
+        "VALIDATED",
+        "REVIEWED",
+        "PUBLISHED",
+    ]
+    assert funnel["EXTRACTED"]["entity_count"] == 2
+    assert funnel["EXTRACTED"]["entity_total"] == 3
+    assert funnel["EXTRACTED"]["entity_recall"] == 2 / 3
+    assert funnel["VALIDATED"]["entity_recall"] == 2 / 3
+    assert funnel["REVIEWED"]["entity_recall"] == 2 / 3
+    assert funnel["PUBLISHED"]["entity_count"] == 1
+    assert funnel["PUBLISHED"]["entity_recall"] == 1 / 3
+    for stage in ["EXTRACTED", "VALIDATED", "REVIEWED", "PUBLISHED"]:
+        assert funnel[stage]["relation_total"] == 2
+        assert funnel[stage]["relation_count"] == 1
+        assert funnel[stage]["relation_recall"] == 0.5
+
     metrics = {
         metric["metric_name"]: metric
         for metric in _json(client.get(f"/api/v1/evaluation-runs/{run['id']}/metrics"))
@@ -421,6 +448,11 @@ def test_mvp6_zero_denominator_metrics_are_not_applicable() -> None:
     assert all(metric["status"] == "NOT_APPLICABLE" for metric in metrics)
     assert all(metric["value"] is None for metric in metrics)
     assert all(metric["denominator"] == 0 for metric in metrics)
+
+    assert len(run["stage_funnel"]) == 4
+    assert all(point["entity_recall"] is None for point in run["stage_funnel"])
+    assert all(point["relation_recall"] is None for point in run["stage_funnel"])
+    assert all(point["entity_count"] == 0 for point in run["stage_funnel"])
 
 
 def test_mvp6_openapi_artifact_is_json_parseable_when_exported() -> None:

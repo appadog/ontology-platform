@@ -5,6 +5,7 @@ import styled from "styled-components";
 import { globalNavItems, projectNavGroups, type NavItem, type NavSection } from "./navigation";
 import { useProjects } from "../api/queries";
 import { getRecentProjectIds } from "../lib/recentProjects";
+import { tokenMatch } from "../lib/textMatch";
 
 // Wave 63 (PM6-041 §2.1 / design doc P4): universal launcher command palette.
 // Built ONLY from existing data sources (navigation.ts route table + the
@@ -53,20 +54,6 @@ function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
-}
-
-/**
- * Simple, dependency-free token match: every whitespace-separated query token
- * must appear as a substring of the action's searchable text. This is enough
- * for a ~60-item action list (57 routes + a couple of extras) -- a fuzzy-match
- * dependency would be overkill per design doc §2.1 ("keep dependency-light").
- */
-function matches(query: string, haystack: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  const tokens = q.split(/\s+/).filter(Boolean);
-  const target = haystack.toLowerCase();
-  return tokens.every((token) => target.includes(token));
 }
 
 export function CommandPalette() {
@@ -134,7 +121,7 @@ export function CommandPalette() {
 
   const filtered = useMemo(() => {
     if (!query.trim()) return actions;
-    return actions.filter((action) => matches(query, `${action.label} ${action.group} ${action.keywords ?? ""}`));
+    return actions.filter((action) => tokenMatch(query, `${action.label} ${action.group} ${action.keywords ?? ""}`));
   }, [actions, query]);
 
   const close = useCallback(() => {

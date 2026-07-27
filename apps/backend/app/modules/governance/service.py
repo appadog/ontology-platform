@@ -4,8 +4,17 @@ import base64
 import itertools
 from datetime import datetime, timezone
 
-from app.core.enums import Role
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.core.enums import OntologyElementStatus, Role
 from app.core.errors import ApiException
+from app.modules.ontology.models import (
+    OntologyClass as OntologyClassModel,
+    OntologyProperty as OntologyPropertyModel,
+    OntologyRelation as OntologyRelationModel,
+    OntologyVersion as OntologyVersionModel,
+)
 
 from .schemas import (
     ChangeRequestChangeType,
@@ -53,22 +62,6 @@ APPLICATION_BANNER_MESSAGE = (
     "승인은 의도 등록 + 감사 기록일 뿐이며, 온톨로지/게시 그래프에 아무것도 "
     "적용되지 않습니다."
 )
-
-# Ontology refs known to resolve in the seeded demo project.
-_KNOWN_CLASS_IDS = {"class-clause", "class-company", "class-extra", "class-isolated"}
-_KNOWN_PROPERTY_IDS = {"property-claim-deadline", "property-name", "property-extra"}
-_KNOWN_RELATION_IDS = {"relation-has-clause", "relation-extra"}
-_KNOWN_ONTOLOGY_VERSION_IDS = {"ontology-v7", "ontology-v1"}
-
-# Point-of-contact (SME) assigned to each known demo class, mirroring the real
-# OntologyClass.owner_id/owner_display_name fields (app/modules/ontology/models.py).
-# Governance is a self-contained in-memory mock (see _KNOWN_CLASS_IDS above) that
-# is not wired to the real ontology DB, so recommendations are looked up here
-# rather than via a cross-module DB join.
-_CLASS_OWNERS: dict[str, tuple[str, str]] = {
-    "class-clause": ("user-ontology-manager-1", "온톨로지 매니저"),
-    "class-company": ("user-ontology-manager-1", "온톨로지 매니저"),
-}
 
 
 def utc_now() -> datetime:
@@ -283,7 +276,7 @@ def _element_ref_for_kind(
     return "MULTIPLE", None
 
 
-def _validate_item(payload: OntologyChangeItemRequest) -> None:
+def _validate_item(db: Session, payload: OntologyChangeItemRequest) -> None:
     ref_value, ref_kind = _element_ref_for_kind(payload)
     if payload.change_type == ChangeRequestChangeType.ADD:
         if ref_value is not None:
@@ -297,30 +290,32 @@ def _validate_item(payload: OntologyChangeItemRequest) -> None:
                 "CHANGE_ITEM_TARGET_INVALID",
                 "MODIFY/DEPRECATE requires exactly one element ref matching target_kind",
             )
-        if not _element_ref_resolves(ref_kind, ref_value):
+        if not _element_ref_resolves(db, ref_kind, ref_value):
             raise _conflict(
                 "ONTOLOGY_REF_INVALID",
                 f"referenced element {ref_value} not found in project",
             )
-    if not _version_resolves(payload.ontology_version_id):
+    if not _version_resolves(db, payload.ontology_version_id):
         raise _conflict(
             "ONTOLOGY_REF_INVALID",
             f"ontology_version_id {payload.ontology_version_id} not found in project",
         )
 
 
-def _element_ref_resolves(kind: ChangeRequestTargetKind, value: str) -> bool:
-    if kind == ChangeRequestTargetKind.CLASS:
-        return value in _KNOWN_CLASS_IDS
-    if kind == ChangeRequestTargetKind.PROPERTY:
-        return value in _KNOWN_PROPERTY_IDS
-    if kind == ChangeRequestTargetKind.RELATION:
-        return value in _KNOWN_RELATION_IDS
-    return False
+def _element_ref_resolves(db: Session, kind: ChangeRequestTargetKind, value: str) -> bool:
+    model = {
+        ChangeRequestTargetKind.CLASS: OntologyClassModel,
+        ChangeRequestTargetKind.PROPERTY: OntologyPropertyModel,
+        ChangeRequestTargetKind.RELATION: OntologyRelationModel,
+    }.get(kind)
+    if model is None:
+        return False
+    element = db.get(model, value)
+    return element is not None and element.status != OntologyElementStatus.DELETED
 
 
-def _version_resolves(version_id: str) -> bool:
-    return version_id in _KNOWN_ONTOLOGY_VERSION_IDS
+def _version_resolves(db: Session, version_id: str) -> bool:
+    return db.get(OntologyVersionModel, version_id) is not None
 
 
 # ---------------------------------------------------------------------------
@@ -360,21 +355,26 @@ def _refresh_item_count(request: OntologyChangeRequest) -> None:
 
 
 def _recommended_approvers_for_items(
-    items: list[OntologyChangeItemRequest],
+    db: Session, items: list[OntologyChangeItemRequest]
 ) -> list[RecommendedApprover]:
     class_ids = {item.ontology_class_id for item in items if item.ontology_class_id}
+    if not class_ids:
+        return []
+
+    classes = db.scalars(
+        select(OntologyClassModel).where(OntologyClassModel.id.in_(class_ids))
+    ).all()
     seen_owner_ids: set[str] = set()
     recommended: list[RecommendedApprover] = []
-    for class_id in class_ids:
-        owner = _CLASS_OWNERS.get(class_id)
-        if owner is None or owner[0] in seen_owner_ids:
+    for ontology_class in classes:
+        if not ontology_class.owner_id or ontology_class.owner_id in seen_owner_ids:
             continue
-        seen_owner_ids.add(owner[0])
+        seen_owner_ids.add(ontology_class.owner_id)
         recommended.append(
             RecommendedApprover(
-                ontology_class_id=class_id,
-                owner_id=owner[0],
-                owner_display_name=owner[1],
+                ontology_class_id=ontology_class.id,
+                owner_id=ontology_class.owner_id,
+                owner_display_name=ontology_class.owner_display_name,
             )
         )
     return recommended
@@ -385,12 +385,13 @@ def propose_change_request(
     payload: OntologyChangeRequestCreateRequest,
     actor_id: str,
     actor_role: Role,
+    db: Session,
 ) -> GovernanceMutationResponse:
     _ensure_seed()
     now = utc_now()
     request_id = _next_request_id()
     for item_payload in payload.items:
-        _validate_item(item_payload)
+        _validate_item(db, item_payload)
     request = OntologyChangeRequest(
         id=request_id,
         project_id=project_id,
@@ -401,7 +402,7 @@ def propose_change_request(
         proposer_id=actor_id,
         item_count=0,
         ontology_version_id=payload.ontology_version_id,
-        recommended_approvers=_recommended_approvers_for_items(payload.items),
+        recommended_approvers=_recommended_approvers_for_items(db, payload.items),
         created_at=now,
         updated_at=now,
     )
@@ -517,11 +518,12 @@ def add_item(
     payload: OntologyChangeItemRequest,
     actor_id: str,
     actor_role: Role,
+    db: Session,
 ) -> GovernanceMutationResponse:
     request = _get_request_or_404(change_request_id)
     _require_proposer(request, actor_id)
     _require_editable(request)
-    _validate_item(payload)
+    _validate_item(db, payload)
     _append_item(request, payload)
     _refresh_item_count(request)
     request.updated_at = utc_now()
@@ -542,12 +544,13 @@ def edit_item(
     payload: OntologyChangeItemRequest,
     actor_id: str,
     actor_role: Role,
+    db: Session,
 ) -> GovernanceMutationResponse:
     request = _get_request_or_404(change_request_id)
     _require_proposer(request, actor_id)
     _require_editable(request)
     item = _get_item_or_404(change_request_id, item_id)
-    _validate_item(payload)
+    _validate_item(db, payload)
     item.target_kind = payload.target_kind
     item.change_type = payload.change_type
     item.ontology_class_id = payload.ontology_class_id

@@ -284,6 +284,7 @@ import {
   OntologyGraph,
   OntologyClass,
   OntologyClassCreateRequest,
+  ClassUsageMetric,
   OntologyClassUpdateRequest,
   OntologyProperty,
   OntologyPropertyCreateRequest,
@@ -352,6 +353,11 @@ let mockOntologyGraphStore: Record<string, OntologyGraph> = {
     classes: mockOntologyGraph.classes ? [...mockOntologyGraph.classes] : null,
     relations: mockOntologyGraph.relations ? [...mockOntologyGraph.relations] : null,
   },
+};
+// Wave 71 (Wave67 리서치 P1 "오브젝트 타입별 사용량 지표"): process-local view
+// counters, mirroring the real backend's `ontology_class_view_events` table.
+const mockClassViewCounts: Record<string, { count: number; lastViewedAt: string }> = {
+  "class-policy": { count: 4, lastViewedAt: "2026-06-16T13:00:00.000Z" },
 };
 let mockSourceStore: SourceData[] = [...mockSources];
 const mockPreviewStore: Record<string, SourcePreview> = { ...mockSourcePreviews };
@@ -2069,6 +2075,57 @@ export const apiClient = {
     return jsonRequest<OntologyClass>(`/api/v1/ontology/classes/${classId}`, {
       method: "DELETE",
     });
+  },
+
+  async recordOntologyClassView(classId: string): Promise<void> {
+    if (USE_MOCK_API) {
+      const existing = mockClassViewCounts[classId];
+      mockClassViewCounts[classId] = {
+        count: (existing?.count ?? 0) + 1,
+        lastViewedAt: new Date().toISOString(),
+      };
+      await delay(undefined);
+      return;
+    }
+
+    // 204 No Content: bypass jsonRequest (which always parses a JSON body).
+    const response = await fetch(`${API_BASE_URL}/api/v1/ontology/classes/${classId}/views`, { method: "POST" });
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+  },
+
+  async listOntologyClassUsage(projectId: string, days = 30): Promise<ClassUsageMetric[]> {
+    if (USE_MOCK_API) {
+      const project = mockProjectStore.find((candidate) => candidate.id === projectId);
+      const versionId = project?.current_ontology_version_id;
+      const graph = versionId ? mockOntologyGraphStore[versionId] : undefined;
+      const classes = graph?.classes ?? [];
+      const since = Date.now() - days * 24 * 60 * 60 * 1000;
+
+      const metrics: ClassUsageMetric[] = [];
+      for (const ontologyClass of classes) {
+        if (ontologyClass.status === "DELETED") {
+          continue;
+        }
+        const usage = mockClassViewCounts[ontologyClass.id];
+        if (!usage || new Date(usage.lastViewedAt).getTime() < since) {
+          continue;
+        }
+        metrics.push({
+          class_id: ontologyClass.id,
+          name: ontologyClass.name,
+          label: ontologyClass.label,
+          view_count: usage.count,
+          last_viewed_at: usage.lastViewedAt,
+        });
+      }
+      metrics.sort((a, b) => b.view_count - a.view_count);
+
+      return delay(metrics);
+    }
+
+    return request<ClassUsageMetric[]>(`/api/v1/projects/${projectId}/ontology/class-usage?days=${days}`);
   },
 
   async createOntologyProperty(versionId: string, payload: OntologyPropertyCreateRequest): Promise<OntologyProperty> {

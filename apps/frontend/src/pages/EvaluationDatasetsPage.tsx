@@ -10,6 +10,7 @@ import {
   Play,
   Plus,
   TableProperties,
+  TrendingDown,
 } from "lucide-react";
 import styled from "styled-components";
 import {
@@ -39,6 +40,7 @@ import {
   GoldEntity,
   GoldEvidenceRef,
   GoldRelation,
+  StageFunnelPoint,
 } from "../shared/api/types";
 import { Breadcrumbs } from "../shared/layout/Breadcrumbs";
 import { PageHeader } from "../shared/layout/PageHeader";
@@ -283,6 +285,7 @@ export function EvaluationDatasetsPage() {
       </Mvp4TwoColumn>
 
       <MetricsSection metrics={metrics} isLoading={metricsQuery.isLoading} isError={metricsQuery.isError} />
+      <StageFunnelSection run={activeRun} />
       <ErrorCaseExplorer errorCases={errorCases} samples={samples} isLoading={errorsQuery.isLoading} isError={errorsQuery.isError} />
 
       <LegacyGoldenItems
@@ -509,6 +512,67 @@ function MetricsSection({ metrics, isLoading, isError }: { metrics: EvaluationMe
                   <td>{metric.numerator}</td>
                   <td>{metric.denominator}</td>
                   <td>{metric.formula}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CompactTable>
+      </HanaCard>
+    </Stack>
+  );
+}
+
+// Wave 72 (Wave67 research P0 "intermediate-stage scoring"): shows recall at
+// each pipeline stage (extracted -> validated -> reviewed -> published)
+// instead of only the final entity/relation F1, so a drop-off can be
+// attributed to a specific stage rather than reported as one final score.
+const STAGE_LABEL: Record<StageFunnelPoint["stage"], string> = {
+  EXTRACTED: "추출됨",
+  VALIDATED: "검증됨",
+  REVIEWED: "검수됨",
+  PUBLISHED: "게시됨",
+};
+
+function formatRecall(recall: number | null): string {
+  return recall === null ? "N/A" : `${Math.round(recall * 100)}%`;
+}
+
+function StageFunnelSection({ run }: { run?: EvaluationRun }) {
+  const funnel = run?.stage_funnel ?? [];
+
+  if (funnel.length === 0) {
+    return null;
+  }
+
+  return (
+    <Stack>
+      <SectionTitle>
+        <TrendingDown aria-hidden="true" size={18} />
+        <h2>파이프라인 단계별 스코어링</h2>
+      </SectionTitle>
+      <HanaCard
+        title="단계별 재현율(recall)"
+        description="정답(gold) 항목이 추출→검증→검수→게시 각 단계를 얼마나 통과했는지 보여줍니다. 최종 점수 하나만으로는 어느 단계에서 손실이 발생했는지 알 수 없습니다."
+      >
+        <CompactTable>
+          <table>
+            <thead>
+              <tr>
+                <th>단계</th>
+                <th>엔티티 재현율</th>
+                <th>관계 재현율</th>
+              </tr>
+            </thead>
+            <tbody>
+              {funnel.map((point) => (
+                <tr key={point.stage}>
+                  <td>{STAGE_LABEL[point.stage]}</td>
+                  <td>
+                    {formatRecall(point.entity_recall)} ({point.entity_count}/{point.entity_total})
+                  </td>
+                  <td>
+                    {formatRecall(point.relation_recall)} ({point.relation_count}/{point.relation_total})
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -238,3 +238,15 @@ class OntologyGraph(BaseModel):
             }
         }
     )
+
+
+class OntologyClassViewEventCreateRequest(BaseModel):
+    actor_id: str | None = None
+
+
+class ClassUsageMetric(BaseModel):
+    class_id: str
+    name: str
+    label: str
+    view_count: int
+    last_viewed_at: datetime | None = None

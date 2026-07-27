@@ -132,6 +132,20 @@ export function useOntologyGraph(versionId: string) {
   });
 }
 
+export function useOntologyClassUsage(projectId: string, days = 30) {
+  return useQuery({
+    queryKey: ["projects", projectId, "ontology", "class-usage", days],
+    queryFn: () => apiClient.listOntologyClassUsage(projectId, days),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useRecordOntologyClassView() {
+  return useMutation({
+    mutationFn: (classId: string) => apiClient.recordOntologyClassView(classId),
+  });
+}
+
 export function useCreateOntologyClass(versionId: string) {
   const queryClient = useQueryClient();
 

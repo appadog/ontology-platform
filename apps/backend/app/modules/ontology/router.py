@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import func, or_, select
@@ -10,14 +10,17 @@ from app.core.errors import ApiErrorResponse, ApiException
 from app.db.session import get_db
 from app.modules.ontology.models import (
     OntologyClass as OntologyClassModel,
+    OntologyClassViewEvent as OntologyClassViewEventModel,
     OntologyProperty as OntologyPropertyModel,
     OntologyRelation as OntologyRelationModel,
     OntologyVersion as OntologyVersionModel,
 )
 from app.modules.ontology.schemas import (
+    ClassUsageMetric,
     OntologyClass,
     OntologyClassCreateRequest,
     OntologyClassUpdateRequest,
+    OntologyClassViewEventCreateRequest,
     OntologyGraph,
     OntologyGraphEdge,
     OntologyGraphNode,
@@ -332,6 +335,71 @@ def delete_class(class_id: str, db: Session = Depends(get_db)) -> OntologyClass:
     db.commit()
     db.refresh(ontology_class)
     return _class_schema(ontology_class)
+
+
+@router.post(
+    "/ontology/classes/{class_id}/views",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Record an ontology class view (for per-object-type usage metrics)",
+    responses={404: {"model": ApiErrorResponse}},
+)
+def record_class_view(
+    class_id: str,
+    payload: OntologyClassViewEventCreateRequest | None = None,
+    db: Session = Depends(get_db),
+) -> None:
+    ontology_class = _class_or_404(db, class_id)
+    event = OntologyClassViewEventModel(
+        project_id=db.get(OntologyVersionModel, ontology_class.version_id).project_id,
+        class_id=class_id,
+        actor_id=(payload.actor_id if payload and payload.actor_id else settings.dev_user_id),
+    )
+    db.add(event)
+    db.commit()
+
+
+@router.get(
+    "/projects/{project_id}/ontology/class-usage",
+    response_model=list[ClassUsageMetric],
+    summary="List ontology classes ranked by recent view count",
+    responses={404: {"model": ApiErrorResponse}},
+)
+def list_class_usage(
+    project_id: str,
+    db: Session = Depends(get_db),
+    days: int = Query(default=30, ge=1, le=365),
+    limit: int = Query(default=10, ge=1, le=100),
+) -> list[ClassUsageMetric]:
+    _project_or_404(db, project_id)
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    rows = db.execute(
+        select(
+            OntologyClassModel.id,
+            OntologyClassModel.name,
+            OntologyClassModel.label,
+            func.count(OntologyClassViewEventModel.id).label("view_count"),
+            func.max(OntologyClassViewEventModel.viewed_at).label("last_viewed_at"),
+        )
+        .join(OntologyClassViewEventModel, OntologyClassViewEventModel.class_id == OntologyClassModel.id)
+        .where(
+            OntologyClassViewEventModel.project_id == project_id,
+            OntologyClassViewEventModel.viewed_at >= since,
+            OntologyClassModel.status != OntologyElementStatus.DELETED,
+        )
+        .group_by(OntologyClassModel.id, OntologyClassModel.name, OntologyClassModel.label)
+        .order_by(func.count(OntologyClassViewEventModel.id).desc())
+        .limit(limit)
+    ).all()
+    return [
+        ClassUsageMetric(
+            class_id=row.id,
+            name=row.name,
+            label=row.label,
+            view_count=row.view_count,
+            last_viewed_at=row.last_viewed_at,
+        )
+        for row in rows
+    ]
 
 
 @router.get(

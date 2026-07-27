@@ -211,6 +211,16 @@ export function buildMockMvp6EvaluationRun(
     },
     error_code: null,
     error_message: null,
+    // Wave 72 (Wave67 research P0 "intermediate-stage scoring"): mirrors the
+    // backend's deterministic stage-cycle demo shape (recall flat through
+    // EXTRACTED/VALIDATED/REVIEWED, then drops at PUBLISHED once a matched
+    // item hasn't been published yet).
+    stage_funnel: [
+      { stage: "EXTRACTED", entity_count: 2, entity_total: 3, entity_recall: 0.6667, relation_count: 1, relation_total: 2, relation_recall: 0.5 },
+      { stage: "VALIDATED", entity_count: 2, entity_total: 3, entity_recall: 0.6667, relation_count: 1, relation_total: 2, relation_recall: 0.5 },
+      { stage: "REVIEWED", entity_count: 2, entity_total: 3, entity_recall: 0.6667, relation_count: 1, relation_total: 2, relation_recall: 0.5 },
+      { stage: "PUBLISHED", entity_count: 1, entity_total: 3, entity_recall: 0.3333, relation_count: 1, relation_total: 2, relation_recall: 0.5 },
+    ],
   };
 }
 

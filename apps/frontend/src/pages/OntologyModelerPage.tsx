@@ -14,6 +14,7 @@ import {
   useOntologyGraph,
   useOntologyVersions,
   useProject,
+  useRecordOntologyClassView,
   useUpdateOntologyClass,
   useUpdateOntologyProperty,
   useUpdateOntologyRelation,
@@ -24,6 +25,7 @@ import { PageHeader } from "../shared/layout/PageHeader";
 import { HanaBadge, HanaButton, HanaCard, HanaInput, HanaSelect, statusToTone } from "../shared/ui/hana";
 import { PageState } from "../shared/ui/platform/PageState";
 import { StatusBadge } from "../shared/ui/platform/StatusBadge";
+import { tokenMatch } from "../shared/lib/textMatch";
 
 const dataTypeOptions: PropertyDataType[] = ["STRING", "TEXT", "INTEGER", "FLOAT", "BOOLEAN", "DATE", "DATETIME", "URI"];
 const cardinalityOptions: Cardinality[] = [
@@ -71,6 +73,7 @@ export function OntologyModelerPage() {
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState("");
   const [selectedRelationId, setSelectedRelationId] = useState("");
+  const [classSearchQuery, setClassSearchQuery] = useState("");
   const [className, setClassName] = useState("Company");
   const [propertyName, setPropertyName] = useState("company_name");
   const [propertyDataType, setPropertyDataType] = useState<PropertyDataType>("STRING");
@@ -108,6 +111,7 @@ export function OntologyModelerPage() {
   const createRelation = useCreateOntologyRelation(versionId);
   const updateRelation = useUpdateOntologyRelation(versionId);
   const deleteRelation = useDeleteOntologyRelation(versionId);
+  const recordClassView = useRecordOntologyClassView();
 
   const classRecords = useMemo<OntologyClass[]>(() => {
     if (!graph) {
@@ -141,6 +145,20 @@ export function OntologyModelerPage() {
   }, [graph]);
 
   const visibleClassIds = useMemo(() => new Set(visibleNodes.map((node) => node.class_id)), [visibleNodes]);
+
+  const filteredVisibleNodes = useMemo(() => {
+    if (!classSearchQuery.trim()) {
+      return visibleNodes;
+    }
+
+    return visibleNodes.filter((node) => {
+      const ontologyClass = classRecords.find((candidate) => candidate.id === node.class_id);
+      return (
+        tokenMatch(classSearchQuery, node.label) ||
+        (ontologyClass && (tokenMatch(classSearchQuery, ontologyClass.name) || tokenMatch(classSearchQuery, ontologyClass.description ?? "")))
+      );
+    });
+  }, [visibleNodes, classRecords, classSearchQuery]);
 
   const relationRecords = useMemo<OntologyRelation[]>(() => {
     if (!graph) {
@@ -194,6 +212,12 @@ export function OntologyModelerPage() {
 
   const selectedNode = visibleNodes.find((node) => node.class_id === selectedClassId) ?? visibleNodes[0];
   const selectedClass = selectedNode ? classRecords.find((ontologyClass) => ontologyClass.id === selectedNode.class_id) : undefined;
+
+  useEffect(() => {
+    if (selectedNode?.class_id) {
+      recordClassView.mutate(selectedNode.class_id);
+    }
+  }, [selectedNode?.class_id, recordClassView.mutate]);
   const selectedProperties = selectedNode
     ? visibleProperties.filter((property) => property.class_id === selectedNode.class_id)
     : [];
@@ -507,6 +531,15 @@ export function OntologyModelerPage() {
     });
   }
 
+  function handleExplorerSelect(match: ExplorerMatch) {
+    setSelectedClassId(match.classId);
+    if (match.kind === "PROPERTY") {
+      setSelectedPropertyId(match.id);
+    } else if (match.kind === "RELATION") {
+      setSelectedRelationId(match.id);
+    }
+  }
+
   function handleDeleteClass() {
     if (!isDraftVersion || !selectedClass) {
       return;
@@ -788,6 +821,12 @@ export function OntologyModelerPage() {
         )}
       </PageHeader>
       {authoringPanel}
+      <OntologyExplorerCard
+        classRecords={classRecords}
+        visibleProperties={visibleProperties}
+        relationRecords={relationRecords}
+        onSelect={handleExplorerSelect}
+      />
       <ModelerGrid>
         <LeftPanel>
           <PanelHeader>
@@ -796,10 +835,17 @@ export function OntologyModelerPage() {
           </PanelHeader>
           <SearchBox>
             <Search aria-hidden="true" />
-            <HanaInput placeholder="Search class" />
+            <HanaInput
+              placeholder="Search class"
+              value={classSearchQuery}
+              onChange={(event) => setClassSearchQuery(event.target.value)}
+            />
           </SearchBox>
           <EntityList>
-            {visibleNodes.map((graphNode) => (
+            {filteredVisibleNodes.length === 0 ? (
+              <EmptyListNotice>No class matches "{classSearchQuery}"</EmptyListNotice>
+            ) : null}
+            {filteredVisibleNodes.map((graphNode) => (
               <button
                 key={graphNode.id}
                 type="button"
@@ -1068,6 +1114,210 @@ export function OntologyModelerPage() {
   );
 }
 
+// Wave 70 (Wave67 리서치 P1 "대화형 온톨로지 탐색" — Palantir AIP Analyst의 대화형
+// 온톨로지 검색+추론 경로 표시에서 영감을 받되, 실제 LLM/추론 엔진 없이 이 앱의
+// 기존 토큰 매칭(`tokenMatch`, CommandPalette와 동일 로직)으로 정직하게 구현한
+// 범위: 자연어 질의 → 클래스/속성/관계 매칭 + "어떤 필드가 매칭됐는지" 근거 표시.
+interface ExplorerMatch {
+  kind: "CLASS" | "PROPERTY" | "RELATION";
+  id: string;
+  classId: string;
+  label: string;
+  matchedFields: string[];
+}
+
+const EXPLORER_KIND_LABEL: Record<ExplorerMatch["kind"], string> = {
+  CLASS: "CLASS · 클래스",
+  PROPERTY: "PROPERTY · 속성",
+  RELATION: "RELATION · 관계",
+};
+
+function matchedFieldsFor(query: string, name: string, label: string, description: string | null): string[] {
+  const fields: string[] = [];
+  if (tokenMatch(query, name)) {
+    fields.push("이름");
+  }
+  if (label !== name && tokenMatch(query, label)) {
+    fields.push("라벨");
+  }
+  if (description && tokenMatch(query, description)) {
+    fields.push("설명");
+  }
+  return fields;
+}
+
+function OntologyExplorerCard({
+  classRecords,
+  visibleProperties,
+  relationRecords,
+  onSelect,
+}: {
+  classRecords: OntologyClass[];
+  visibleProperties: OntologyProperty[];
+  relationRecords: OntologyRelation[];
+  onSelect: (match: ExplorerMatch) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [turns, setTurns] = useState<Array<{ query: string; matches: ExplorerMatch[] }>>([]);
+
+  function runQuery() {
+    const q = query.trim();
+    if (!q) {
+      return;
+    }
+
+    const matches: ExplorerMatch[] = [];
+    for (const ontologyClass of classRecords) {
+      const matchedFields = matchedFieldsFor(q, ontologyClass.name, ontologyClass.label, ontologyClass.description);
+      if (matchedFields.length > 0) {
+        matches.push({ kind: "CLASS", id: ontologyClass.id, classId: ontologyClass.id, label: ontologyClass.label, matchedFields });
+      }
+    }
+    for (const property of visibleProperties) {
+      const matchedFields = matchedFieldsFor(q, property.name, property.label, property.description ?? null);
+      if (matchedFields.length > 0) {
+        matches.push({ kind: "PROPERTY", id: property.id, classId: property.class_id, label: property.label, matchedFields });
+      }
+    }
+    for (const relation of relationRecords) {
+      const matchedFields = matchedFieldsFor(q, relation.name, relation.label, relation.description);
+      if (matchedFields.length > 0) {
+        matches.push({ kind: "RELATION", id: relation.id, classId: relation.domain_class_id, label: relation.label, matchedFields });
+      }
+    }
+
+    setTurns((current) => [...current, { query: q, matches }]);
+    setQuery("");
+  }
+
+  return (
+    <HanaCard title="온톨로지 탐색" description="자연어로 클래스·속성·관계를 검색하고, 어떤 필드가 매칭됐는지 근거와 함께 확인합니다.">
+      <ExplorerBody>
+        {turns.length === 0 ? (
+          <EmptyListNotice>아직 검색한 내용이 없습니다. 아래에 질의를 입력해보세요 (예: 클래스나 속성 이름 일부).</EmptyListNotice>
+        ) : (
+          <ExplorerTurns>
+            {turns.map((turn, index) => (
+              <ExplorerTurn key={`${turn.query}-${index}`}>
+                <ExplorerQueryBubble>{turn.query}</ExplorerQueryBubble>
+                {turn.matches.length === 0 ? (
+                  <ExplorerAnswer>일치하는 클래스·속성·관계가 없습니다.</ExplorerAnswer>
+                ) : (
+                  <ExplorerResultList>
+                    {turn.matches.map((match) => (
+                      <li key={`${match.kind}-${match.id}`}>
+                        <button type="button" onClick={() => onSelect(match)}>
+                          <HanaBadge tone="neutral">{EXPLORER_KIND_LABEL[match.kind]}</HanaBadge>
+                          <strong>{match.label}</strong>
+                          <span>매칭 근거: {match.matchedFields.join(", ")}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ExplorerResultList>
+                )}
+              </ExplorerTurn>
+            ))}
+          </ExplorerTurns>
+        )}
+        <ExplorerInputRow>
+          <HanaInput
+            value={query}
+            placeholder="클래스, 속성, 관계를 자연어로 검색"
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                runQuery();
+              }
+            }}
+          />
+          <HanaButton type="button" disabled={!query.trim()} onClick={runQuery}>
+            <Search aria-hidden="true" />
+            검색
+          </HanaButton>
+        </ExplorerInputRow>
+      </ExplorerBody>
+    </HanaCard>
+  );
+}
+
+const ExplorerBody = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.md};
+  padding: 0 ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+`;
+
+const ExplorerTurns = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.md};
+  max-height: 320px;
+  overflow-y: auto;
+`;
+
+const ExplorerTurn = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const ExplorerQueryBubble = styled.div`
+  justify-self: end;
+  max-width: 80%;
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  border-radius: ${({ theme }) => theme.radius.lg};
+  background: ${({ theme }) => theme.color.primarySoft};
+  color: ${({ theme }) => theme.color.primary};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+  overflow-wrap: anywhere;
+`;
+
+const ExplorerAnswer = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.color.textMuted};
+`;
+
+const ExplorerResultList = styled.ul`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.xs};
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  button {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: ${({ theme }) => theme.spacing.sm};
+    width: 100%;
+    padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+    border: 1px solid ${({ theme }) => theme.color.borderSubtle};
+    border-radius: ${({ theme }) => theme.radius.md};
+    background: ${({ theme }) => theme.color.surfaceRaised};
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      border-color: ${({ theme }) => theme.color.borderStrong};
+    }
+
+    strong {
+      color: ${({ theme }) => theme.color.text};
+    }
+
+    span {
+      color: ${({ theme }) => theme.color.textMuted};
+      font-size: ${({ theme }) => theme.typography.fontSize.sm};
+    }
+  }
+`;
+
+const ExplorerInputRow = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.sm};
+
+  input {
+    flex: 1;
+  }
+`;
+
 const ModelerGrid = styled.div`
   display: grid;
   grid-template-columns: 280px minmax(420px, 1fr) 360px;
@@ -1127,6 +1377,13 @@ const SearchBox = styled.div`
   input {
     padding-left: 34px;
   }
+`;
+
+const EmptyListNotice = styled.p`
+  margin: 0;
+  padding: 8px 4px;
+  color: ${({ theme }) => theme.color.textMuted};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
 `;
 
 const EntityList = styled.div`

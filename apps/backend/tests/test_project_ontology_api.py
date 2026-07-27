@@ -89,6 +89,62 @@ def test_project_ontology_graph_flow() -> None:
     assert len(graph["properties"]) == 1
 
 
+def test_ontology_class_usage_ranks_by_recent_view_count() -> None:
+    project_id = client.post(
+        "/api/v1/projects",
+        json={"name": "Class Usage Project", "description": "Wave 71"},
+    ).json()["id"]
+    version_id = client.post(f"/api/v1/projects/{project_id}/ontology/versions").json()["id"]
+    company_id = client.post(
+        f"/api/v1/ontology/versions/{version_id}/classes",
+        json={"name": "Company", "label": "Company", "position": {"x": 100, "y": 100}},
+    ).json()["id"]
+    department_id = client.post(
+        f"/api/v1/ontology/versions/{version_id}/classes",
+        json={"name": "Department", "label": "Department", "position": {"x": 300, "y": 100}},
+    ).json()["id"]
+
+    # Company is viewed 3 times, Department only once -> Company ranks first.
+    for _ in range(3):
+        response = client.post(f"/api/v1/ontology/classes/{company_id}/views")
+        assert response.status_code == 204
+    assert client.post(f"/api/v1/ontology/classes/{department_id}/views").status_code == 204
+
+    usage_response = client.get(f"/api/v1/projects/{project_id}/ontology/class-usage")
+    assert usage_response.status_code == 200
+    usage = usage_response.json()
+    assert len(usage) == 2
+    assert usage[0]["class_id"] == company_id
+    assert usage[0]["view_count"] == 3
+    assert usage[0]["last_viewed_at"] is not None
+    assert usage[1]["class_id"] == department_id
+    assert usage[1]["view_count"] == 1
+
+
+def test_ontology_class_usage_scoped_to_project_and_days_window() -> None:
+    other_project_id = client.post(
+        "/api/v1/projects",
+        json={"name": "Other Class Usage Project", "description": "Wave 71 isolation"},
+    ).json()["id"]
+    other_version_id = client.post(f"/api/v1/projects/{other_project_id}/ontology/versions").json()["id"]
+    other_class_id = client.post(
+        f"/api/v1/ontology/versions/{other_version_id}/classes",
+        json={"name": "Unrelated", "label": "Unrelated", "position": {"x": 0, "y": 0}},
+    ).json()["id"]
+    assert client.post(f"/api/v1/ontology/classes/{other_class_id}/views").status_code == 204
+
+    unrelated_project_id = client.post(
+        "/api/v1/projects",
+        json={"name": "No Views Project", "description": "Wave 71 empty"},
+    ).json()["id"]
+    empty_usage = client.get(f"/api/v1/projects/{unrelated_project_id}/ontology/class-usage").json()
+    assert empty_usage == []
+
+    scoped_usage = client.get(f"/api/v1/projects/{other_project_id}/ontology/class-usage?days=1").json()
+    assert len(scoped_usage) == 1
+    assert scoped_usage[0]["class_id"] == other_class_id
+
+
 def test_class_delete_hides_orphan_property_and_connected_relation_from_graph() -> None:
     project_response = client.post(
         "/api/v1/projects",

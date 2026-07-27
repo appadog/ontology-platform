@@ -3,7 +3,7 @@ import { Star } from "lucide-react";
 import styled from "styled-components";
 import { PageHeader } from "../shared/layout/PageHeader";
 import { PageContainer } from "../shared/layout/PageContainer";
-import { useDashboardSummary, useProjects } from "../shared/api/queries";
+import { useDashboardSummary, useOntologyClassUsage, useProjects } from "../shared/api/queries";
 import { PageState } from "../shared/ui/platform/PageState";
 import { Skeleton, useDelayedVisible } from "../shared/ui/platform/Skeleton";
 import { MetricCard } from "../shared/ui/platform/MetricCard";
@@ -45,6 +45,7 @@ export function DashboardPage() {
   const recentProjects = recentProjectIds
     .map((id) => projects.find((project) => project.id === id))
     .filter((project): project is ProjectSummary => Boolean(project));
+  const classUsageQuery = useOntologyClassUsage(recentProject?.id ?? "");
 
   if (isLoading) {
     if (!showLoadingSkeleton) {
@@ -171,6 +172,30 @@ export function DashboardPage() {
           )}
         </ActivityList>
       </HanaCard>
+      {recentProject ? (
+        <HanaCard
+          title="인기 오브젝트 타입"
+          description={`${recentProject.name} 프로젝트에서 최근 30일간 가장 많이 조회된 온톨로지 클래스입니다.`}
+        >
+          {!classUsageQuery.data || classUsageQuery.data.length === 0 ? (
+            <EmptyPersonalizationNotice>
+              <span>아직 조회 기록이 없습니다. Ontology 모델러에서 클래스를 열어보세요.</span>
+              <SecondaryActionLink to={`/projects/${recentProject.id}/ontology`}>Ontology 모델러로 이동</SecondaryActionLink>
+            </EmptyPersonalizationNotice>
+          ) : (
+            <ClassUsageList>
+              {classUsageQuery.data.map((metric) => (
+                <li key={metric.class_id}>
+                  <Link to={`/projects/${recentProject.id}/ontology`}>
+                    <span>{metric.label}</span>
+                    <strong>{metric.view_count}회 조회</strong>
+                  </Link>
+                </li>
+              ))}
+            </ClassUsageList>
+          )}
+        </HanaCard>
+      ) : null}
       <Notice>
         <span>새 작업 공간이 필요하신가요?</span>
         <SecondaryActionLink to="/projects">프로젝트 만들기 또는 선택</SecondaryActionLink>
@@ -333,6 +358,35 @@ const EmptyPersonalizationNotice = styled.div`
   gap: ${({ theme }) => theme.spacing.sm};
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
   color: ${({ theme }) => theme.color.textMuted};
+`;
+
+const ClassUsageList = styled.ul`
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.lg} ${({ theme }) => theme.spacing.lg};
+  list-style: none;
+
+  a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: ${({ theme }) => theme.spacing.sm};
+    padding: ${({ theme }) => theme.spacing.sm};
+    border-radius: ${({ theme }) => theme.radius.sm};
+    color: ${({ theme }) => theme.color.text};
+    overflow-wrap: anywhere;
+
+    &:hover {
+      background: ${({ theme }) => theme.color.surface};
+    }
+  }
+
+  strong {
+    color: ${({ theme }) => theme.color.textMuted};
+    font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
+    white-space: nowrap;
+  }
 `;
 
 const MetricGrid = styled.div`

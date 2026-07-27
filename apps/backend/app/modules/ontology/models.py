@@ -155,3 +155,22 @@ class OntologyRelation(Base):
     )
 
     version: Mapped[OntologyVersion] = relationship(back_populates="relations")
+
+
+class OntologyClassViewEvent(Base):
+    """Records a class being opened/selected in the Ontology Modeler, used to
+    compute per-object-type usage metrics (wave-071, Wave67 research P1)."""
+
+    __tablename__ = "ontology_class_view_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    class_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("ontology_classes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    actor_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    viewed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, index=True
+    )

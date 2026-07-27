@@ -28,6 +28,8 @@ from .schemas import (
     GoldEvidenceRef,
     GoldRelation,
     GoldRelationCreateRequest,
+    PipelineStage,
+    StageFunnelPoint,
 )
 
 
@@ -618,6 +620,53 @@ def _match_relations(
     return matches, missing, unmatched_candidates, wrong_direction
 
 
+_STAGE_ORDER = [
+    PipelineStage.EXTRACTED,
+    PipelineStage.VALIDATED,
+    PipelineStage.REVIEWED,
+    PipelineStage.PUBLISHED,
+]
+# Deterministic per-match stage assignment (index-cycled), consistent with this
+# module's fully-synthetic DETERMINISTIC_MOCK design: matches don't carry real
+# validation/review/publish state, so a fixed rotation stands in for it,
+# producing a stable funnel shape instead of a single final pass/fail.
+_STAGE_ASSIGNMENT_CYCLE = [
+    PipelineStage.PUBLISHED,
+    PipelineStage.REVIEWED,
+    PipelineStage.VALIDATED,
+    PipelineStage.EXTRACTED,
+]
+
+
+def _assign_stage(index: int) -> PipelineStage:
+    return _STAGE_ASSIGNMENT_CYCLE[index % len(_STAGE_ASSIGNMENT_CYCLE)]
+
+
+def _stage_funnel(
+    entity_total: int,
+    relation_total: int,
+    entity_stages: list[PipelineStage],
+    relation_stages: list[PipelineStage],
+) -> list[StageFunnelPoint]:
+    stage_rank = {stage: rank for rank, stage in enumerate(_STAGE_ORDER)}
+    points: list[StageFunnelPoint] = []
+    for stage in _STAGE_ORDER:
+        entity_count = sum(1 for reached in entity_stages if stage_rank[reached] >= stage_rank[stage])
+        relation_count = sum(1 for reached in relation_stages if stage_rank[reached] >= stage_rank[stage])
+        points.append(
+            StageFunnelPoint(
+                stage=stage,
+                entity_count=entity_count,
+                entity_total=entity_total,
+                entity_recall=(entity_count / entity_total) if entity_total else None,
+                relation_count=relation_count,
+                relation_total=relation_total,
+                relation_recall=(relation_count / relation_total) if relation_total else None,
+            )
+        )
+    return points
+
+
 def _error_case(
     *,
     run_id: str,
@@ -868,6 +917,15 @@ def create_run(project_id: str, payload: EvaluationRunCreateRequest) -> Evaluati
             )
         )
 
+    entity_stages = [_assign_stage(index) for index in range(len(entity_matches))]
+    relation_stages = [_assign_stage(index) for index in range(len(relation_matches))]
+    stage_funnel = _stage_funnel(
+        entity_total=len(gold_entities),
+        relation_total=len(gold_relations),
+        entity_stages=entity_stages,
+        relation_stages=relation_stages,
+    )
+
     metric_summary = {metric.metric_name.value: metric.value for metric in metrics}
     run = EvaluationRun(
         id=run_id,
@@ -900,6 +958,7 @@ def create_run(project_id: str, payload: EvaluationRunCreateRequest) -> Evaluati
             "model_run_id": model_run_id,
             "parser_version": payload.parser_version,
         },
+        stage_funnel=stage_funnel,
     )
     _runs[run.id] = run
     _metrics_by_run[run.id] = metrics

@@ -42,6 +42,29 @@ class EvaluationMetricStatus(str, Enum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
+class PipelineStage(str, Enum):
+    """Ordered pipeline stages a matched gold entity/relation can reach.
+
+    Wave 72 (Wave67 research P0 "intermediate-stage scoring", inspired by
+    AIP Evals evaluating intermediate block outputs, not just final results).
+    """
+
+    EXTRACTED = "EXTRACTED"
+    VALIDATED = "VALIDATED"
+    REVIEWED = "REVIEWED"
+    PUBLISHED = "PUBLISHED"
+
+
+class StageFunnelPoint(BaseModel):
+    stage: PipelineStage
+    entity_count: int
+    entity_total: int
+    entity_recall: float | None
+    relation_count: int
+    relation_total: int
+    relation_recall: float | None
+
+
 class EvaluationErrorType(str, Enum):
     MISSING_ENTITY = "MISSING_ENTITY"
     EXTRA_ENTITY = "EXTRA_ENTITY"
@@ -184,6 +207,7 @@ class EvaluationRun(BaseModel):
     dimensions: dict[str, Any] = Field(default_factory=dict)
     error_code: str | None = None
     error_message: str | None = None
+    stage_funnel: list[StageFunnelPoint] = Field(default_factory=list)
 
 
 class EvaluationMetric(BaseModel):

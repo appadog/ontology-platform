@@ -292,6 +292,14 @@ export interface OntologyGraph {
   relations?: OntologyRelation[] | null;
 }
 
+export interface ClassUsageMetric {
+  class_id: string;
+  name: string;
+  label: string;
+  view_count: number;
+  last_viewed_at: string | null;
+}
+
 export interface SourceData {
   id: string;
   project_id: string;
@@ -1165,6 +1173,18 @@ export interface EvaluationRunCreateRequest {
   parser_version: string;
 }
 
+export type PipelineStage = "EXTRACTED" | "VALIDATED" | "REVIEWED" | "PUBLISHED";
+
+export interface StageFunnelPoint {
+  stage: PipelineStage;
+  entity_count: number;
+  entity_total: number;
+  entity_recall: number | null;
+  relation_count: number;
+  relation_total: number;
+  relation_recall: number | null;
+}
+
 export interface EvaluationRun {
   id: string;
   project_id: string;
@@ -1188,6 +1208,7 @@ export interface EvaluationRun {
   dimensions: EvaluationDimensions;
   error_code?: string | null;
   error_message?: string | null;
+  stage_funnel?: StageFunnelPoint[];
 }
 
 export interface EvaluationErrorCase {

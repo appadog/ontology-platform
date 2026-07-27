@@ -67,7 +67,7 @@ def propose_change_request(
     db: Session = Depends(get_db),
 ) -> GovernanceMutationResponse:
     evaluation_service.project_or_404(db, project_id)
-    return service.propose_change_request(project_id, payload, actor_id, actor_role)
+    return service.propose_change_request(project_id, payload, actor_id, actor_role, db)
 
 
 @router.get(
@@ -136,8 +136,9 @@ def add_change_item(
     payload: OntologyChangeItemRequest,
     actor_id: str = ActorId,
     actor_role: Role = ActorRole,
+    db: Session = Depends(get_db),
 ) -> GovernanceMutationResponse:
-    return service.add_item(change_request_id, payload, actor_id, actor_role)
+    return service.add_item(change_request_id, payload, actor_id, actor_role, db)
 
 
 @router.patch(
@@ -152,8 +153,9 @@ def edit_change_item(
     payload: OntologyChangeItemRequest,
     actor_id: str = ActorId,
     actor_role: Role = ActorRole,
+    db: Session = Depends(get_db),
 ) -> GovernanceMutationResponse:
-    return service.edit_item(change_request_id, item_id, payload, actor_id, actor_role)
+    return service.edit_item(change_request_id, item_id, payload, actor_id, actor_role, db)
 
 
 @router.delete(

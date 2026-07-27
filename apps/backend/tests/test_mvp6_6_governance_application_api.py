@@ -10,10 +10,11 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from app.core.enums import OntologyElementStatus, OntologyVersionStatus  # noqa: E402
 from app.db.base import Base  # noqa: E402
-from app.db.session import engine  # noqa: E402
+from app.db.session import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.modules.governance import application  # noqa: E402
 from app.modules.governance import service  # noqa: E402
+from app.modules.governance.fixtures import ensure_governance_ontology_fixtures  # noqa: E402
 from scripts.seed_mvp3 import seed_mvp3  # noqa: E402
 
 Base.metadata.create_all(bind=engine)
@@ -61,6 +62,8 @@ def _json(response: Any, expected_status: int = 200) -> Any:
 def _reset() -> None:
     service.reset_runtime_store()
     seed_mvp3(reset=True)
+    with SessionLocal() as db:
+        ensure_governance_ontology_fixtures(db)
 
 
 def _add_item(**overrides: Any) -> dict:
