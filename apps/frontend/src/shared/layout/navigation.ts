@@ -20,6 +20,7 @@ import {
   BarChart3,
   Bot,
   PlugZap,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -49,6 +50,7 @@ export type NavSection =
   | "published-graph"
   | "search"
   | "rag"
+  | "rag-portal"
   | "evaluation"
   | "copilot"
   | "learning-insights"
@@ -125,6 +127,10 @@ export const projectNavGroups: NavGroup[] = [
       { section: "copilot", label: "Copilot", icon: Bot, to: (p) => `/projects/${p}/copilot` },
       { section: "search", label: "Search", icon: Search, to: (p) => `/projects/${p}/search` },
       { section: "rag", label: "RAG", icon: MessageSquareText, to: (p) => `/projects/${p}/rag` },
+      // Wave 74: non-expert-facing RAG build guide + per-document parsing/chunking
+      // analysis. Deliberately a separate LNB item from the RAG Q&A workspace above
+      // (different audience: build/config guidance vs. day-to-day query workspace).
+      { section: "rag-portal", label: "RAG Portal", icon: BookOpen, to: (p) => `/projects/${p}/rag-portal` },
       { section: "evaluation", label: "Evaluation", icon: ClipboardList, to: (p) => `/projects/${p}/evaluation-datasets` },
       { section: "learning-insights", label: "Learning Insights", icon: Lightbulb, to: (p) => `/projects/${p}/learning-insights` },
       { section: "benchmark", label: "Benchmark", icon: BarChart3, to: (p) => `/projects/${p}/benchmark-comparisons` },
@@ -158,6 +164,8 @@ export function resolveActiveSection(pathname: string): NavSection | null {
   if (pathname.includes("/published-graph")) return "published-graph";
   if (pathname.includes("/publish")) return "publish"; // covers /publish and /publish-jobs
   if (pathname.includes("/search")) return "search";
+  // RAG Portal is more specific than RAG (its path contains /rag) — test it first.
+  if (pathname.includes("/rag-portal")) return "rag-portal";
   if (pathname.includes("/rag")) return "rag";
   if (pathname.includes("/evaluation-dataset")) return "evaluation";
   if (pathname.includes("/copilot")) return "copilot";

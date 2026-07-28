@@ -34,6 +34,7 @@ const sectionKeywordsKo: Record<NavSection, string> = {
   "published-graph": "게시 그래프",
   search: "검색",
   rag: "RAG 답변",
+  "rag-portal": "RAG 포탈",
   evaluation: "평가 골드셋",
   copilot: "코파일럿",
   "learning-insights": "학습 인사이트",

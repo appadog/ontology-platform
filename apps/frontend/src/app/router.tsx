@@ -52,6 +52,7 @@ const ProjectDetailPage = lazyNamed(() => import("../pages/ProjectDetailPage"), 
 const ProjectListPage = lazyNamed(() => import("../pages/ProjectListPage"), "ProjectListPage");
 const QualityDashboardPage = lazyNamed(() => import("../pages/QualityDashboardPage"), "QualityDashboardPage");
 const RagAnswerWorkspacePage = lazyNamed(() => import("../pages/RagAnswerWorkspacePage"), "RagAnswerWorkspacePage");
+const RagPortalPage = lazyNamed(() => import("../pages/RagPortalPage"), "RagPortalPage");
 const ReviewInboxPage = lazyNamed(() => import("../pages/ReviewInboxPage"), "ReviewInboxPage");
 const ReviewWorkbenchPage = lazyNamed(() => import("../pages/ReviewWorkbenchPage"), "ReviewWorkbenchPage");
 const SourceDetailPage = lazyNamed(() => import("../pages/SourceDetailPage"), "SourceDetailPage");
@@ -194,6 +195,10 @@ export const router = createBrowserRouter([
       {
         path: "/projects/:projectId/rag",
         element: <RagAnswerWorkspacePage />,
+      },
+      {
+        path: "/projects/:projectId/rag-portal",
+        element: <RagPortalPage />,
       },
       {
         path: "/projects/:projectId/evaluation-datasets",
